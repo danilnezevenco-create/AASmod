@@ -1,0 +1,1072 @@
+Java Launcher: C:\Users\user\.jdks\ms-17.0.18\bin\java.exe
+Arguments: '--input, C:\Users\user\Desktop\mods\AAS\build\libs\aas-1.0.0.jar, --output, C:\Users\user\Desktop\mods\AAS\build\reobfJar\output.jar, --names, C:\Users\user\Desktop\mods\AAS\build\reobfJar\mappings.tsrg, --lib, C:\Users\user\Desktop\mods\AAS\libs\voicechat-api-2.5.0.jar, --lib, C:\Users\user\.gradle\caches\forge_gradle\deobf_dependencies\software\bernie\geckolib\geckolib-forge-1.20.1\4.4.4_mapped_official_1.20.1\geckolib-forge-1.20.1-4.4.4_mapped_official_1.20.1.jar, --lib, C:\Users\user\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.10_mapped_official_1.20.1\forge-1.20.1-47.4.10_mapped_official_1.20.1-recomp.jar, --lib, C:\Users\user\.gradle\caches\forge_gradle\minecraft_repo\versions\1.20.1\client-extra.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlloader\1.20.1-47.4.10\55c46d27e7cfc8b829af8a28e562a7d290fa38b6\fmlloader-1.20.1-47.4.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarSelector\0.3.19\376cc9c8ea60720cf027c01fc033de915699801c\JarJarSelector-0.3.19.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarMetadata\0.3.19\83feaa9b770e6ac0e96ee4fc23fa89325c5fe2\JarJarMetadata-0.3.19.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\datafixerupper\6.0.8\3ba4a30557a9b057760af4011f909ba619fc5125\datafixerupper-6.0.8.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\31.1-jre\60458f877d055d0c9114d9e1a2efb737b4bc282c\guava-31.1-jre.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.code.findbugs\jsr305\3.0.2\25ea2e8b0c338a877313bd4672d3fe056ea78f0d\jsr305-3.0.2.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\ca.weblite\java-objc-bridge\1.1\1227f9e0666314f9de41477e3ec277e542ed7f7b\java-objc-bridge-1.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\forgespi\7.0.1\3b4972a0cdb135853dba219be61a79b22cff1309\forgespi-7.0.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mergetool\1.1.5\f3da18e12c696d35a47c82cbb2cc8b5aa15e1154\mergetool-1.1.5-api.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.jetbrains\annotations\24.0.1\13c5c75c4206580aa4d683bffee658caae6c9f43\annotations-24.0.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\cpw.mods\securejarhandler\2.1.10\51e6a22c6c716beb11e244bf5b8be480f51dd6b5\securejarhandler-2.1.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\coremods\5.2.4\e30bab269d896613e38396274711410b3a0e4b87\coremods-5.2.4.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\cpw.mods\modlauncher\10.0.9\6d9443f56f50bb85cea383686ff9c867391458b\modlauncher-10.0.9.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.openjdk.nashorn\nashorn-core\15.4\f67f5ffaa5f5130cf6fb9b133da00c7df3b532a5\nashorn-core-15.4.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-commons\9.8\36e4d212970388e5bd2c5180292012502df461bb\asm-commons-9.8.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-util\9.8\395f1c1f035258511f27bc9b2583d76e4b143f59\asm-util-9.8.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-analysis\9.8\b9747a320844b6cb1eacd90d8ecfd260a16c01d3\asm-analysis-9.8.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-tree\9.8\18419ca5b77a2f81097c741e7872e6ab8d2f40d\asm-tree-9.8.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm\9.8\dc19ecb3f7889b7860697215cae99c0f9b6f6b4b\asm-9.8.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\accesstransformers\8.0.4\272d240aa73f42195b2a68e2ebd8b701ecf41f63\accesstransformers-8.0.4.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4\4.9.1\e92af8ab33e428461927b484e90bb155a4f3a052\antlr4-4.9.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4-runtime\4.9.1\428664f05d2b7f7b7610204b5aa7c1763f62011a\antlr4-runtime-4.9.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.4.10\94dae566be650566ea9115a1414ab76bfcf5a804\fmlcore-1.20.1-47.4.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\eventbus\6.0.5\699143dd438431d06b57416944f7cedbe52e1475\eventbus-6.0.5.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\unsafe\0.2.0\54d7a0a5e8fdb71b973025caa46f341ae5904f39\unsafe-0.2.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\toml\3.6.4\51d6cefb2b55ee55ee26b16391212fb2c7dfb4f4\toml-3.6.4.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\core\3.6.4\510f174abbf1c947494db50ef2445683bd52c230\core-3.6.4.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.maven\maven-artifact\3.8.5\4433f50c07debefaed0553bd0068f4f48d449313\maven-artifact-3.8.5.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.jodah\typetools\0.6.3\a01aaa6ddaea9ec07ec4f209487b7a46a526283a\typetools-0.6.3.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecrell\terminalconsoleappender\1.2.0\96d02cd3b384ff015a8fef4223bcb4ccf1717c95\terminalconsoleappender-1.2.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.jline\jline-reader\3.12.1\4382ab1382c7b6f379377ed5f665dc2f6e1218bc\jline-reader-3.12.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.jline\jline-terminal\3.12.1\c777448314e050d980a6b697c140f3bfe9eb7416\jline-terminal-3.12.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.spongepowered\mixin\0.8.5\9d1c0c3a304ae6697ecd477218fa61b850bf57fc\mixin-0.8.5.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\cpw.mods\bootstraplauncher\1.1.2\c546e00443d8432cda6baa1c860346980742628\bootstraplauncher-1.1.2.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarFileSystems\0.3.19\2464eb7d6b9ddb9db36a82cf8a95193e5c6fe020\JarJarFileSystems-0.3.19.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlearlydisplay\1.20.1-47.4.10\a262fa19e65f643aae210b4275b53bee053aa765\fmlearlydisplay-1.20.1-47.4.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.4.10\ccc533c7dd67e0983217197d7549c8b49e7ab453\javafmllanguage-1.20.1-47.4.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.4.10\e9a2879fe3612ea34b9728ec2633304a1e67d480\lowcodelanguage-1.20.1-47.4.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.4.10\ec5cefbbc65c67302b8fac317010faab85fa14b9\mclanguage-1.20.1-47.4.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.github.oshi\oshi-core\6.2.2\54f5efc19bca95d709d9a37d19ffcbba3d21c1a6\oshi-core-6.2.2.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.10\dd9b193aef96e973d5a11ab13cd17430c2e4306b\gson-2.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.guava\failureaccess\1.0.1\1dcf1de382a0bf95a3d8b0849546c88bac1292c9\failureaccess-1.0.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.ibm.icu\icu4j\71.1\9e7d3304c23f9ba5cb71915f7cce23231a57a445\icu4j-71.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\authlib\4.0.43\2ff9d747a77570a07a60d32ac77eb6162ad2a2d9\authlib-4.0.43.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\blocklist\1.0.10\5c685c5ffa94c4cd39496c7184c1d122e515ecef\blocklist-1.0.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\brigadier\1.1.8\5244ce82c3337bba4a196a3ce858bfaecc74404a\brigadier-1.1.8.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\logging\1.1.1\832b8e6674a9b325a5175a3a6267dfaf34c85139\logging-1.1.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\patchy\2.2.10\da05971b07cbb379d002cf7eaec6a2048211fefc\patchy-2.2.10.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\text2speech\1.17.9\3cad216e3a7f0c19b4b394388bc9ffc446f13b14\text2speech-1.17.9.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpclient\4.5.13\e5f6cae5ca7ecaac1ec2827a9e2d65ae2869cada\httpclient-4.5.13.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\commons-codec\commons-codec\1.15\49d94806b6e3dc933dacbd8acb0fdbab8ebd1e5d\commons-codec-1.15.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\commons-io\commons-io\2.11.0\a2503f302b11ebde7ebc3df41daebe0e4eea3689\commons-io-2.11.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\commons-logging\commons-logging\1.2\4bfc12adfe4842bf07b657f0369c4cb522955686\commons-logging-1.2.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-handler\4.1.82.Final\644041d1fa96a5d3130a29e8978630d716d76e38\netty-handler-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-codec\4.1.82.Final\b77200379acb345a9ffdece1c605e591ac3e4e0a\netty-codec-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-classes-epoll\4.1.82.Final\e7c7dd18deac93105797f30057c912651ea76521\netty-transport-classes-epoll-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-native-unix-common\4.1.82.Final\3e895b35ca1b8a0eca56cacff4c2dde5d2c6abce\netty-transport-native-unix-common-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport\4.1.82.Final\e431a218d91acb6476ccad5f5aafde50aa3945ca\netty-transport-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-buffer\4.1.82.Final\a544270cf1ae8b8077082f5036436a9a9971ea71\netty-buffer-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-resolver\4.1.82.Final\38f665ae8dcd29032eea31245ba7806bed2e0fa8\netty-resolver-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-common\4.1.82.Final\22d148e85c3f5ebdacc0ce1f5aabb1d420f73f3\netty-common-4.1.82.Final.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\it.unimi.dsi\fastutil\8.5.9\bb7ea75ecdb216654237830b3a96d87ad91f8cc5\fastutil-8.5.9.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna-platform\5.12.1\97406a297c852f4a41e688a176ec675f72e8329\jna-platform-5.12.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna\5.12.1\b1e93a735caea94f503e95e6fe79bf9cdc1e985d\jna-5.12.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\net.sf.jopt-simple\jopt-simple\5.0.4\4fdac2fbe92dfad86aa6e9301736f6b4342a3f5c\jopt-simple-5.0.4.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-compress\1.21\4ec95b60d4e86b5c95a0e919cb172a0af98011ef\commons-compress-1.21.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-lang3\3.12.0\c6842c86792ff03b9f1d1fe2aab8dc23aa6c6f0e\commons-lang3-3.12.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpcore\4.4.15\7f2e0c573eaa7a74bac2e89b359e1f73d92a0a1d\httpcore-4.4.15.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-core\2.19.0\3b6eeb4de4c49c0fe38a4ee27188ff5fee44d0bb\log4j-core-2.19.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-slf4j2-impl\2.19.0\5c04bfdd63ce9dceb2e284b81e96b6a70010ee10\log4j-slf4j2-impl-2.19.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-api\2.19.0\ea1b37f38c327596b216542bc636cfdc0b8036fa\log4j-api-2.19.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.joml\joml\1.10.5\22566d58af70ad3d72308bab63b8339906deb649\joml-1.10.5.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\cbac1b8d30cb4795149c1ef540f912671a8616d0\lwjgl-glfw-3.3.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\ed892f945cf7e79c8756796f32d00fa4ceaf573b\lwjgl-glfw-3.3.1-natives-windows.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\beda65ee503443e60aa196d58ed31f8d001dc22a\lwjgl-glfw-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\b997e3391d6ce8f05487e7335d95c606043884a1\lwjgl-glfw-3.3.1-natives-windows-x86.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\a817bcf213db49f710603677457567c37d53e103\lwjgl-jemalloc-3.3.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\948a89b76a16aa324b046ae9308891216ffce5f9\lwjgl-jemalloc-3.3.1-natives-windows.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\cae85c4edb219c88b6a0c26a87955ad98dc9519d\lwjgl-jemalloc-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\fb476c8ec110e1c137ad3ce8a7f7bfe6b11c6324\lwjgl-jemalloc-3.3.1-natives-windows-x86.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\2623a6b8ae1dfcd880738656a9f0243d2e6840bd\lwjgl-openal-3.3.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\30a474d0e57193d7bc128849a3ab66bc9316fdb1\lwjgl-openal-3.3.1-natives-windows.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\40d65f1a7368a2aa47336f9cb69f5a190cf9975a\lwjgl-openal-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\888349f7b1be6fbae58bf8edfb9ef12def04c4e3\lwjgl-openal-3.3.1-natives-windows-x86.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\831a5533a21a5f4f81bbc51bb13e9899319b5411\lwjgl-opengl-3.3.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\c1807e9bd571402787d7e37e3029776ae2513bb8\lwjgl-opengl-3.3.1-natives-windows.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\527d78f1e9056aff3ed02ce93019c73c5e8f1721\lwjgl-opengl-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\deef3eb9b178ff2ff3ce893cc72ae741c3a17974\lwjgl-opengl-3.3.1-natives-windows-x86.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\b119297cf8ed01f247abe8685857f8e7fcf5980f\lwjgl-stb-3.3.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\86315914ac119efdb02dc9e8e978ade84f1702af\lwjgl-stb-3.3.1-natives-windows.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\fde63cdd2605c00636721a6c8b961e41d1f6b247\lwjgl-stb-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\a8d41f419eecb430b7c91ea2ce2c5c451cae2091\lwjgl-stb-3.3.1-natives-windows-x86.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\ff1914111ef2e3e0110ef2dabc8d8cdaad82347\lwjgl-tinyfd-3.3.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\a5d830475ec0958d9fdba1559efa99aef211e6ff\lwjgl-tinyfd-3.3.1-natives-windows.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\83a5e780df610829ff3a737822b4f931cffecd91\lwjgl-tinyfd-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\842eedd876fae354abc308c98a263f6bbc9e8a4d\lwjgl-tinyfd-3.3.1-natives-windows-x86.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\ae58664f88e18a9bb2c77b063833ca7aaec484cb\lwjgl-3.3.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\36c37f16ab611b3aa11f3bcf80b1d509b4ce6b\lwjgl-3.3.1-natives-windows.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\f46cadcf95675908fd3a550d63d9d709cb68998\lwjgl-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\3b14f4beae9dd39791ec9e12190a9380cd8a3ce6\lwjgl-3.3.1-natives-windows-x86.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.machinezoo.noexception\noexception\1.7.1\b65330c98e38a1f915fa54a6e5eca496505e3f0a\noexception-1.7.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.slf4j\slf4j-api\2.0.1\f48d81adce2abf5ad3cfe463df517952749e03bc\slf4j-api-2.0.1.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.codehaus.plexus\plexus-utils\3.3.0\cf43b5391de623b36fe066a21127baef82c64022\plexus-utils-3.3.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.guava\listenablefuture\9999.0-empty-to-avoid-conflict-with-guava\b421526c5f297295adef1c886e5246c39d4ac629\listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.checkerframework\checker-qual\3.12.0\d5692f0526415fcc6de94bb5bfbd3afd9dd3b3e5\checker-qual-3.12.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.errorprone\error_prone_annotations\2.11.0\c5a0ace696d3f8b1c1d8cc036d8c03cc0cbe6b69\error_prone_annotations-2.11.0.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.j2objc\j2objc-annotations\1.3\ba035118bc8bac37d7eff77700720999acd9986d\j2objc-annotations-1.3.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\ST4\4.3\92f2c1ad8d84abcbeead6cf7f2c53a04166293c2\ST4-4.3.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\antlr-runtime\3.5.2\cd9cd41361c155f3af0f653009dcecb08d8b4afd\antlr-runtime-3.5.2.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.abego.treelayout\org.abego.treelayout.core\1.0.3\457216e8e6578099ae63667bb1e4439235892028\org.abego.treelayout.core-1.0.3.jar, --lib, C:\Users\user\.gradle\caches\modules-2\files-2.1\org.glassfish\javax.json\1.0.4\3178f73569fd7a1e5ffc464e680f7a8cc784b85a\javax.json-1.0.4.jar, --disable-abstract-param'
+Classpath:
+ - C:\Users\user\.gradle\caches\forge_gradle\maven_downloader\net\minecraftforge\renamer\2.0.4\renamer-2.0.4-all.jar
+Working directory: C:\Users\user\Desktop\mods\AAS\build\reobfJar
+Main class: net.minecraftforge.renamer.Main
+====================================
+Forge Renamer v2.0.4
+lib: C:\Users\user\Desktop\mods\AAS\libs\voicechat-api-2.5.0.jar
+lib: C:\Users\user\.gradle\caches\forge_gradle\deobf_dependencies\software\bernie\geckolib\geckolib-forge-1.20.1\4.4.4_mapped_official_1.20.1\geckolib-forge-1.20.1-4.4.4_mapped_official_1.20.1.jar
+lib: C:\Users\user\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.10_mapped_official_1.20.1\forge-1.20.1-47.4.10_mapped_official_1.20.1-recomp.jar
+lib: C:\Users\user\.gradle\caches\forge_gradle\minecraft_repo\versions\1.20.1\client-extra.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlloader\1.20.1-47.4.10\55c46d27e7cfc8b829af8a28e562a7d290fa38b6\fmlloader-1.20.1-47.4.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarSelector\0.3.19\376cc9c8ea60720cf027c01fc033de915699801c\JarJarSelector-0.3.19.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarMetadata\0.3.19\83feaa9b770e6ac0e96ee4fc23fa89325c5fe2\JarJarMetadata-0.3.19.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\datafixerupper\6.0.8\3ba4a30557a9b057760af4011f909ba619fc5125\datafixerupper-6.0.8.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\31.1-jre\60458f877d055d0c9114d9e1a2efb737b4bc282c\guava-31.1-jre.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.code.findbugs\jsr305\3.0.2\25ea2e8b0c338a877313bd4672d3fe056ea78f0d\jsr305-3.0.2.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\ca.weblite\java-objc-bridge\1.1\1227f9e0666314f9de41477e3ec277e542ed7f7b\java-objc-bridge-1.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\forgespi\7.0.1\3b4972a0cdb135853dba219be61a79b22cff1309\forgespi-7.0.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mergetool\1.1.5\f3da18e12c696d35a47c82cbb2cc8b5aa15e1154\mergetool-1.1.5-api.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.jetbrains\annotations\24.0.1\13c5c75c4206580aa4d683bffee658caae6c9f43\annotations-24.0.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\cpw.mods\securejarhandler\2.1.10\51e6a22c6c716beb11e244bf5b8be480f51dd6b5\securejarhandler-2.1.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\coremods\5.2.4\e30bab269d896613e38396274711410b3a0e4b87\coremods-5.2.4.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\cpw.mods\modlauncher\10.0.9\6d9443f56f50bb85cea383686ff9c867391458b\modlauncher-10.0.9.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.openjdk.nashorn\nashorn-core\15.4\f67f5ffaa5f5130cf6fb9b133da00c7df3b532a5\nashorn-core-15.4.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-commons\9.8\36e4d212970388e5bd2c5180292012502df461bb\asm-commons-9.8.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-util\9.8\395f1c1f035258511f27bc9b2583d76e4b143f59\asm-util-9.8.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-analysis\9.8\b9747a320844b6cb1eacd90d8ecfd260a16c01d3\asm-analysis-9.8.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-tree\9.8\18419ca5b77a2f81097c741e7872e6ab8d2f40d\asm-tree-9.8.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm\9.8\dc19ecb3f7889b7860697215cae99c0f9b6f6b4b\asm-9.8.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\accesstransformers\8.0.4\272d240aa73f42195b2a68e2ebd8b701ecf41f63\accesstransformers-8.0.4.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4\4.9.1\e92af8ab33e428461927b484e90bb155a4f3a052\antlr4-4.9.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4-runtime\4.9.1\428664f05d2b7f7b7610204b5aa7c1763f62011a\antlr4-runtime-4.9.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.4.10\94dae566be650566ea9115a1414ab76bfcf5a804\fmlcore-1.20.1-47.4.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\eventbus\6.0.5\699143dd438431d06b57416944f7cedbe52e1475\eventbus-6.0.5.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\unsafe\0.2.0\54d7a0a5e8fdb71b973025caa46f341ae5904f39\unsafe-0.2.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\toml\3.6.4\51d6cefb2b55ee55ee26b16391212fb2c7dfb4f4\toml-3.6.4.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\core\3.6.4\510f174abbf1c947494db50ef2445683bd52c230\core-3.6.4.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.maven\maven-artifact\3.8.5\4433f50c07debefaed0553bd0068f4f48d449313\maven-artifact-3.8.5.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.jodah\typetools\0.6.3\a01aaa6ddaea9ec07ec4f209487b7a46a526283a\typetools-0.6.3.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecrell\terminalconsoleappender\1.2.0\96d02cd3b384ff015a8fef4223bcb4ccf1717c95\terminalconsoleappender-1.2.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.jline\jline-reader\3.12.1\4382ab1382c7b6f379377ed5f665dc2f6e1218bc\jline-reader-3.12.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.jline\jline-terminal\3.12.1\c777448314e050d980a6b697c140f3bfe9eb7416\jline-terminal-3.12.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.spongepowered\mixin\0.8.5\9d1c0c3a304ae6697ecd477218fa61b850bf57fc\mixin-0.8.5.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\cpw.mods\bootstraplauncher\1.1.2\c546e00443d8432cda6baa1c860346980742628\bootstraplauncher-1.1.2.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarFileSystems\0.3.19\2464eb7d6b9ddb9db36a82cf8a95193e5c6fe020\JarJarFileSystems-0.3.19.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlearlydisplay\1.20.1-47.4.10\a262fa19e65f643aae210b4275b53bee053aa765\fmlearlydisplay-1.20.1-47.4.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.4.10\ccc533c7dd67e0983217197d7549c8b49e7ab453\javafmllanguage-1.20.1-47.4.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.4.10\e9a2879fe3612ea34b9728ec2633304a1e67d480\lowcodelanguage-1.20.1-47.4.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.4.10\ec5cefbbc65c67302b8fac317010faab85fa14b9\mclanguage-1.20.1-47.4.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.github.oshi\oshi-core\6.2.2\54f5efc19bca95d709d9a37d19ffcbba3d21c1a6\oshi-core-6.2.2.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.10\dd9b193aef96e973d5a11ab13cd17430c2e4306b\gson-2.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.guava\failureaccess\1.0.1\1dcf1de382a0bf95a3d8b0849546c88bac1292c9\failureaccess-1.0.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.ibm.icu\icu4j\71.1\9e7d3304c23f9ba5cb71915f7cce23231a57a445\icu4j-71.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\authlib\4.0.43\2ff9d747a77570a07a60d32ac77eb6162ad2a2d9\authlib-4.0.43.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\blocklist\1.0.10\5c685c5ffa94c4cd39496c7184c1d122e515ecef\blocklist-1.0.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\brigadier\1.1.8\5244ce82c3337bba4a196a3ce858bfaecc74404a\brigadier-1.1.8.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\logging\1.1.1\832b8e6674a9b325a5175a3a6267dfaf34c85139\logging-1.1.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\patchy\2.2.10\da05971b07cbb379d002cf7eaec6a2048211fefc\patchy-2.2.10.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.mojang\text2speech\1.17.9\3cad216e3a7f0c19b4b394388bc9ffc446f13b14\text2speech-1.17.9.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpclient\4.5.13\e5f6cae5ca7ecaac1ec2827a9e2d65ae2869cada\httpclient-4.5.13.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\commons-codec\commons-codec\1.15\49d94806b6e3dc933dacbd8acb0fdbab8ebd1e5d\commons-codec-1.15.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\commons-io\commons-io\2.11.0\a2503f302b11ebde7ebc3df41daebe0e4eea3689\commons-io-2.11.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\commons-logging\commons-logging\1.2\4bfc12adfe4842bf07b657f0369c4cb522955686\commons-logging-1.2.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-handler\4.1.82.Final\644041d1fa96a5d3130a29e8978630d716d76e38\netty-handler-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-codec\4.1.82.Final\b77200379acb345a9ffdece1c605e591ac3e4e0a\netty-codec-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-classes-epoll\4.1.82.Final\e7c7dd18deac93105797f30057c912651ea76521\netty-transport-classes-epoll-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-native-unix-common\4.1.82.Final\3e895b35ca1b8a0eca56cacff4c2dde5d2c6abce\netty-transport-native-unix-common-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport\4.1.82.Final\e431a218d91acb6476ccad5f5aafde50aa3945ca\netty-transport-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-buffer\4.1.82.Final\a544270cf1ae8b8077082f5036436a9a9971ea71\netty-buffer-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-resolver\4.1.82.Final\38f665ae8dcd29032eea31245ba7806bed2e0fa8\netty-resolver-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\io.netty\netty-common\4.1.82.Final\22d148e85c3f5ebdacc0ce1f5aabb1d420f73f3\netty-common-4.1.82.Final.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\it.unimi.dsi\fastutil\8.5.9\bb7ea75ecdb216654237830b3a96d87ad91f8cc5\fastutil-8.5.9.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna-platform\5.12.1\97406a297c852f4a41e688a176ec675f72e8329\jna-platform-5.12.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna\5.12.1\b1e93a735caea94f503e95e6fe79bf9cdc1e985d\jna-5.12.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\net.sf.jopt-simple\jopt-simple\5.0.4\4fdac2fbe92dfad86aa6e9301736f6b4342a3f5c\jopt-simple-5.0.4.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-compress\1.21\4ec95b60d4e86b5c95a0e919cb172a0af98011ef\commons-compress-1.21.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-lang3\3.12.0\c6842c86792ff03b9f1d1fe2aab8dc23aa6c6f0e\commons-lang3-3.12.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpcore\4.4.15\7f2e0c573eaa7a74bac2e89b359e1f73d92a0a1d\httpcore-4.4.15.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-core\2.19.0\3b6eeb4de4c49c0fe38a4ee27188ff5fee44d0bb\log4j-core-2.19.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-slf4j2-impl\2.19.0\5c04bfdd63ce9dceb2e284b81e96b6a70010ee10\log4j-slf4j2-impl-2.19.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-api\2.19.0\ea1b37f38c327596b216542bc636cfdc0b8036fa\log4j-api-2.19.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.joml\joml\1.10.5\22566d58af70ad3d72308bab63b8339906deb649\joml-1.10.5.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\cbac1b8d30cb4795149c1ef540f912671a8616d0\lwjgl-glfw-3.3.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\ed892f945cf7e79c8756796f32d00fa4ceaf573b\lwjgl-glfw-3.3.1-natives-windows.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\beda65ee503443e60aa196d58ed31f8d001dc22a\lwjgl-glfw-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\b997e3391d6ce8f05487e7335d95c606043884a1\lwjgl-glfw-3.3.1-natives-windows-x86.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\a817bcf213db49f710603677457567c37d53e103\lwjgl-jemalloc-3.3.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\948a89b76a16aa324b046ae9308891216ffce5f9\lwjgl-jemalloc-3.3.1-natives-windows.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\cae85c4edb219c88b6a0c26a87955ad98dc9519d\lwjgl-jemalloc-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\fb476c8ec110e1c137ad3ce8a7f7bfe6b11c6324\lwjgl-jemalloc-3.3.1-natives-windows-x86.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\2623a6b8ae1dfcd880738656a9f0243d2e6840bd\lwjgl-openal-3.3.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\30a474d0e57193d7bc128849a3ab66bc9316fdb1\lwjgl-openal-3.3.1-natives-windows.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\40d65f1a7368a2aa47336f9cb69f5a190cf9975a\lwjgl-openal-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\888349f7b1be6fbae58bf8edfb9ef12def04c4e3\lwjgl-openal-3.3.1-natives-windows-x86.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\831a5533a21a5f4f81bbc51bb13e9899319b5411\lwjgl-opengl-3.3.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\c1807e9bd571402787d7e37e3029776ae2513bb8\lwjgl-opengl-3.3.1-natives-windows.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\527d78f1e9056aff3ed02ce93019c73c5e8f1721\lwjgl-opengl-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\deef3eb9b178ff2ff3ce893cc72ae741c3a17974\lwjgl-opengl-3.3.1-natives-windows-x86.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\b119297cf8ed01f247abe8685857f8e7fcf5980f\lwjgl-stb-3.3.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\86315914ac119efdb02dc9e8e978ade84f1702af\lwjgl-stb-3.3.1-natives-windows.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\fde63cdd2605c00636721a6c8b961e41d1f6b247\lwjgl-stb-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\a8d41f419eecb430b7c91ea2ce2c5c451cae2091\lwjgl-stb-3.3.1-natives-windows-x86.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\ff1914111ef2e3e0110ef2dabc8d8cdaad82347\lwjgl-tinyfd-3.3.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\a5d830475ec0958d9fdba1559efa99aef211e6ff\lwjgl-tinyfd-3.3.1-natives-windows.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\83a5e780df610829ff3a737822b4f931cffecd91\lwjgl-tinyfd-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\842eedd876fae354abc308c98a263f6bbc9e8a4d\lwjgl-tinyfd-3.3.1-natives-windows-x86.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\ae58664f88e18a9bb2c77b063833ca7aaec484cb\lwjgl-3.3.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\36c37f16ab611b3aa11f3bcf80b1d509b4ce6b\lwjgl-3.3.1-natives-windows.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\f46cadcf95675908fd3a550d63d9d709cb68998\lwjgl-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\3b14f4beae9dd39791ec9e12190a9380cd8a3ce6\lwjgl-3.3.1-natives-windows-x86.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.machinezoo.noexception\noexception\1.7.1\b65330c98e38a1f915fa54a6e5eca496505e3f0a\noexception-1.7.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.slf4j\slf4j-api\2.0.1\f48d81adce2abf5ad3cfe463df517952749e03bc\slf4j-api-2.0.1.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.codehaus.plexus\plexus-utils\3.3.0\cf43b5391de623b36fe066a21127baef82c64022\plexus-utils-3.3.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.guava\listenablefuture\9999.0-empty-to-avoid-conflict-with-guava\b421526c5f297295adef1c886e5246c39d4ac629\listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.checkerframework\checker-qual\3.12.0\d5692f0526415fcc6de94bb5bfbd3afd9dd3b3e5\checker-qual-3.12.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.errorprone\error_prone_annotations\2.11.0\c5a0ace696d3f8b1c1d8cc036d8c03cc0cbe6b69\error_prone_annotations-2.11.0.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\com.google.j2objc\j2objc-annotations\1.3\ba035118bc8bac37d7eff77700720999acd9986d\j2objc-annotations-1.3.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\ST4\4.3\92f2c1ad8d84abcbeead6cf7f2c53a04166293c2\ST4-4.3.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.antlr\antlr-runtime\3.5.2\cd9cd41361c155f3af0f653009dcecb08d8b4afd\antlr-runtime-3.5.2.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.abego.treelayout\org.abego.treelayout.core\1.0.3\457216e8e6578099ae63667bb1e4439235892028\org.abego.treelayout.core-1.0.3.jar
+lib: C:\Users\user\.gradle\caches\modules-2\files-2.1\org.glassfish\javax.json\1.0.4\3178f73569fd7a1e5ffc464e680f7a8cc784b85a\javax.json-1.0.4.jar
+log: null
+input: C:\Users\user\Desktop\mods\AAS\build\libs\aas-1.0.0.jar
+output: C:\Users\user\Desktop\mods\AAS\build\reobfJar\output.jar
+threads: 12
+Names: C:\Users\user\Desktop\mods\AAS\build\reobfJar\mappings.tsrg(reversed: false)
+Fix Annotations: false
+Fix Records: false
+Fix Identifiers: false
+Fix SourceFile: false
+Fix Line Numbers: false
+Strip codesigning signatures: false
+Adding Libraries to Inheritance
+Reading Input: C:\Users\user\Desktop\mods\AAS\build\libs\aas-1.0.0.jar
+Adding input to inheritance map
+Processing entries
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/HubBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/AmmoStackBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/AmmoStackBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/HubBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/HubBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/AmmoStackBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/block/HubBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/block/AmmoStackBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/block/HubBlockEntity/setRemoved()V from net/minecraft/world/level/block/entity/BlockEntity/setRemoved()V: setRemoved -> m_7651_
+Conflicting propagated mapping for com/example/aas/block/AmmoBagBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/example/aas/block/AmmoBagBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/AmmoBagBlock/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z from net/minecraft/world/level/block/state/BlockBehaviour/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z: canSurvive -> m_7898_
+Conflicting propagated mapping for com/example/aas/block/AmmoBagBlock/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/state/BlockBehaviour/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;: updateShape -> m_7417_
+Conflicting propagated mapping for com/example/aas/block/AmmoBagBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/AmmoBagBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/AmmoBagBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V from net/minecraft/world/level/block/state/BlockBehaviour/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V: onRemove -> m_6810_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V from net/minecraft/world/level/block/state/BlockBehaviour/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V: onRemove -> m_6810_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/entityInside(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)V from net/minecraft/world/level/block/state/BlockBehaviour/entityInside(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)V: entityInside -> m_7892_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/GhostBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/AGSConstructionBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/getShadeBrightness(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)F from net/minecraft/world/level/block/state/BlockBehaviour/getShadeBrightness(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)F: getShadeBrightness -> m_7749_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/propagatesSkylightDown(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Z from net/minecraft/world/level/block/Block/propagatesSkylightDown(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Z: propagatesSkylightDown -> m_7420_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/setPlacedBy(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V from net/minecraft/world/level/block/Block/setPlacedBy(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V: setPlacedBy -> m_6402_
+Conflicting propagated mapping for com/example/aas/block/GhostBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/playerWillDestroy(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V from net/minecraft/world/level/block/Block/playerWillDestroy(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V: playerWillDestroy -> m_5707_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z from net/minecraft/world/level/block/state/BlockBehaviour/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z: canSurvive -> m_7898_
+Conflicting propagated mapping for com/example/aas/block/GhostBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/state/BlockBehaviour/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;: updateShape -> m_7417_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V from net/minecraft/world/level/block/state/BlockBehaviour/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V: onProjectileHit -> m_5581_
+Conflicting propagated mapping for com/example/aas/block/GhostBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/world/AASWorldData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/saveddata/SavedData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;: save -> m_7176_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/GhostBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/BarbedWireBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/AGSAmmoStackBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/example/aas/block/HubBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V from net/minecraft/world/level/block/state/BlockBehaviour/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V: onRemove -> m_6810_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/setPlacedBy(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V from net/minecraft/world/level/block/Block/setPlacedBy(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V: setPlacedBy -> m_6402_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z from net/minecraft/world/level/block/state/BlockBehaviour/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z: canSurvive -> m_7898_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/state/BlockBehaviour/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;: updateShape -> m_7417_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V from net/minecraft/world/level/block/state/BlockBehaviour/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V: onProjectileHit -> m_5581_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/M2AmmoStackBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/M2ConstructionBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/item/M2AmmoItem/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V from net/minecraft/world/item/Item/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V: appendHoverText -> m_7373_
+Conflicting propagated mapping for com/example/aas/item/M2AmmoItem/getBarWidth(Lnet/minecraft/world/item/ItemStack;)I from net/minecraft/world/item/Item/getBarWidth(Lnet/minecraft/world/item/ItemStack;)I: getBarWidth -> m_142158_
+Conflicting propagated mapping for com/example/aas/item/AGSAmmoItem/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V from net/minecraft/world/item/Item/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V: appendHoverText -> m_7373_
+Conflicting propagated mapping for com/example/aas/item/M2AmmoItem/getBarColor(Lnet/minecraft/world/item/ItemStack;)I from net/minecraft/world/item/Item/getBarColor(Lnet/minecraft/world/item/ItemStack;)I: getBarColor -> m_142159_
+Conflicting propagated mapping for com/example/aas/item/M2AmmoItem/isBarVisible(Lnet/minecraft/world/item/ItemStack;)Z from net/minecraft/world/item/Item/isBarVisible(Lnet/minecraft/world/item/ItemStack;)Z: isBarVisible -> m_142522_
+Conflicting propagated mapping for com/example/aas/item/AGSAmmoItem/getBarWidth(Lnet/minecraft/world/item/ItemStack;)I from net/minecraft/world/item/Item/getBarWidth(Lnet/minecraft/world/item/ItemStack;)I: getBarWidth -> m_142158_
+Conflicting propagated mapping for com/example/aas/item/AGSAmmoItem/getBarColor(Lnet/minecraft/world/item/ItemStack;)I from net/minecraft/world/item/Item/getBarColor(Lnet/minecraft/world/item/ItemStack;)I: getBarColor -> m_142159_
+Conflicting propagated mapping for com/example/aas/item/AGSAmmoItem/isBarVisible(Lnet/minecraft/world/item/ItemStack;)Z from net/minecraft/world/item/Item/isBarVisible(Lnet/minecraft/world/item/ItemStack;)Z: isBarVisible -> m_142522_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/isAttackable()Z from net/minecraft/world/entity/Entity/isAttackable()Z: isAttackable -> m_6097_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/isAttackable()Z from net/minecraft/world/entity/Entity/isAttackable()Z: isAttackable -> m_6097_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/Entity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: readAdditionalSaveData -> m_7378_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/Entity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: readAdditionalSaveData -> m_7378_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/isPickable()Z from net/minecraft/world/entity/Entity/isPickable()Z: isPickable -> m_6087_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/isPickable()Z from net/minecraft/world/entity/Entity/isPickable()Z: isPickable -> m_6087_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/tick()V from net/minecraft/world/entity/Entity/tick()V: tick -> m_8119_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/tick()V from net/minecraft/world/entity/Entity/tick()V: tick -> m_8119_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/interact(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/entity/Entity/interact(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;: interact -> m_6096_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/interact(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/entity/Entity/interact(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;: interact -> m_6096_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/entity/Entity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet;: getAddEntityPacket -> m_5654_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/defineSynchedData()V from net/minecraft/world/entity/Entity/defineSynchedData()V: defineSynchedData -> m_8097_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/entity/Entity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet;: getAddEntityPacket -> m_5654_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/defineSynchedData()V from net/minecraft/world/entity/Entity/defineSynchedData()V: defineSynchedData -> m_8097_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/Entity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: addAdditionalSaveData -> m_7380_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/Entity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: addAdditionalSaveData -> m_7380_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/positionRider(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity$MoveFunction;)V from net/minecraft/world/entity/Entity/positionRider(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity$MoveFunction;)V: positionRider -> m_19956_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/positionRider(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity$MoveFunction;)V from net/minecraft/world/entity/Entity/positionRider(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity$MoveFunction;)V: positionRider -> m_19956_
+Conflicting propagated mapping for com/example/aas/entity/AGS30Entity/hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z from net/minecraft/world/entity/Entity/hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z: hurt -> m_6469_
+Conflicting propagated mapping for com/example/aas/entity/M2BrowningEntity/hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z from net/minecraft/world/entity/Entity/hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z: hurt -> m_6469_
+Conflicting propagated mapping for com/example/aas/block/MainSupplyBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/MainSupplyBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/MainSupplyBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/RallyPointBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/MortarConstructionBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for net/minecraft/world/entity/LivingEntity/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V from net/minecraft/world/entity/player/Player/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V: lambda$addAdditionalSaveData$3 -> m_219754_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z from net/minecraft/world/level/block/state/BlockBehaviour/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z: canSurvive -> m_7898_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/state/BlockBehaviour/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;: updateShape -> m_7417_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V from net/minecraft/world/level/block/state/BlockBehaviour/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V: onProjectileHit -> m_5581_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/MortarShellStackBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/example/aas/block/RallyPointBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/client/sound/HubLoopingSound/tick()V from net/minecraft/client/resources/sounds/TickableSoundInstance/tick()V: tick -> m_7788_
+Conflicting propagated mapping for com/example/aas/block/RallyPointBlock/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V from net/minecraft/world/level/block/state/BlockBehaviour/onRemove(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V: onRemove -> m_6810_
+Conflicting propagated mapping for com/example/aas/block/RallyPointBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/WallBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/WallBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/RallyPointBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/WallBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/RallyPointBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/WallBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/block/RallyPointBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/TOWConstructionBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/block/entity/BlockEntity/getUpdateTag()Lnet/minecraft/nbt/CompoundTag;: getUpdateTag -> m_5995_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/load(Lnet/minecraft/nbt/CompoundTag;)V: load -> m_142466_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/level/block/entity/BlockEntity/saveAdditional(Lnet/minecraft/nbt/CompoundTag;)V: saveAdditional -> m_183515_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/level/block/entity/BlockEntity/getUpdatePacket()Lnet/minecraft/network/protocol/Packet;: getUpdatePacket -> m_58483_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlockEntity/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu; from net/minecraft/world/inventory/MenuConstructor/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;: createMenu -> m_7208_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlockEntity/getDisplayName()Lnet/minecraft/network/chat/Component; from net/minecraft/world/MenuProvider/getDisplayName()Lnet/minecraft/network/chat/Component;: getDisplayName -> m_5446_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z from net/minecraft/world/level/block/state/BlockBehaviour/canSurvive(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z: canSurvive -> m_7898_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/state/BlockBehaviour/updateShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;: updateShape -> m_7417_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V from net/minecraft/world/level/block/state/BlockBehaviour/onProjectileHit(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/BlockHitResult;Lnet/minecraft/world/entity/projectile/Projectile;)V: onProjectileHit -> m_5581_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/block/TOWMissileStackBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/VehicleSpawnerBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/example/aas/block/WallBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker; from net/minecraft/world/level/block/EntityBlock/getTicker(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntityType;)Lnet/minecraft/world/level/block/entity/BlockEntityTicker;: getTicker -> m_142354_
+Conflicting propagated mapping for com/example/aas/block/WallBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/example/aas/block/WallBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity; from net/minecraft/world/level/block/EntityBlock/newBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/entity/BlockEntity;: newBlockEntity -> m_142194_
+Conflicting propagated mapping for com/example/aas/block/WallBlock/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getCollisionShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getCollisionShape -> m_5939_
+Conflicting propagated mapping for com/example/aas/block/WallBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape; from net/minecraft/world/level/block/BaseEntityBlock/getRenderShape(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/RenderShape;: getRenderShape -> m_7514_
+Conflicting propagated mapping for com/example/aas/block/WallBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/example/aas/block/WallBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/example/aas/item/VehicleMarkerItem/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V from net/minecraft/world/item/Item/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V: appendHoverText -> m_7373_
+Conflicting propagated mapping for com/example/aas/item/SupplyTruckMarkerItem/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V from net/minecraft/world/item/Item/appendHoverText(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/item/TooltipFlag;)V: appendHoverText -> m_7373_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/DeathScreen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/DeathScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/mouseScrolled(DDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseScrolled(DDD)Z: mouseScrolled -> m_6050_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/lambda$init$1(Lnet/minecraft/client/gui/components/Button;)V from net/minecraft/client/gui/screens/DeathScreen/lambda$init$1(Lnet/minecraft/client/gui/components/Button;)V: lambda$init$1 -> m_279762_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/init()V from net/minecraft/client/gui/screens/DeathScreen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/lambda$init$0(Lnet/minecraft/client/gui/components/Button;)V from net/minecraft/client/gui/screens/DeathScreen/lambda$init$0(Lnet/minecraft/client/gui/components/Button;)V: lambda$init$0 -> m_279760_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/screens/DeathScreen/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/tick()V from net/minecraft/client/gui/screens/DeathScreen/tick()V: tick -> m_86600_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/mouseDragged(DDIDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseDragged(DDIDD)Z: mouseDragged -> m_7979_
+Conflicting propagated mapping for com/example/aas/client/AASDeathScreen/mouseReleased(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseReleased(DDI)Z: mouseReleased -> m_6348_
+Conflicting propagated mapping for com/example/aas/client/gui/AASConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/AASConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for com/example/aas/client/gui/AASConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/menu/VehicleSpawnerMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/AbstractContainerMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z: stillValid -> m_6875_
+Conflicting propagated mapping for com/example/aas/menu/VehicleSpawnerMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/AbstractContainerMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack;: quickMoveStack -> m_7648_
+Conflicting propagated mapping for com/example/aas/client/gui/CrateRadialScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/CrateRadialScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/CrateRadialScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/gui/DefenseRadialScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/DefenseRadialScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/DefenseRadialScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for software/bernie/geckolib/renderer/GeoEntityRenderer/shouldShowName(Lnet/minecraft/world/entity/Entity;)Z from net/minecraft/client/renderer/entity/EntityRenderer/shouldShowName(Lnet/minecraft/world/entity/Entity;)Z: shouldShowName -> m_6512_
+Conflicting propagated mapping for software/bernie/geckolib/renderer/GeoEntityRenderer/getTextureLocation(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/resources/ResourceLocation; from net/minecraft/client/renderer/entity/EntityRenderer/getTextureLocation(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/resources/ResourceLocation;: getTextureLocation -> m_5478_
+Conflicting propagated mapping for software/bernie/geckolib/renderer/GeoEntityRenderer/render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V from net/minecraft/client/renderer/entity/EntityRenderer/render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V: render -> m_7392_
+Conflicting propagated mapping for com/example/aas/client/gui/DownedScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/DownedScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/DownedScreen/shouldCloseOnEsc()Z from net/minecraft/client/gui/screens/Screen/shouldCloseOnEsc()Z: shouldCloseOnEsc -> m_6913_
+Conflicting propagated mapping for com/example/aas/client/renderer/M2BulletRenderer/getTextureLocation(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/resources/ResourceLocation; from net/minecraft/client/renderer/entity/EntityRenderer/getTextureLocation(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/resources/ResourceLocation;: getTextureLocation -> m_5478_
+Conflicting propagated mapping for com/example/aas/client/renderer/M2BulletRenderer/render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V from net/minecraft/client/renderer/entity/EntityRenderer/render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V: render -> m_7392_
+Conflicting propagated mapping for com/example/aas/client/renderer/VehicleSpawnerRenderer/render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V from net/minecraft/client/renderer/blockentity/BlockEntityRenderer/render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V: render -> m_6922_
+Conflicting propagated mapping for com/example/aas/client/renderer/SupplyCrateRenderer/getTextureLocation(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/resources/ResourceLocation; from net/minecraft/client/renderer/entity/EntityRenderer/getTextureLocation(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/resources/ResourceLocation;: getTextureLocation -> m_5478_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/updateMessage()V from net/minecraft/client/gui/components/AbstractSliderButton/updateMessage()V: updateMessage -> m_5695_
+Conflicting propagated mapping for com/example/aas/client/renderer/SupplyCrateRenderer/render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V from net/minecraft/client/renderer/entity/EntityRenderer/render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V: render -> m_7392_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/setValue(D)V from net/minecraft/client/gui/components/AbstractSliderButton/setValue(D)V: setValue -> m_93611_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/keyPressed(III)Z from net/minecraft/client/gui/components/AbstractSliderButton/keyPressed(III)Z: keyPressed -> m_7933_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/onClick(DD)V from net/minecraft/client/gui/components/AbstractSliderButton/onClick(DD)V: onClick -> m_5716_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/renderWidget(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/components/AbstractSliderButton/renderWidget(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: renderWidget -> m_87963_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/setValueFromMouse(D)V from net/minecraft/client/gui/components/AbstractSliderButton/setValueFromMouse(D)V: setValueFromMouse -> m_93585_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/onDrag(DDDD)V from net/minecraft/client/gui/components/AbstractSliderButton/onDrag(DDDD)V: onDrag -> m_7212_
+Conflicting propagated mapping for net/minecraftforge/client/gui/widget/ForgeSlider/applyValue()V from net/minecraft/client/gui/components/AbstractSliderButton/applyValue()V: applyValue -> m_5697_
+Conflicting propagated mapping for com/example/aas/client/gui/HubAmmoScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/HubAmmoScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/HubAmmoScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/gui/VehicleSpawnerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/VehicleSpawnerScreen/init()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/VehicleSpawnerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V: renderBg -> m_7286_
+Conflicting propagated mapping for com/example/aas/client/gui/KitEditorScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/KitEditorScreen/init()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/KitEditorScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/gui/KitEditorScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V: renderBg -> m_7286_
+Conflicting propagated mapping for com/example/aas/menu/KitEditorMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/AbstractContainerMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z: stillValid -> m_6875_
+Conflicting propagated mapping for com/example/aas/menu/KitEditorMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/AbstractContainerMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack;: quickMoveStack -> m_7648_
+Conflicting propagated mapping for com/example/aas/item/EntrenchingToolItem/getUseAnimation(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/world/item/UseAnim; from net/minecraft/world/item/Item/getUseAnimation(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/world/item/UseAnim;: getUseAnimation -> m_6164_
+Conflicting propagated mapping for com/example/aas/item/EntrenchingToolItem/use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder; from net/minecraft/world/item/Item/use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder;: use -> m_7203_
+Conflicting propagated mapping for com/example/aas/item/EntrenchingToolItem/getUseDuration(Lnet/minecraft/world/item/ItemStack;)I from net/minecraft/world/item/Item/getUseDuration(Lnet/minecraft/world/item/ItemStack;)I: getUseDuration -> m_8105_
+Conflicting propagated mapping for com/example/aas/item/EntrenchingToolItem/onUseTick(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;I)V from net/minecraft/world/item/Item/onUseTick(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;I)V: onUseTick -> m_5929_
+Conflicting propagated mapping for com/example/aas/client/gui/PlayerKitSelectScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/PlayerKitSelectScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/KitTeamSelectScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/KitTeamSelectScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/RadioRadialScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/RadioRadialScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/RadioRadialScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/gui/HubRadialScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/HubRadialScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/HubRadialScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/canBeCollidedWith()Z from net/minecraft/world/entity/Entity/canBeCollidedWith()Z: canBeCollidedWith -> m_5829_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/isAttackable()Z from net/minecraft/world/entity/Entity/isAttackable()Z: isAttackable -> m_6097_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/Entity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: readAdditionalSaveData -> m_7378_
+Conflicting propagated mapping for com/example/aas/client/gui/KitListScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/KitListScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/KitPreviewScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/KitPreviewScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/MapMarkerGridScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/MapMarkerGridScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/MapMarkerSelectionScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/MapMarkerSelectionScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/mouseScrolled(DDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseScrolled(DDD)Z: mouseScrolled -> m_6050_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/tick()V from net/minecraft/client/gui/screens/Screen/tick()V: tick -> m_86600_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/mouseDragged(DDIDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseDragged(DDIDD)Z: mouseDragged -> m_7979_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadSelectionScreen/mouseReleased(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseReleased(DDI)Z: mouseReleased -> m_6348_
+Conflicting propagated mapping for com/example/aas/client/gui/StaticGunRadialScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/StaticGunRadialScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/StaticGunRadialScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadMarkerRadialScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadMarkerRadialScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/SquadMarkerRadialScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/gui/TeamSelectionScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/client/gui/TeamSelectionScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/client/gui/TeamSelectionScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/isPickable()Z from net/minecraft/world/entity/Entity/isPickable()Z: isPickable -> m_6087_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/tick()V from net/minecraft/world/entity/Entity/tick()V: tick -> m_8119_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/interact(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/entity/Entity/interact(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;: interact -> m_6096_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/entity/Entity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet;: getAddEntityPacket -> m_5654_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/defineSynchedData()V from net/minecraft/world/entity/Entity/defineSynchedData()V: defineSynchedData -> m_8097_
+Conflicting propagated mapping for com/example/aas/client/gui/TacticalMapRadialScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/Entity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: addAdditionalSaveData -> m_7380_
+Conflicting propagated mapping for com/example/aas/client/gui/TacticalMapRadialScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/isPushable()Z from net/minecraft/world/entity/Entity/isPushable()Z: isPushable -> m_6094_
+Conflicting propagated mapping for com/example/aas/entity/SupplyCrateEntity/hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z from net/minecraft/world/entity/Entity/hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z: hurt -> m_6469_
+Conflicting propagated mapping for com/example/aas/client/gui/TacticalMapRadialScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/example/aas/client/model/ModelRallyPoint/setupAnim(Lnet/minecraft/world/entity/Entity;FFFFF)V from net/minecraft/client/model/EntityModel/setupAnim(Lnet/minecraft/world/entity/Entity;FFFFF)V: setupAnim -> m_6973_
+Conflicting propagated mapping for com/example/aas/client/model/ModelRallyPoint/renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;IIFFFF)V from net/minecraft/client/model/Model/renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;IIFFFF)V: renderToBuffer -> m_7695_
+Conflicting propagated mapping for com/example/aas/client/renderer/RallyPointRenderer/render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V from net/minecraft/client/renderer/blockentity/BlockEntityRenderer/render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V: render -> m_6922_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/updateRotation()V from net/minecraft/world/entity/projectile/Projectile/updateRotation()V: updateRotation -> m_37283_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/projectile/Projectile/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: readAdditionalSaveData -> m_7378_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/onHitEntity(Lnet/minecraft/world/phys/EntityHitResult;)V from net/minecraft/world/entity/projectile/Projectile/onHitEntity(Lnet/minecraft/world/phys/EntityHitResult;)V: onHitEntity -> m_5790_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/tick()V from net/minecraft/world/entity/projectile/Projectile/tick()V: tick -> m_8119_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/shootFromRotation(Lnet/minecraft/world/entity/Entity;FFFFF)V from net/minecraft/world/entity/projectile/Projectile/shootFromRotation(Lnet/minecraft/world/entity/Entity;FFFFF)V: shootFromRotation -> m_37251_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/entity/projectile/Projectile/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet;: getAddEntityPacket -> m_5654_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/defineSynchedData()V from net/minecraft/world/entity/Entity/defineSynchedData()V: defineSynchedData -> m_8097_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/projectile/Projectile/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: addAdditionalSaveData -> m_7380_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/onHitBlock(Lnet/minecraft/world/phys/BlockHitResult;)V from net/minecraft/world/entity/projectile/Projectile/onHitBlock(Lnet/minecraft/world/phys/BlockHitResult;)V: onHitBlock -> m_8060_
+Conflicting propagated mapping for com/example/aas/entity/M2BulletEntity/lerpRotation(FF)F from net/minecraft/world/entity/projectile/Projectile/lerpRotation(FF)F: lerpRotation -> m_37273_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/projectile/Projectile/readAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: readAdditionalSaveData -> m_7378_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/onHitEntity(Lnet/minecraft/world/phys/EntityHitResult;)V from net/minecraft/world/entity/projectile/Projectile/onHitEntity(Lnet/minecraft/world/phys/EntityHitResult;)V: onHitEntity -> m_5790_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/tick()V from net/minecraft/world/entity/projectile/Projectile/tick()V: tick -> m_8119_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/shootFromRotation(Lnet/minecraft/world/entity/Entity;FFFFF)V from net/minecraft/world/entity/projectile/Projectile/shootFromRotation(Lnet/minecraft/world/entity/Entity;FFFFF)V: shootFromRotation -> m_37251_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/entity/projectile/Projectile/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet;: getAddEntityPacket -> m_5654_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/defineSynchedData()V from net/minecraft/world/entity/Entity/defineSynchedData()V: defineSynchedData -> m_8097_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V from net/minecraft/world/entity/projectile/Projectile/addAdditionalSaveData(Lnet/minecraft/nbt/CompoundTag;)V: addAdditionalSaveData -> m_7380_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/onHitBlock(Lnet/minecraft/world/phys/BlockHitResult;)V from net/minecraft/world/entity/projectile/Projectile/onHitBlock(Lnet/minecraft/world/phys/BlockHitResult;)V: onHitBlock -> m_8060_
+Conflicting propagated mapping for com/example/aas/entity/AGS30GrenadeEntity/getItem()Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/entity/projectile/ItemSupplier/getItem()Lnet/minecraft/world/item/ItemStack;: getItem -> m_7846_
+Conflicting propagated mapping for com/example/aas/item/KitSetupItem/use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder; from net/minecraft/world/item/Item/use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder;: use -> m_7203_
+Conflicting propagated mapping for com/example/aas/item/RallyItem/use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder; from net/minecraft/world/item/Item/use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder;: use -> m_7203_
+Conflicting propagated mapping for com/example/aas/menu/KitEditorMenu$1/getNoItemIcon()Lcom/mojang/datafixers/util/Pair; from net/minecraft/world/inventory/Slot/getNoItemIcon()Lcom/mojang/datafixers/util/Pair;: getNoItemIcon -> m_7543_
+Conflicting propagated mapping for com/example/aas/menu/KitEditorMenu$2/getNoItemIcon()Lcom/mojang/datafixers/util/Pair; from net/minecraft/world/inventory/Slot/getNoItemIcon()Lcom/mojang/datafixers/util/Pair;: getNoItemIcon -> m_7543_
+Conflicting propagated mapping for com/example/aas/network/PacketOpenKitEditor$1/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu; from net/minecraft/world/inventory/MenuConstructor/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;: createMenu -> m_7208_
+Conflicting propagated mapping for com/example/aas/network/PacketOpenKitEditor$1/getDisplayName()Lnet/minecraft/network/chat/Component; from net/minecraft/world/MenuProvider/getDisplayName()Lnet/minecraft/network/chat/Component;: getDisplayName -> m_5446_
+Conflicting propagated mapping for net/minecraftforge/network/IContainerFactory/create(ILnet/minecraft/world/entity/player/Inventory;)Lnet/minecraft/world/inventory/AbstractContainerMenu; from net/minecraft/world/inventory/MenuType$MenuSupplier/create(ILnet/minecraft/world/entity/player/Inventory;)Lnet/minecraft/world/inventory/AbstractContainerMenu;: create -> m_39994_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/set(Lnet/minecraft/world/item/ItemStack;)V from net/minecraft/world/inventory/Slot/set(Lnet/minecraft/world/item/ItemStack;)V: set -> m_5852_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z from net/minecraft/world/inventory/Slot/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z: mayPlace -> m_5857_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/remove(I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/Slot/remove(I)Lnet/minecraft/world/item/ItemStack;: remove -> m_6201_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/onQuickCraft(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)V from net/minecraft/world/inventory/Slot/onQuickCraft(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)V: onQuickCraft -> m_40234_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/getItem()Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/Slot/getItem()Lnet/minecraft/world/item/ItemStack;: getItem -> m_7993_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/getMaxStackSize(Lnet/minecraft/world/item/ItemStack;)I from net/minecraft/world/inventory/Slot/getMaxStackSize(Lnet/minecraft/world/item/ItemStack;)I: getMaxStackSize -> m_5866_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/Slot/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z: mayPickup -> m_8010_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/getMaxStackSize()I from net/minecraft/world/inventory/Slot/getMaxStackSize()I: getMaxStackSize -> m_6641_
+Adding extras
+Sorting
+Writing Output: C:\Users\user\Desktop\mods\AAS\build\reobfJar\output.jar
+  META-INF/
+  META-INF/MANIFEST.MF
+  META-INF/mods.toml
+  aas.mixins.json
+  aas.refmap.json
+  assets/
+  assets/aas/
+  assets/aas/animations/
+  assets/aas/animations/ags_30.animation.json
+  assets/aas/animations/m2_browning.animation.json
+  assets/aas/blockstates/
+  assets/aas/blockstates/ags_ammo_stack.json
+  assets/aas/blockstates/ags_construction.json
+  assets/aas/blockstates/ammo_bag.json
+  assets/aas/blockstates/barbed_wire.json
+  assets/aas/blockstates/blue_rally.json
+  assets/aas/blockstates/crate_dropped.json
+  assets/aas/blockstates/hub_block.json
+  assets/aas/blockstates/m2_ammo_stack.json
+  assets/aas/blockstates/m2_construction.json
+  assets/aas/blockstates/main_supply.json
+  assets/aas/blockstates/mortar_construction.json
+  assets/aas/blockstates/mortar_shell_stack.json
+  assets/aas/blockstates/red_rally.json
+  assets/aas/blockstates/tow_construction.json
+  assets/aas/blockstates/tow_missile_stack.json
+  assets/aas/blockstates/vehicle_spawner.json
+  assets/aas/blockstates/wall_block.json
+  assets/aas/geo/
+  assets/aas/geo/ags_30.geo.json
+  assets/aas/geo/ags_30_no_mag.geo.json
+  assets/aas/geo/m2_browning.geo.json
+  assets/aas/geo/m2_browning_no_magazin.geo.json
+  assets/aas/models/
+  assets/aas/models/block/
+  assets/aas/models/block/ags_30_invalid.json
+  assets/aas/models/block/ags_30_static.json
+  assets/aas/models/block/ags_ammo_1.json
+  assets/aas/models/block/ags_ammo_2.json
+  assets/aas/models/block/ags_ammo_3.json
+  assets/aas/models/block/ags_ammo_4.json
+  assets/aas/models/block/ammo_bag.json
+  assets/aas/models/block/barbed_wire_ghost.json
+  assets/aas/models/block/barbed_wire_invalid.json
+  assets/aas/models/block/barbed_wire_solid.json
+  assets/aas/models/block/blue_rally.json
+  assets/aas/models/block/crate_dropped.json
+  assets/aas/models/block/hub_base.json
+  assets/aas/models/block/hub_solid.json
+  assets/aas/models/block/m2_ammo_1.json
+  assets/aas/models/block/m2_ammo_2.json
+  assets/aas/models/block/m2_ammo_3.json
+  assets/aas/models/block/m2_ammo_4.json
+  assets/aas/models/block/m2_browning_invalid.json
+  assets/aas/models/block/m2_browning_static.json
+  assets/aas/models/block/main_supply.json
+  assets/aas/models/block/mortar_ghost.json
+  assets/aas/models/block/mortar_invalid.json
+  assets/aas/models/block/mortar_shell_1.json
+  assets/aas/models/block/mortar_shell_2.json
+  assets/aas/models/block/mortar_shell_3.json
+  assets/aas/models/block/mortar_shell_4.json
+  assets/aas/models/block/mortar_shell_5.json
+  assets/aas/models/block/mortar_shell_6.json
+  assets/aas/models/block/mortar_shell_7.json
+  assets/aas/models/block/mortar_shell_8.json
+  assets/aas/models/block/red_rally.json
+  assets/aas/models/block/tow_ghost.json
+  assets/aas/models/block/tow_invalid.json
+  assets/aas/models/block/tow_shell_1.json
+  assets/aas/models/block/tow_shell_2.json
+  assets/aas/models/block/tow_shell_3.json
+  assets/aas/models/block/tow_shell_4.json
+  assets/aas/models/block/vehicle_spawner.json
+  assets/aas/models/block/wall_base.json
+  assets/aas/models/block/wall_invalid.json
+  assets/aas/models/block/wall_solid.json
+  assets/aas/models/entity/
+  assets/aas/models/entity/m2_bullet.json
+  assets/aas/models/item/
+  assets/aas/models/item/ags_ammo_box.json
+  assets/aas/models/item/ags_projectile.json
+  assets/aas/models/item/ammo_bag.json
+  assets/aas/models/item/blue_apc.json
+  assets/aas/models/item/blue_boat.json
+  assets/aas/models/item/blue_cas_fighter.json
+  assets/aas/models/item/blue_cas_helicopter.json
+  assets/aas/models/item/blue_combat_vehicle.json
+  assets/aas/models/item/blue_helicopter.json
+  assets/aas/models/item/blue_infantry_vehicle.json
+  assets/aas/models/item/blue_mobile_zu.json
+  assets/aas/models/item/blue_static_zu.json
+  assets/aas/models/item/blue_supply_helicopter.json
+  assets/aas/models/item/blue_supply_marker.json
+  assets/aas/models/item/blue_tank.json
+  assets/aas/models/item/entrenching_tool.json
+  assets/aas/models/item/m2_ammo_box.json
+  assets/aas/models/item/main_supply.json
+  assets/aas/models/item/red_apc.json
+  assets/aas/models/item/red_boat.json
+  assets/aas/models/item/red_cas_fighter.json
+  assets/aas/models/item/red_cas_helicopter.json
+  assets/aas/models/item/red_combat_vehicle.json
+  assets/aas/models/item/red_helicopter.json
+  assets/aas/models/item/red_infantry_vehicle.json
+  assets/aas/models/item/red_mobile_zu.json
+  assets/aas/models/item/red_static_zu.json
+  assets/aas/models/item/red_supply_helicopter.json
+  assets/aas/models/item/red_supply_marker.json
+  assets/aas/models/item/red_tank.json
+  assets/aas/models/item/squad_leader_radio.json
+  assets/aas/models/item/vehicle_spawner.json
+  assets/aas/sounds.json
+  assets/aas/sounds/
+  assets/aas/sounds/ags_shoot.ogg
+  assets/aas/sounds/help_scream.ogg
+  assets/aas/sounds/hub_idle.ogg
+  assets/aas/sounds/m2_load.ogg
+  assets/aas/sounds/m2_shoot.ogg
+  assets/aas/sounds/m2_unload.ogg
+  assets/aas/sounds/player_downed.ogg
+  assets/aas/sounds/siren_alarm.ogg
+  assets/aas/textures/
+  assets/aas/textures/block/
+  assets/aas/textures/block/ags_30_ghost.png
+  assets/aas/textures/block/ags_30_invalid.png
+  assets/aas/textures/block/ammo_bag_texture.png
+  assets/aas/textures/block/barbed_wire_ghost.png
+  assets/aas/textures/block/barbed_wire_invalid.png
+  assets/aas/textures/block/barbed_wire_solid.png
+  assets/aas/textures/block/blue_rally.png
+  assets/aas/textures/block/crate_dropped.png
+  assets/aas/textures/block/hub_ghost.png
+  assets/aas/textures/block/hub_solid.png
+  assets/aas/textures/block/m2_browning_ghost.png
+  assets/aas/textures/block/m2_browning_invalid.png
+  assets/aas/textures/block/main_supply_texture.png
+  assets/aas/textures/block/mortar_ghost.png
+  assets/aas/textures/block/mortar_invalid.png
+  assets/aas/textures/block/mortar_shell_texture.png
+  assets/aas/textures/block/mortar_shell_texture1.png
+  assets/aas/textures/block/red_rally.png
+  assets/aas/textures/block/tow_ghost.png
+  assets/aas/textures/block/tow_invalid.png
+  assets/aas/textures/block/tow_shell_texture.png
+  assets/aas/textures/block/wall_2x2_ghost.png
+  assets/aas/textures/block/wall_2x2_invalid.png
+  assets/aas/textures/block/wall_2x2_solid.png
+  assets/aas/textures/block/wall_ghost.png
+  assets/aas/textures/block/wall_invalid.png
+  assets/aas/textures/block/wall_solid.png
+  assets/aas/textures/entity/
+  assets/aas/textures/entity/ags_30.png
+  assets/aas/textures/entity/m2_browning.png
+  assets/aas/textures/entity/m2_bullet.png
+  assets/aas/textures/entity/rally_point.png
+  assets/aas/textures/gui/
+  assets/aas/textures/gui/ags_scope.png
+  assets/aas/textures/gui/arrow_down.png
+  assets/aas/textures/gui/arrow_up.png
+  assets/aas/textures/gui/flags/
+  assets/aas/textures/gui/flags/bluefor.png
+  assets/aas/textures/gui/flags/china.png
+  assets/aas/textures/gui/flags/dnr.png
+  assets/aas/textures/gui/flags/ichkeria.png
+  assets/aas/textures/gui/flags/insurgency.png
+  assets/aas/textures/gui/flags/nato.png
+  assets/aas/textures/gui/flags/neutral.png
+  assets/aas/textures/gui/flags/red_army.png
+  assets/aas/textures/gui/flags/redfor.png
+  assets/aas/textures/gui/flags/russia.png
+  assets/aas/textures/gui/flags/russia_syria.png
+  assets/aas/textures/gui/flags/ukraine.png
+  assets/aas/textures/gui/flags/usa.png
+  assets/aas/textures/gui/flags/wehrmacht.png
+  assets/aas/textures/gui/kits/
+  assets/aas/textures/gui/kits/anti_air.png
+  assets/aas/textures/gui/kits/assault.png
+  assets/aas/textures/gui/kits/drone_operator.png
+  assets/aas/textures/gui/kits/grenadier.png
+  assets/aas/textures/gui/kits/hat.png
+  assets/aas/textures/gui/kits/hmg.png
+  assets/aas/textures/gui/kits/lat.png
+  assets/aas/textures/gui/kits/lmg.png
+  assets/aas/textures/gui/kits/marksman.png
+  assets/aas/textures/gui/kits/mechanic.png
+  assets/aas/textures/gui/kits/medic.png
+  assets/aas/textures/gui/kits/none.png
+  assets/aas/textures/gui/kits/officer.png
+  assets/aas/textures/gui/kits/pilot.png
+  assets/aas/textures/gui/kits/rifleman.png
+  assets/aas/textures/gui/kits/sapper.png
+  assets/aas/textures/gui/kits/sniper.png
+  assets/aas/textures/gui/map.png
+  assets/aas/textures/gui/map_grid.png
+  assets/aas/textures/gui/map_icons/
+  assets/aas/textures/gui/map_icons/apc.png
+  assets/aas/textures/gui/map_icons/apc_marker.png
+  assets/aas/textures/gui/map_icons/boat.png
+  assets/aas/textures/gui/map_icons/cas_fighter.png
+  assets/aas/textures/gui/map_icons/cas_fighter_marker.png
+  assets/aas/textures/gui/map_icons/cas_helicopter.png
+  assets/aas/textures/gui/map_icons/cas_helicopter_marker.png
+  assets/aas/textures/gui/map_icons/combat_vehicle.png
+  assets/aas/textures/gui/map_icons/combat_vehicle_marker.png
+  assets/aas/textures/gui/map_icons/hat_marker.png
+  assets/aas/textures/gui/map_icons/helicopter.png
+  assets/aas/textures/gui/map_icons/helicopter_marker.png
+  assets/aas/textures/gui/map_icons/hub_icon.png
+  assets/aas/textures/gui/map_icons/hub_marker.png
+  assets/aas/textures/gui/map_icons/infantry_marker.png
+  assets/aas/textures/gui/map_icons/infantry_vehicle.png
+  assets/aas/textures/gui/map_icons/infantry_vehicle_marker.png
+  assets/aas/textures/gui/map_icons/marker_attack.png
+  assets/aas/textures/gui/map_icons/marker_build.png
+  assets/aas/textures/gui/map_icons/marker_defend.png
+  assets/aas/textures/gui/map_icons/marker_move.png
+  assets/aas/textures/gui/map_icons/medic_plus.png
+  assets/aas/textures/gui/map_icons/mobile_zu.png
+  assets/aas/textures/gui/map_icons/mobile_zu_marker.png
+  assets/aas/textures/gui/map_icons/mortar_marker.png
+  assets/aas/textures/gui/map_icons/player_circle.png
+  assets/aas/textures/gui/map_icons/player_self.png
+  assets/aas/textures/gui/map_icons/rally_icon.png
+  assets/aas/textures/gui/map_icons/rally_marker.png
+  assets/aas/textures/gui/map_icons/sniper_marker.png
+  assets/aas/textures/gui/map_icons/static_zu.png
+  assets/aas/textures/gui/map_icons/static_zu_marker.png
+  assets/aas/textures/gui/map_icons/supply_helicopter.png
+  assets/aas/textures/gui/map_icons/supply_request_marker.png
+  assets/aas/textures/gui/map_icons/supply_truck.png
+  assets/aas/textures/gui/map_icons/supply_truck_marker.png
+  assets/aas/textures/gui/map_icons/tank.png
+  assets/aas/textures/gui/map_icons/tank_marker.png
+  assets/aas/textures/gui/map_icons/tow_marker.png
+  assets/aas/textures/gui/medic_plus.png
+  assets/aas/textures/gui/radial_sector.png
+  assets/aas/textures/gui/radial_sector_2.png
+  assets/aas/textures/gui/radial_sector_4.png
+  assets/aas/textures/gui/radial_sector_5.png
+  assets/aas/textures/gui/spawner_gui.png
+  assets/aas/textures/gui/squad_lock.png
+  assets/aas/textures/item/
+  assets/aas/textures/item/ags_ammo_box.png
+  assets/aas/textures/item/ags_projectile.png
+  assets/aas/textures/item/blue_apc.png
+  assets/aas/textures/item/blue_boat.png
+  assets/aas/textures/item/blue_cas_fighter.png
+  assets/aas/textures/item/blue_cas_helicopter.png
+  assets/aas/textures/item/blue_combat_vehicle.png
+  assets/aas/textures/item/blue_helicopter.png
+  assets/aas/textures/item/blue_infantry_vehicle.png
+  assets/aas/textures/item/blue_mobile_zu.png
+  assets/aas/textures/item/blue_static_zu.png
+  assets/aas/textures/item/blue_supply_helicopter.png
+  assets/aas/textures/item/blue_supply_marker.png
+  assets/aas/textures/item/blue_tank.png
+  assets/aas/textures/item/entrenching_tool.png
+  assets/aas/textures/item/m2_ammo_box.png
+  assets/aas/textures/item/mapicon/
+  assets/aas/textures/item/mapicon/apc.png
+  assets/aas/textures/item/mapicon/boat.png
+  assets/aas/textures/item/mapicon/cas_fighter.png
+  assets/aas/textures/item/mapicon/cas_helicopter.png
+  assets/aas/textures/item/mapicon/combat_vehicle.png
+  assets/aas/textures/item/mapicon/enemy/
+  assets/aas/textures/item/mapicon/enemy/apc_marker.png
+  assets/aas/textures/item/mapicon/enemy/cas_fighter_marker.png
+  assets/aas/textures/item/mapicon/enemy/cas_helicopter_marker.png
+  assets/aas/textures/item/mapicon/enemy/combat_vehicle_marker.png
+  assets/aas/textures/item/mapicon/enemy/hat_marker.png
+  assets/aas/textures/item/mapicon/enemy/helicopter_marker.png
+  assets/aas/textures/item/mapicon/enemy/hub_marker.png
+  assets/aas/textures/item/mapicon/enemy/infantry_marker.png
+  assets/aas/textures/item/mapicon/enemy/infantry_vehicle_marker.png
+  assets/aas/textures/item/mapicon/enemy/mobile_zu_marker.png
+  assets/aas/textures/item/mapicon/enemy/mortar_marker.png
+  assets/aas/textures/item/mapicon/enemy/rally_marker.png
+  assets/aas/textures/item/mapicon/enemy/sniper_marker.png
+  assets/aas/textures/item/mapicon/enemy/static_zu_marker.png
+  assets/aas/textures/item/mapicon/enemy/supply_truck_marker.png
+  assets/aas/textures/item/mapicon/enemy/tank_marker.png
+  assets/aas/textures/item/mapicon/enemy/tow_marker.png
+  assets/aas/textures/item/mapicon/helicopter.png
+  assets/aas/textures/item/mapicon/hub_icon.png
+  assets/aas/textures/item/mapicon/infantry_vehicle.png
+  assets/aas/textures/item/mapicon/marker_attack.png
+  assets/aas/textures/item/mapicon/marker_build.png
+  assets/aas/textures/item/mapicon/marker_defend.png
+  assets/aas/textures/item/mapicon/marker_move.png
+  assets/aas/textures/item/mapicon/mobile_zu.png
+  assets/aas/textures/item/mapicon/player_arrow.png
+  assets/aas/textures/item/mapicon/player_circle.png
+  assets/aas/textures/item/mapicon/rally_icon.png
+  assets/aas/textures/item/mapicon/static_zu.png
+  assets/aas/textures/item/mapicon/supply_helicopter.png
+  assets/aas/textures/item/mapicon/supply_truck.png
+  assets/aas/textures/item/mapicon/tank.png
+  assets/aas/textures/item/mapicon/team/
+  assets/aas/textures/item/mapicon/team/supply_request_marker.png
+  assets/aas/textures/item/ralik_radio.png
+  assets/aas/textures/item/red_apc.png
+  assets/aas/textures/item/red_boat.png
+  assets/aas/textures/item/red_cas_fighter.png
+  assets/aas/textures/item/red_cas_helicopter.png
+  assets/aas/textures/item/red_combat_vehicle.png
+  assets/aas/textures/item/red_helicopter.png
+  assets/aas/textures/item/red_infantry_vehicle.png
+  assets/aas/textures/item/red_mobile_zu.png
+  assets/aas/textures/item/red_static_zu.png
+  assets/aas/textures/item/red_supply_helicopter.png
+  assets/aas/textures/item/red_supply_marker.png
+  assets/aas/textures/item/red_tank.png
+  assets/aas/textures/misc/
+  assets/aas/textures/misc/vignette.png
+  assets/aas/textures/skins/
+  assets/aas/textures/skins/OchenZirnayaFoto.png
+  assets/aas/textures/skins/bluefor/
+  assets/aas/textures/skins/bluefor/anti_air.png
+  assets/aas/textures/skins/bluefor/assault.png
+  assets/aas/textures/skins/bluefor/base.png
+  assets/aas/textures/skins/bluefor/drone_operator.png
+  assets/aas/textures/skins/bluefor/grenadier.png
+  assets/aas/textures/skins/bluefor/hat.png
+  assets/aas/textures/skins/bluefor/hmg.png
+  assets/aas/textures/skins/bluefor/lat.png
+  assets/aas/textures/skins/bluefor/lmg.png
+  assets/aas/textures/skins/bluefor/marksman.png
+  assets/aas/textures/skins/bluefor/mechanic.png
+  assets/aas/textures/skins/bluefor/medic.png
+  assets/aas/textures/skins/bluefor/officer.png
+  assets/aas/textures/skins/bluefor/pilot.png
+  assets/aas/textures/skins/bluefor/rifleman.png
+  assets/aas/textures/skins/bluefor/sapper.png
+  assets/aas/textures/skins/bluefor/sniper.png
+  assets/aas/textures/skins/nato/
+  assets/aas/textures/skins/nato/anti_air.png
+  assets/aas/textures/skins/nato/assault.png
+  assets/aas/textures/skins/nato/base.png
+  assets/aas/textures/skins/nato/drone_operator.png
+  assets/aas/textures/skins/nato/grenadier.png
+  assets/aas/textures/skins/nato/hat.png
+  assets/aas/textures/skins/nato/hmg.png
+  assets/aas/textures/skins/nato/lat.png
+  assets/aas/textures/skins/nato/lmg.png
+  assets/aas/textures/skins/nato/marksman.png
+  assets/aas/textures/skins/nato/mechanic.png
+  assets/aas/textures/skins/nato/medic.png
+  assets/aas/textures/skins/nato/officer.png
+  assets/aas/textures/skins/nato/pilot.png
+  assets/aas/textures/skins/nato/rifleman.png
+  assets/aas/textures/skins/nato/sapper.png
+  assets/aas/textures/skins/nato/sniper.png
+  assets/aas/textures/skins/redfor/
+  assets/aas/textures/skins/redfor/anti_air.png
+  assets/aas/textures/skins/redfor/assault.png
+  assets/aas/textures/skins/redfor/base.png
+  assets/aas/textures/skins/redfor/drone_operator.png
+  assets/aas/textures/skins/redfor/grenadier.png
+  assets/aas/textures/skins/redfor/hat.png
+  assets/aas/textures/skins/redfor/hmg.png
+  assets/aas/textures/skins/redfor/lat.png
+  assets/aas/textures/skins/redfor/lmg.png
+  assets/aas/textures/skins/redfor/marksman.png
+  assets/aas/textures/skins/redfor/mechanic.png
+  assets/aas/textures/skins/redfor/medic.png
+  assets/aas/textures/skins/redfor/officer.png
+  assets/aas/textures/skins/redfor/pilot.png
+  assets/aas/textures/skins/redfor/rifleman.png
+  assets/aas/textures/skins/redfor/sapper.png
+  assets/aas/textures/skins/redfor/sniper.png
+  assets/aas/textures/skins/russia/
+  assets/aas/textures/skins/russia/anti_air.png
+  assets/aas/textures/skins/russia/assault.png
+  assets/aas/textures/skins/russia/base.png
+  assets/aas/textures/skins/russia/drone_operator.png
+  assets/aas/textures/skins/russia/grenadier.png
+  assets/aas/textures/skins/russia/hmg.png
+  assets/aas/textures/skins/russia/lat.png
+  assets/aas/textures/skins/russia/lmg.png
+  assets/aas/textures/skins/russia/marksman.png
+  assets/aas/textures/skins/russia/mechanic.png
+  assets/aas/textures/skins/russia/medic.png
+  assets/aas/textures/skins/russia/officer.png
+  assets/aas/textures/skins/russia/pilot.png
+  assets/aas/textures/skins/russia/rifleman.png
+  assets/aas/textures/skins/russia/sapper.png
+  assets/aas/textures/skins/russia/sniper.png
+  assets/aas/textures/skins/ukraine/
+  assets/aas/textures/skins/ukraine/anti_air.png
+  assets/aas/textures/skins/ukraine/assault.png
+  assets/aas/textures/skins/ukraine/base.png
+  assets/aas/textures/skins/ukraine/drone_operator.png
+  assets/aas/textures/skins/ukraine/grenadier.png
+  assets/aas/textures/skins/ukraine/hat.png
+  assets/aas/textures/skins/ukraine/hmg.png
+  assets/aas/textures/skins/ukraine/lat.png
+  assets/aas/textures/skins/ukraine/lmg.png
+  assets/aas/textures/skins/ukraine/marksman.png
+  assets/aas/textures/skins/ukraine/mechanic.png
+  assets/aas/textures/skins/ukraine/medic.png
+  assets/aas/textures/skins/ukraine/officer.png
+  assets/aas/textures/skins/ukraine/pilot.png
+  assets/aas/textures/skins/ukraine/rifleman.png
+  assets/aas/textures/skins/ukraine/sapper.png
+  assets/aas/textures/skins/ukraine/sniper.png
+  assets/aas/textures/skins/usa/
+  assets/aas/textures/skins/usa/anti_air.png
+  assets/aas/textures/skins/usa/assault.png
+  assets/aas/textures/skins/usa/base.png
+  assets/aas/textures/skins/usa/drone_operator.png
+  assets/aas/textures/skins/usa/grenadier.png
+  assets/aas/textures/skins/usa/hat.png
+  assets/aas/textures/skins/usa/hmg.png
+  assets/aas/textures/skins/usa/lat.png
+  assets/aas/textures/skins/usa/lmg.png
+  assets/aas/textures/skins/usa/marksman.png
+  assets/aas/textures/skins/usa/mechanic.png
+  assets/aas/textures/skins/usa/medic.png
+  assets/aas/textures/skins/usa/officer.png
+  assets/aas/textures/skins/usa/pilot.png
+  assets/aas/textures/skins/usa/rifleman.png
+  assets/aas/textures/skins/usa/sapper.png
+  assets/aas/textures/skins/usa/sniper.png
+  com/
+  com/example/
+  com/example/aas/
+  com/example/aas/AASMod.class
+  com/example/aas/block/
+  com/example/aas/block/AGSAmmoStackBlock.class
+  com/example/aas/block/AGSConstructionBlock$1.class
+  com/example/aas/block/AGSConstructionBlock.class
+  com/example/aas/block/AGSConstructionBlockEntity.class
+  com/example/aas/block/AmmoBagBlock.class
+  com/example/aas/block/AmmoStackBlockEntity.class
+  com/example/aas/block/BarbedWireBlock.class
+  com/example/aas/block/BarbedWireBlockEntity.class
+  com/example/aas/block/GhostBlock.class
+  com/example/aas/block/HubBlock.class
+  com/example/aas/block/HubBlockEntity.class
+  com/example/aas/block/M2AmmoStackBlock.class
+  com/example/aas/block/M2ConstructionBlock$1.class
+  com/example/aas/block/M2ConstructionBlock.class
+  com/example/aas/block/M2ConstructionBlockEntity.class
+  com/example/aas/block/MainSupplyBlock.class
+  com/example/aas/block/MainSupplyBlockEntity.class
+  com/example/aas/block/ModBlocks.class
+  com/example/aas/block/MortarConstructionBlock$1.class
+  com/example/aas/block/MortarConstructionBlock.class
+  com/example/aas/block/MortarConstructionBlockEntity.class
+  com/example/aas/block/MortarShellStackBlock.class
+  com/example/aas/block/RallyPointBlock.class
+  com/example/aas/block/RallyPointBlockEntity.class
+  com/example/aas/block/TOWConstructionBlock$1.class
+  com/example/aas/block/TOWConstructionBlock.class
+  com/example/aas/block/TOWConstructionBlockEntity.class
+  com/example/aas/block/TOWMissileStackBlock.class
+  com/example/aas/block/VehicleSpawnerBlock.class
+  com/example/aas/block/VehicleSpawnerBlockEntity$1.class
+  com/example/aas/block/VehicleSpawnerBlockEntity.class
+  com/example/aas/block/WallBlock.class
+  com/example/aas/block/WallBlockEntity.class
+  com/example/aas/client/
+  com/example/aas/client/AASClipboard.class
+  com/example/aas/client/AASDeathScreen.class
+  com/example/aas/client/AASOverlay.class
+  com/example/aas/client/AGSScopeOverlay.class
+  com/example/aas/client/ClientConfigRegistry.class
+  com/example/aas/client/ClientData.class
+  com/example/aas/client/ClientEvents.class
+  com/example/aas/client/ClientHooks.class
+  com/example/aas/client/ClientModEvents.class
+  com/example/aas/client/ClientPlacementHandler.class
+  com/example/aas/client/MapPlayerInfo.class
+  com/example/aas/client/ModKeyBindings.class
+  com/example/aas/client/OverlayHandler.class
+  com/example/aas/client/RecoilHandler.class
+  com/example/aas/client/gui/
+  com/example/aas/client/gui/AASConfigScreen.class
+  com/example/aas/client/gui/AASMapRenderer.class
+  com/example/aas/client/gui/CrateRadialScreen.class
+  com/example/aas/client/gui/DefenseRadialScreen.class
+  com/example/aas/client/gui/DownedScreen.class
+  com/example/aas/client/gui/HubAmmoScreen.class
+  com/example/aas/client/gui/HubRadialScreen.class
+  com/example/aas/client/gui/KitEditorScreen.class
+  com/example/aas/client/gui/KitListScreen.class
+  com/example/aas/client/gui/KitPreviewScreen.class
+  com/example/aas/client/gui/KitTeamSelectScreen.class
+  com/example/aas/client/gui/MapMarkerGridScreen.class
+  com/example/aas/client/gui/MapMarkerSelectionScreen.class
+  com/example/aas/client/gui/PlayerKitSelectScreen.class
+  com/example/aas/client/gui/RadioRadialScreen.class
+  com/example/aas/client/gui/SquadMarkerRadialScreen.class
+  com/example/aas/client/gui/SquadSelectionScreen.class
+  com/example/aas/client/gui/StaticGunRadialScreen.class
+  com/example/aas/client/gui/TacticalMapRadialScreen.class
+  com/example/aas/client/gui/TeamSelectionScreen.class
+  com/example/aas/client/gui/VehicleSpawnerScreen.class
+  com/example/aas/client/model/
+  com/example/aas/client/model/AGS30Model.class
+  com/example/aas/client/model/M2BrowningModel.class
+  com/example/aas/client/model/ModelRallyPoint.class
+  com/example/aas/client/renderer/
+  com/example/aas/client/renderer/AGS30Renderer.class
+  com/example/aas/client/renderer/M2BrowningRenderer.class
+  com/example/aas/client/renderer/M2BulletRenderer.class
+  com/example/aas/client/renderer/RallyPointRenderer.class
+  com/example/aas/client/renderer/SupplyCrateRenderer.class
+  com/example/aas/client/renderer/VehicleSpawnerRenderer.class
+  com/example/aas/client/sound/
+  com/example/aas/client/sound/HubLoopingSound.class
+  com/example/aas/command/
+  com/example/aas/command/ModCommands.class
+  com/example/aas/config/
+  com/example/aas/config/AASConfig.class
+  com/example/aas/entity/
+  com/example/aas/entity/AGS30Entity.class
+  com/example/aas/entity/AGS30GrenadeEntity.class
+  com/example/aas/entity/M2BrowningEntity.class
+  com/example/aas/entity/M2BulletEntity.class
+  com/example/aas/entity/ModEntities.class
+  com/example/aas/entity/SupplyCrateEntity.class
+  com/example/aas/events/
+  com/example/aas/events/DownedHandler.class
+  com/example/aas/events/GameLogicEvents.class
+  com/example/aas/events/InteractionEvents.class
+  com/example/aas/events/ModServerEvents.class
+  com/example/aas/item/
+  com/example/aas/item/AGSAmmoItem.class
+  com/example/aas/item/EntrenchingToolItem.class
+  com/example/aas/item/KitSetupItem.class
+  com/example/aas/item/M2AmmoItem.class
+  com/example/aas/item/ModCreativeModeTabs.class
+  com/example/aas/item/ModItems.class
+  com/example/aas/item/RallyItem.class
+  com/example/aas/item/SupplyTruckMarkerItem.class
+  com/example/aas/item/VehicleMarkerItem.class
+  com/example/aas/menu/
+  com/example/aas/menu/KitEditorMenu$1.class
+  com/example/aas/menu/KitEditorMenu$2.class
+  com/example/aas/menu/KitEditorMenu.class
+  com/example/aas/menu/ModMenuTypes.class
+  com/example/aas/menu/VehicleSpawnerMenu.class
+  com/example/aas/mixin/
+  com/example/aas/mixin/FirstPersonArmFixMixin.class
+  com/example/aas/mixin/MouseSensitivityMixin.class
+  com/example/aas/mixin/PlayerModelMixin.class
+  com/example/aas/mixin/PlayerSkinMixin.class
+  com/example/aas/network/
+  com/example/aas/network/PacketApplyMarker.class
+  com/example/aas/network/PacketBuildRequest.class
+  com/example/aas/network/PacketDebugFill.class
+  com/example/aas/network/PacketDebugSpawnRally.class
+  com/example/aas/network/PacketDownedAction.class
+  com/example/aas/network/PacketDropCrate.class
+  com/example/aas/network/PacketHandler.class
+  com/example/aas/network/PacketOpenKitEditor$1.class
+  com/example/aas/network/PacketOpenKitEditor.class
+  com/example/aas/network/PacketOpenPlayerKitMenu$KitDTO.class
+  com/example/aas/network/PacketOpenPlayerKitMenu.class
+  com/example/aas/network/PacketPasteKit.class
+  com/example/aas/network/PacketPasteTeam.class
+  com/example/aas/network/PacketPlaceMapMarker.class
+  com/example/aas/network/PacketRadioAction.class
+  com/example/aas/network/PacketRecoil.class
+  com/example/aas/network/PacketRequestAmmo.class
+  com/example/aas/network/PacketRequestCrateAmmo.class
+  com/example/aas/network/PacketRequestKitData.class
+  com/example/aas/network/PacketRequestKitMenu.class
+  com/example/aas/network/PacketRespawnRequest.class
+  com/example/aas/network/PacketSaveKit.class
+  com/example/aas/network/PacketSelectKit.class
+  com/example/aas/network/PacketSendKitData.class
+  com/example/aas/network/PacketSpawnGhost.class
+  com/example/aas/network/PacketSquadAction.class
+  com/example/aas/network/PacketSquadChat.class
+  com/example/aas/network/PacketSquadMarker.class
+  com/example/aas/network/PacketSyncDownedState.class
+  com/example/aas/network/PacketSyncGameData.class
+  com/example/aas/network/PacketSyncMapPlayers.class
+  com/example/aas/network/PacketSyncPoint.class
+  com/example/aas/network/PacketSyncSquads.class
+  com/example/aas/network/PacketTeamSelect.class
+  com/example/aas/network/PacketToggleAim.class
+  com/example/aas/network/PacketUpdateSpawner.class
+  com/example/aas/network/PacketVehicleShoot.class
+  com/example/aas/network/ResupplyHandler.class
+  com/example/aas/sound/
+  com/example/aas/sound/ModSounds.class
+  com/example/aas/world/
+  com/example/aas/world/AASWorldData$CapturePoint.class
+  com/example/aas/world/AASWorldData$HubInfo.class
+  com/example/aas/world/AASWorldData$KitInfo.class
+  com/example/aas/world/AASWorldData$MapMarker.class
+  com/example/aas/world/AASWorldData$Squad.class
+  com/example/aas/world/AASWorldData$SquadMarker.class
+  com/example/aas/world/AASWorldData$VehicleRecord.class
+  com/example/aas/world/AASWorldData.class
+  pack.mcmeta

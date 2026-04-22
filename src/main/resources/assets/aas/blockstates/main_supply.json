@@ -1,0 +1,5 @@
+{
+	"variants": {
+		"": { "model": "aas:block/main_supply" }
+	}
+}

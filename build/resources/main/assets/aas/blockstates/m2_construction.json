@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "facing=north,valid=true":  { "model": "aas:block/m2_browning_static" },
+    "facing=east,valid=true":   { "model": "aas:block/m2_browning_static", "y": 90 },
+    "facing=south,valid=true":  { "model": "aas:block/m2_browning_static", "y": 180 },
+    "facing=west,valid=true":   { "model": "aas:block/m2_browning_static", "y": 270 },
+
+    "facing=north,valid=false": { "model": "aas:block/m2_browning_invalid" },
+    "facing=east,valid=false":  { "model": "aas:block/m2_browning_invalid", "y": 90 },
+    "facing=south,valid=false": { "model": "aas:block/m2_browning_invalid", "y": 180 },
+    "facing=west,valid=false":  { "model": "aas:block/m2_browning_invalid", "y": 270 }
+  }
+}

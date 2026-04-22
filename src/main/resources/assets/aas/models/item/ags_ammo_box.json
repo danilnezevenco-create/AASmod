@@ -1,0 +1,39 @@
+{
+	"credit": "Made with Blockbench",
+	"parent": "block/block",
+	"textures": {
+		"0": "aas:item/ags_ammo_box",
+		"particle": "aas:item/ags_ammo_box"
+	},
+	"elements": [
+		{
+			"from": [4, 0, 7],
+			"to": [14, 9, 11],
+			"rotation": {"angle": 0, "axis": "y", "origin": [6, 0, 9]},
+			"faces": {
+				"north": {"uv": [7.1875, 3.5, 9.6875, 5.125], "texture": "#0"},
+				"east": {"uv": [6.3125, 3.1875, 7.3125, 5.4375], "texture": "#0"},
+				"south": {"uv": [6.3125, 3.4375, 8.8125, 5.125], "texture": "#0"},
+				"west": {"uv": [6.5625, 3.0625, 7.625, 5.3125], "texture": "#0"},
+				"up": {"uv": [6.875, 3.8125, 9.375, 4.8125], "texture": "#0"},
+				"down": {"uv": [0, 0, 2.5, 1], "texture": "#0"}
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"translation": [0, 6.75, 0]
+		},
+		"firstperson_righthand": {
+			"translation": [0, 5.75, 0]
+		}
+	},
+	"groups": [
+		{
+			"name": "group",
+			"origin": [8, 8, 8],
+			"color": 0,
+			"children": [0]
+		}
+	]
+}

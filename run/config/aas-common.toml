@@ -1,0 +1,68 @@
+#Enable knockout mechanic
+enableKnockout = true
+#Registry name of the item used to revive (e.g. 'minecraft:paper')
+reviveItem = "minecraft:paper"
+#Time in seconds where dying again results in instant death
+#Range: 0 ~ 600
+reviveCooldownSeconds = 120
+
+["Gameplay Settings"]
+	#Grenade destruction
+	agsProjectileDestruction = true
+	#Ammo explosion destruction
+	ammoStackDestruction = true
+	#Digging speed multiplier
+	#Range: 0.1 ~ 10.0
+	diggingSpeedMultiplier = 1.0
+	#Prevent players from breaking blocks
+	preventBlockBreaking = true
+	#Prevent item dropping in survival when game is started
+	preventAllItemDrops = true
+	#Cost for kit resupply
+	#Range: 0 ~ 1000
+	hubResupplyCost = 15
+	#Play siren at 50 tickets
+	lowTicketsSiren = true
+	#Does spawning at FOB cost materials?
+	hubSpawnCostsMaterials = true
+	#Material cost to spawn at FOB
+	#Range: 0 ~ 1000
+	hubSpawnMaterialCost = 20
+	#Automatically give radio to new Squad Leaders
+	autoGiveSlRadio = false
+	#Does placing a FOB require a Supply Crate nearby? (Consumes the crate, crate gives 0 mats to FOB)
+	hubPlacementRequiresCrate = true
+	#Give regeneration near Main Base?
+	mainSupplyHealing = true
+	#Radius for Main Base healing
+	#Range: 1 ~ 50
+	mainSupplyHealRadius = 5
+	#Allow players to break walls and barbed wire even if PREVENT_BLOCK_BREAKING is true
+	allowBreakingDefenses = true
+
+["Balance Settings"]
+	#Range: 0 ~ 10000
+	minHubDistance = 150
+	#Range: 0 ~ 10000
+	minRallyPointDistance = 150
+	#Range: 1 ~ 100
+	maxHubsPerTeam = 8
+	#Range: 5 ~ 200
+	hubBlockRadius = 40
+	#Range: 5 ~ 200
+	rallyBlockRadius = 40
+	#Range: 1 ~ 128
+	hubSoundRadius = 15
+	#Range: 10 ~ 200
+	hubBuildRadius = 50
+	#Range: 5 ~ 200
+	crateBuildRadius = 50
+	#Range: 1 ~ 20
+	hubBlockEnemyCount = 3
+	#Range: 1 ~ 20
+	rallyBlockEnemyCount = 1
+
+["Faction Settings"]
+	blueTeamCustomName = "BLUEFOR"
+	redTeamCustomName = "REDFOR"
+

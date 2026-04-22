@@ -1,0 +1,41 @@
+{
+	"parent": "block/block",
+	"textures": {
+		"0": "aas:block/ammo_bag_texture",
+		"particle": "aas:block/ammo_bag_texture"
+	},
+	"elements": [
+		{
+			"from": [7, 0, 2],
+			"to": [10, 6, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 0, 7]},
+			"faces": {
+				"north": {"uv": [0, 6, 1.5, 9], "texture": "#0"},
+				"east": {"uv": [0, 0, 5, 3], "texture": "#0"},
+				"south": {"uv": [1.5, 6, 3, 9], "texture": "#0"},
+				"west": {"uv": [0, 3, 5, 6], "texture": "#0"},
+				"up": {"uv": [6.5, 5, 5, 0], "texture": "#0"},
+				"down": {"uv": [6.5, 5, 5, 10], "texture": "#0"}
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation": [0, 90, 0],
+			"translation": [0, 6.5, 0]
+		},
+		"firstperson_righthand": {
+			"rotation": [0, 90, 0],
+			"translation": [0, 7.25, 0]
+		}
+	},
+	"groups": [
+		{
+			"name": "group",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0]
+		}
+	]
+}

@@ -1,0 +1,23 @@
+{
+  "variants": {
+    "facing=north,mags=1": { "model": "aas:block/ags_ammo_1" },
+    "facing=east,mags=1":  { "model": "aas:block/ags_ammo_1", "y": 90 },
+    "facing=south,mags=1": { "model": "aas:block/ags_ammo_1", "y": 180 },
+    "facing=west,mags=1":  { "model": "aas:block/ags_ammo_1", "y": 270 },
+
+    "facing=north,mags=2": { "model": "aas:block/ags_ammo_2" },
+    "facing=east,mags=2":  { "model": "aas:block/ags_ammo_2", "y": 90 },
+    "facing=south,mags=2": { "model": "aas:block/ags_ammo_2", "y": 180 },
+    "facing=west,mags=2":  { "model": "aas:block/ags_ammo_2", "y": 270 },
+
+    "facing=north,mags=3": { "model": "aas:block/ags_ammo_3" },
+    "facing=east,mags=3":  { "model": "aas:block/ags_ammo_3", "y": 90 },
+    "facing=south,mags=3": { "model": "aas:block/ags_ammo_3", "y": 180 },
+    "facing=west,mags=3":  { "model": "aas:block/ags_ammo_3", "y": 270 },
+
+    "facing=north,mags=4": { "model": "aas:block/ags_ammo_4" },
+    "facing=east,mags=4":  { "model": "aas:block/ags_ammo_4", "y": 90 },
+    "facing=south,mags=4": { "model": "aas:block/ags_ammo_4", "y": 180 },
+    "facing=west,mags=4":  { "model": "aas:block/ags_ammo_4", "y": 270 }
+  }
+}

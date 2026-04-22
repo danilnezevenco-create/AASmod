@@ -1,0 +1,43 @@
+{
+  "variants": {
+    "facing=north,shells=1": { "model": "aas:block/mortar_shell_1" },
+    "facing=east,shells=1":  { "model": "aas:block/mortar_shell_1", "y": 90 },
+    "facing=south,shells=1": { "model": "aas:block/mortar_shell_1", "y": 180 },
+    "facing=west,shells=1":  { "model": "aas:block/mortar_shell_1", "y": 270 },
+
+    "facing=north,shells=2": { "model": "aas:block/mortar_shell_2" },
+    "facing=east,shells=2":  { "model": "aas:block/mortar_shell_2", "y": 90 },
+    "facing=south,shells=2": { "model": "aas:block/mortar_shell_2", "y": 180 },
+    "facing=west,shells=2":  { "model": "aas:block/mortar_shell_2", "y": 270 },
+
+    "facing=north,shells=3": { "model": "aas:block/mortar_shell_3" },
+    "facing=east,shells=3":  { "model": "aas:block/mortar_shell_3", "y": 90 },
+    "facing=south,shells=3": { "model": "aas:block/mortar_shell_3", "y": 180 },
+    "facing=west,shells=3":  { "model": "aas:block/mortar_shell_3", "y": 270 },
+
+    "facing=north,shells=4": { "model": "aas:block/mortar_shell_4" },
+    "facing=east,shells=4":  { "model": "aas:block/mortar_shell_4", "y": 90 },
+    "facing=south,shells=4": { "model": "aas:block/mortar_shell_4", "y": 180 },
+    "facing=west,shells=4":  { "model": "aas:block/mortar_shell_4", "y": 270 },
+
+    "facing=north,shells=5": { "model": "aas:block/mortar_shell_5" },
+    "facing=east,shells=5":  { "model": "aas:block/mortar_shell_5", "y": 90 },
+    "facing=south,shells=5": { "model": "aas:block/mortar_shell_5", "y": 180 },
+    "facing=west,shells=5":  { "model": "aas:block/mortar_shell_5", "y": 270 },
+
+    "facing=north,shells=6": { "model": "aas:block/mortar_shell_6" },
+    "facing=east,shells=6":  { "model": "aas:block/mortar_shell_6", "y": 90 },
+    "facing=south,shells=6": { "model": "aas:block/mortar_shell_6", "y": 180 },
+    "facing=west,shells=6":  { "model": "aas:block/mortar_shell_6", "y": 270 },
+
+    "facing=north,shells=7": { "model": "aas:block/mortar_shell_7" },
+    "facing=east,shells=7":  { "model": "aas:block/mortar_shell_7", "y": 90 },
+    "facing=south,shells=7": { "model": "aas:block/mortar_shell_7", "y": 180 },
+    "facing=west,shells=7":  { "model": "aas:block/mortar_shell_7", "y": 270 },
+
+    "facing=north,shells=8": { "model": "aas:block/mortar_shell_8" },
+    "facing=east,shells=8":  { "model": "aas:block/mortar_shell_8", "y": 90 },
+    "facing=south,shells=8": { "model": "aas:block/mortar_shell_8", "y": 180 },
+    "facing=west,shells=8":  { "model": "aas:block/mortar_shell_8", "y": 270 }
+  }
+}

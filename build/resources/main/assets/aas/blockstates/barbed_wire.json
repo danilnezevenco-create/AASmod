@@ -1,0 +1,23 @@
+{
+  "variants": {
+    "constructed=false,facing=north,valid=true": { "model": "aas:block/barbed_wire_ghost" },
+    "constructed=false,facing=east,valid=true":  { "model": "aas:block/barbed_wire_ghost", "y": 90 },
+    "constructed=false,facing=south,valid=true": { "model": "aas:block/barbed_wire_ghost", "y": 180 },
+    "constructed=false,facing=west,valid=true":  { "model": "aas:block/barbed_wire_ghost", "y": 270 },
+
+    "constructed=false,facing=north,valid=false": { "model": "aas:block/barbed_wire_invalid" },
+    "constructed=false,facing=east,valid=false":  { "model": "aas:block/barbed_wire_invalid", "y": 90 },
+    "constructed=false,facing=south,valid=false": { "model": "aas:block/barbed_wire_invalid", "y": 180 },
+    "constructed=false,facing=west,valid=false":  { "model": "aas:block/barbed_wire_invalid", "y": 270 },
+
+    "constructed=true,facing=north,valid=true":  { "model": "aas:block/barbed_wire_solid" },
+    "constructed=true,facing=east,valid=true":   { "model": "aas:block/barbed_wire_solid", "y": 90 },
+    "constructed=true,facing=south,valid=true":  { "model": "aas:block/barbed_wire_solid", "y": 180 },
+    "constructed=true,facing=west,valid=true":   { "model": "aas:block/barbed_wire_solid", "y": 270 },
+
+    "constructed=true,facing=north,valid=false":  { "model": "aas:block/barbed_wire_solid" },
+    "constructed=true,facing=east,valid=false":   { "model": "aas:block/barbed_wire_solid", "y": 90 },
+    "constructed=true,facing=south,valid=false":  { "model": "aas:block/barbed_wire_solid", "y": 180 },
+    "constructed=true,facing=west,valid=false":   { "model": "aas:block/barbed_wire_solid", "y": 270 }
+  }
+}

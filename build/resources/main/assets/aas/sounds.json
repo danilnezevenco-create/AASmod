@@ -1,0 +1,74 @@
+{
+  "hub_idle": {
+    "category": "block",
+    "subtitle": "subtitles.aas.hub_idle",
+    "sounds": [
+      {
+        "name": "aas:hub_idle",
+        "stream": true
+      }
+    ]
+  },
+  "m2_load": {
+    "category": "player",
+    "subtitle": "subtitles.aas.m2_load",
+    "sounds": [
+      {
+        "name": "aas:m2_load",
+        "stream": false
+      }
+    ]
+  },
+  "m2_unload": {
+    "category": "player",
+    "subtitle": "subtitles.aas.m2_unload",
+    "sounds": [
+      {
+        "name": "aas:m2_unload",
+        "stream": false
+      }
+    ]
+  },
+  "ags_shoot": {
+    "category": "player",
+    "subtitle": "subtitles.aas.ags_shoot",
+    "sounds": [
+      {
+        "name": "aas:ags_shoot",
+        "stream": false
+      }
+    ]
+  },
+  "m2_shoot": {
+    "category": "player",
+    "subtitle": "subtitles.aas.m2_shoot",
+    "sounds": [
+      {
+        "name": "aas:m2_shoot",
+        "stream": false
+      }
+    ]
+  },
+  "siren_alarm": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "aas:siren_alarm",
+        "stream": false
+      }
+    ]
+  },
+  "help_scream": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "aas:help_scream",
+        "stream": false
+      }
+    ]
+  },
+  "player_downed": {
+    "category": "player",
+    "sounds": ["aas:player_downed"]
+  }
+}

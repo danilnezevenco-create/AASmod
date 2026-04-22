@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "constructed=false": {
+      "model": "aas:block/hub_base"
+    },
+    "constructed=true": {
+      "model": "aas:block/hub_solid"
+    }
+  }
+}

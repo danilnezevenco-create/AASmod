@@ -1,0 +1,23 @@
+{
+  "variants": {
+    "facing=north,stack=1": { "model": "aas:block/tow_shell_1" },
+    "facing=east,stack=1":  { "model": "aas:block/tow_shell_1", "y": 90 },
+    "facing=south,stack=1": { "model": "aas:block/tow_shell_1", "y": 180 },
+    "facing=west,stack=1":  { "model": "aas:block/tow_shell_1", "y": 270 },
+
+    "facing=north,stack=2": { "model": "aas:block/tow_shell_2" },
+    "facing=east,stack=2":  { "model": "aas:block/tow_shell_2", "y": 90 },
+    "facing=south,stack=2": { "model": "aas:block/tow_shell_2", "y": 180 },
+    "facing=west,stack=2":  { "model": "aas:block/tow_shell_2", "y": 270 },
+
+    "facing=north,stack=3": { "model": "aas:block/tow_shell_3" },
+    "facing=east,stack=3":  { "model": "aas:block/tow_shell_3", "y": 90 },
+    "facing=south,stack=3": { "model": "aas:block/tow_shell_3", "y": 180 },
+    "facing=west,stack=3":  { "model": "aas:block/tow_shell_3", "y": 270 },
+
+    "facing=north,stack=4": { "model": "aas:block/tow_shell_4" },
+    "facing=east,stack=4":  { "model": "aas:block/tow_shell_4", "y": 90 },
+    "facing=south,stack=4": { "model": "aas:block/tow_shell_4", "y": 180 },
+    "facing=west,stack=4":  { "model": "aas:block/tow_shell_4", "y": 270 }
+  }
+}

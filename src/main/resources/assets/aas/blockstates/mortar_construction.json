@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,valid=true":  { "model": "aas:block/mortar_ghost" },
+    "facing=east,valid=true":   { "model": "aas:block/mortar_ghost", "y": 90 },
+    "facing=south,valid=true":  { "model": "aas:block/mortar_ghost", "y": 180 },
+    "facing=west,valid=true":   { "model": "aas:block/mortar_ghost", "y": 270 },
+    "facing=north,valid=false": { "model": "aas:block/mortar_invalid" },
+    "facing=east,valid=false":  { "model": "aas:block/mortar_invalid", "y": 90 },
+    "facing=south,valid=false": { "model": "aas:block/mortar_invalid", "y": 180 },
+    "facing=west,valid=false":  { "model": "aas:block/mortar_invalid", "y": 270 }
+  }
+}

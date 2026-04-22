@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Specification-Title: Advance And Secure
+Specification-Vendor: danilfb123
+Specification-Version: 1
+Implementation-Title: AAS
+Implementation-Version: 1.0.0
+Implementation-Vendor: danilfb123
+Implementation-Timestamp: 2026-04-22T11:28:18+0300
+MixinConfigs: aas.mixins.json
+

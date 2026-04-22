@@ -1,0 +1,34 @@
+{
+  "mappings": {
+    "com/example/aas/mixin/PlayerModelMixin": {
+      "setModelProperties": "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;m_117818_(Lnet/minecraft/client/player/AbstractClientPlayer;)V"
+    },
+    "com/example/aas/mixin/MouseSensitivityMixin": {
+      "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;": "Lnet/minecraft/client/OptionInstance;m_231551_()Ljava/lang/Object;",
+      "turnPlayer": "Lnet/minecraft/client/MouseHandler;m_91523_()V"
+    },
+    "com/example/aas/mixin/FirstPersonArmFixMixin": {
+      "renderArmWithItem": "Lnet/minecraft/client/renderer/ItemInHandRenderer;m_109371_(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+    },
+    "com/example/aas/mixin/PlayerSkinMixin": {
+      "getSkinTextureLocation": "Lnet/minecraft/client/player/AbstractClientPlayer;m_108560_()Lnet/minecraft/resources/ResourceLocation;"
+    }
+  },
+  "data": {
+    "searge": {
+      "com/example/aas/mixin/PlayerModelMixin": {
+        "setModelProperties": "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;m_117818_(Lnet/minecraft/client/player/AbstractClientPlayer;)V"
+      },
+      "com/example/aas/mixin/MouseSensitivityMixin": {
+        "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;": "Lnet/minecraft/client/OptionInstance;m_231551_()Ljava/lang/Object;",
+        "turnPlayer": "Lnet/minecraft/client/MouseHandler;m_91523_()V"
+      },
+      "com/example/aas/mixin/FirstPersonArmFixMixin": {
+        "renderArmWithItem": "Lnet/minecraft/client/renderer/ItemInHandRenderer;m_109371_(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+      },
+      "com/example/aas/mixin/PlayerSkinMixin": {
+        "getSkinTextureLocation": "Lnet/minecraft/client/player/AbstractClientPlayer;m_108560_()Lnet/minecraft/resources/ResourceLocation;"
+      }
+    }
+  }
+}

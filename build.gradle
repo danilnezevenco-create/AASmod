@@ -1,0 +1,111 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.0.+', changing: true
+        classpath 'org.spongepowered:mixingradle:0.7.+'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'org.spongepowered.mixin'
+
+group = 'com.example' // Замени на свой ID группы из mods.toml
+version = '1.0.0'
+archivesBaseName = 'aas'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+minecraft {
+// Версия маппингов (official для 1.20.1 — это стандарт)
+    mappings channel: 'official', version: '1.20.1'
+// Если у тебя есть файл access transformer:
+// accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.config', 'aas.mixins.json'
+            mods {
+                aas {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.config', 'aas.mixins.json'
+            mods {
+                aas {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+
+}
+
+// Настройка Mixin
+mixin {
+    add sourceSets.main, "aas.refmap.json"
+    config "aas.mixins.json"
+}
+
+repositories {
+    maven { url 'https://repo.spongepowered.org/repository/maven-public/' }
+    maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+    mavenCentral()
+}
+
+dependencies {
+// Forge
+    minecraft "net.minecraftforge:forge:1.20.1-47.4.10"
+// GeckoLib
+    implementation fg.deobf('software.bernie.geckolib:geckolib-forge-1.20.1:4.4.4')
+
+// Simple Voice Chat API (файл должен лежать в папке libs внутри проекта)
+    compileOnly files('libs/voicechat-api-2.5.0.jar')
+
+// Mixin Processor
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+}
+
+// Важно для правильной сборки мода: прописываем Mixin в манифест JAR файла
+jar {
+    manifest {
+        attributes([
+                "Specification-Title"     : "Advance And Secure",
+                "Specification-Vendor"    : "danilfb123",
+                "Specification-Version"   : "1",
+                "Implementation-Title"    : project.name,
+                "Implementation-Version"  : project.version,
+                "Implementation-Vendor"   : "danilfb123",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "MixinConfigs": "aas.mixins.json" // БЕЗ ЭТОГО MIXINS НЕ БУДУТ РАБОТАТЬ В СБОРКЕ
+        ])
+    }
+}
+
+// Исправление дубликатов ресурсов (для корректной работы с GeckoLib и Mixins)
+tasks.withType(ProcessResources).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Настройка кодировки
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// Перенос ресурсов из основной папки (для IntelliJ IDEA)
+sourceSets.main.resources { srcDir 'src/generated/resources' }

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "aas:block/ammo_bag" },
+    "facing=east":  { "model": "aas:block/ammo_bag", "y": 90 },
+    "facing=south": { "model": "aas:block/ammo_bag", "y": 180 },
+    "facing=west":  { "model": "aas:block/ammo_bag", "y": 270 }
+  }
+}

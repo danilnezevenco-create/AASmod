@@ -1,0 +1,57 @@
+{
+	"parent": "aas:block/blue_rally",
+	"textures": {
+		"particle": "aas:block/red_rally",
+		"0": "aas:block/red_rally"
+	}
+}
+	"elements": [
+		{
+			"from": [0, 0, 0],
+			"to": [16, 6, 16],
+			"faces": {
+				"north": {"uv": [4, 14.5, 8, 16], "texture": "#0"},
+				"east": {"uv": [0, 14.5, 4, 16], "texture": "#0"},
+				"south": {"uv": [12, 14.5, 16, 16], "texture": "#0"},
+				"west": {"uv": [8, 14.5, 12, 16], "texture": "#0"},
+				"up": {"uv": [8, 14.5, 4, 10.5], "texture": "#0"},
+				"down": {"uv": [12, 10.5, 8, 14.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [11, 6, 4],
+			"to": [15, 8, 6],
+			"rotation": {"angle": 0, "axis": "y", "origin": [16, 0, 4]},
+			"faces": {
+				"north": {"uv": [13.5, 8, 14.5, 8.5], "texture": "#0"},
+				"east": {"uv": [13, 8, 13.5, 8.5], "texture": "#0"},
+				"south": {"uv": [15, 8, 16, 8.5], "texture": "#0"},
+				"west": {"uv": [14.5, 8, 15, 8.5], "texture": "#0"},
+				"up": {"uv": [14.5, 8, 13.5, 7.5], "texture": "#0"},
+				"down": {"uv": [15.5, 7.5, 14.5, 8], "texture": "#0"}
+			}
+		},
+		{
+			"from": [4, 6, 3],
+			"to": [11, 9, 8],
+			"rotation": {"angle": 0, "axis": "y", "origin": [4, 6, 4]},
+			"faces": {
+				"north": {"uv": [11.25, 9.75, 13, 10.5], "texture": "#0"},
+				"east": {"uv": [10, 9.75, 11.25, 10.5], "texture": "#0"},
+				"south": {"uv": [14.25, 9.75, 16, 10.5], "texture": "#0"},
+				"west": {"uv": [13, 9.75, 14.25, 10.5], "texture": "#0"},
+				"up": {"uv": [13, 9.75, 11.25, 8.5], "texture": "#0"},
+				"down": {"uv": [14.75, 8.5, 13, 9.75], "texture": "#0"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "Rally",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1, 2]
+		}
+	]
+}
