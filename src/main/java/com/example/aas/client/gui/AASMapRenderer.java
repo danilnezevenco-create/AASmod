@@ -2,7 +2,7 @@
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientData;
-import com.example.aas.client.MapPlayerInfo;
+import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.world.AASWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -12,12 +12,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class AASMapRenderer implements AutoCloseable {
 
@@ -501,11 +499,26 @@ public class AASMapRenderer implements AutoCloseable {
         }
         return "NEUTRAL";
     }
+    // В файле AASMapRenderer.java
+
     private void renderTacticalMarkers(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
         String myTeam = getPlayerTeamStrict(mc);
+        long currentTime = mc.level.getGameTime();
+
+        // Стандартное время жизни метки, которое мы задали в пакете (3600 тиков = 3 минуты)
+        float totalLifetime = 3600.0f;
 
         for (AASWorldData.MapMarker m : ClientData.activeMarkers) {
             if (!m.team.equalsIgnoreCase(myTeam)) continue;
+
+            // Вычисляем прозрачность
+            long timeLeft = m.expiryTick - currentTime;
+
+            // Если время вышло, пропускаем (хотя сервер должен их удалять, это для плавности)
+            if (timeLeft <= 0) continue;
+
+            // Коэффициент прозрачности: от 1.0 (новая) до 0.0 (исчезающая)
+            float alpha = Mth.clamp((float)timeLeft / totalLifetime, 0.0f, 1.0f);
 
             double dx = (m.pos.getX() - cx) / bpp;
             double dy = (m.pos.getZ() - cz) / bpp;
@@ -520,12 +533,16 @@ public class AASMapRenderer implements AutoCloseable {
             gui.pose().pushPose();
             gui.pose().translate(sx, sy, 120);
 
-            // ВАЖНО: Устанавливаем чисто белый цвет, чтобы рисовались твои оригинальные текстуры
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            // Включаем смешивание цветов (Blend) и устанавливаем прозрачность
             RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha); // alpha меняется со временем
 
-            // Рендер иконки (размер 16x16, можешь поменять на 24x24 если мелко)
+            // Рендер иконки
             gui.blit(icon, -8, -8, 16, 16, 0, 0, 32, 32, 32, 32);
+
+            // Сбрасываем цвет обратно в 1.0, чтобы не покрасить другие элементы интерфейса
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
             gui.pose().popPose();
             setFilter(icon, false);

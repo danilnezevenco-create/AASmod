@@ -1614,6 +1614,8 @@ public class M2ConstructionBlockEntity extends BlockEntity {
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
+                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
 
@@ -2355,6 +2357,14 @@ import com.example.aas.events.GameLogicEvents;
 
 public class RallyPointBlock extends BaseEntityBlock {
 
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return createTickerHelper(type, ModBlocks.RALLY_BE.get(), (lvl, pos, st, be) -> {
+            if (lvl.isClientSide) be.handleSoundClient();
+        });
+    }
+
     public static final VoxelShape SHAPE = Shapes.block();
 
     public RallyPointBlock() {
@@ -2470,6 +2480,30 @@ public class RallyPointBlockEntity extends BlockEntity {
             data.setDirty();
             PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
         }
+    }
+
+    private Object clientSoundRef = null;
+
+    public void handleSoundClient() {
+        net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
+            if (this.clientSoundRef == null) {
+                com.example.aas.client.sound.RallyLoopingSound sound = new com.example.aas.client.sound.RallyLoopingSound(this);
+                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(sound);
+                this.clientSoundRef = sound;
+            }
+        });
+    }
+
+    @Override
+    public void setRemoved() {
+        if (this.level != null && this.level.isClientSide && clientSoundRef != null) {
+            // РџСЂРёРІРѕРґРёРј С‚РёРї Рє РЅР°С€РµРјСѓ РєР»Р°СЃСЃСѓ Рё РІС‹Р·С‹РІР°РµРј РїСѓР±Р»РёС‡РЅС‹Р№ РјРµС‚РѕРґ РѕСЃС‚Р°РЅРѕРІРєРё
+            if (clientSoundRef instanceof com.example.aas.client.sound.RallyLoopingSound sound) {
+                sound.stopSound();
+            }
+            clientSoundRef = null;
+        }
+        super.setRemoved();
     }
 
     @Override
@@ -3631,7 +3665,7 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\gui\AA
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientData;
-import com.example.aas.client.MapPlayerInfo;
+import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.world.AASWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -3641,12 +3675,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class AASMapRenderer implements AutoCloseable {
 
@@ -3850,11 +3882,13 @@ public class AASMapRenderer implements AutoCloseable {
 
             // 2. Р›РѕРіРёРєР° РќРћРљРђ (РљСЂРµСЃС‚РёРє)
             if (info.isDowned) {
-                if (amIMedic && (currentTime - info.lastShoutTime < 3000)) {
+                // РўР•РџР•Р Р¬: РџСЂРѕРІРµСЂРєР° amIMedic СѓРґР°Р»РµРЅР°.
+                // Р•СЃР»Рё РёРіСЂРѕРє РІ РЅРѕРєРµ Рё РєСЂРёС‡Р°Р» РїРѕСЃР»РµРґРЅРёРµ 3 СЃРµРєСѓРЅРґС‹ вЂ” РµРіРѕ РІРёРґСЏС‚ Р’РЎР• СЃРѕСЋР·РЅРёРєРё.
+                if (currentTime - info.lastShoutTime < 3000) {
                     RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                     gui.blit(ICON_PLUS, sx - 4, sy - 4, 8, 8, 0, 0, 16, 16, 16, 16);
                 }
-                continue;
+                continue; // РќРµ СЂРёСЃСѓРµРј РѕР±С‹С‡РЅС‹Р№ РєСЂСѓР¶РѕРє РґР»СЏ С‚РµС…, РєС‚Рѕ РІ РЅРѕРєРµ
             }
 
             // 3. РћС‚СЂРёСЃРѕРІРєР° РљР РЈР–РљРђ (РґР»СЏ РІСЃРµС… РєСЂРѕРјРµ СЃР°РјРѕРіРѕ СЃРµР±СЏ)
@@ -4128,11 +4162,26 @@ public class AASMapRenderer implements AutoCloseable {
         }
         return "NEUTRAL";
     }
+    // Р’ С„Р°Р№Р»Рµ AASMapRenderer.java
+
     private void renderTacticalMarkers(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
         String myTeam = getPlayerTeamStrict(mc);
+        long currentTime = mc.level.getGameTime();
+
+        // РЎС‚Р°РЅРґР°СЂС‚РЅРѕРµ РІСЂРµРјСЏ Р¶РёР·РЅРё РјРµС‚РєРё, РєРѕС‚РѕСЂРѕРµ РјС‹ Р·Р°РґР°Р»Рё РІ РїР°РєРµС‚Рµ (3600 С‚РёРєРѕРІ = 3 РјРёРЅСѓС‚С‹)
+        float totalLifetime = 3600.0f;
 
         for (AASWorldData.MapMarker m : ClientData.activeMarkers) {
             if (!m.team.equalsIgnoreCase(myTeam)) continue;
+
+            // Р’С‹С‡РёСЃР»СЏРµРј РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ
+            long timeLeft = m.expiryTick - currentTime;
+
+            // Р•СЃР»Рё РІСЂРµРјСЏ РІС‹С€Р»Рѕ, РїСЂРѕРїСѓСЃРєР°РµРј (С…РѕС‚СЏ СЃРµСЂРІРµСЂ РґРѕР»Р¶РµРЅ РёС… СѓРґР°Р»СЏС‚СЊ, СЌС‚Рѕ РґР»СЏ РїР»Р°РІРЅРѕСЃС‚Рё)
+            if (timeLeft <= 0) continue;
+
+            // РљРѕСЌС„С„РёС†РёРµРЅС‚ РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё: РѕС‚ 1.0 (РЅРѕРІР°СЏ) РґРѕ 0.0 (РёСЃС‡РµР·Р°СЋС‰Р°СЏ)
+            float alpha = Mth.clamp((float)timeLeft / totalLifetime, 0.0f, 1.0f);
 
             double dx = (m.pos.getX() - cx) / bpp;
             double dy = (m.pos.getZ() - cz) / bpp;
@@ -4147,12 +4196,16 @@ public class AASMapRenderer implements AutoCloseable {
             gui.pose().pushPose();
             gui.pose().translate(sx, sy, 120);
 
-            // Р’РђР–РќРћ: РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С‡РёСЃС‚Рѕ Р±РµР»С‹Р№ С†РІРµС‚, С‡С‚РѕР±С‹ СЂРёСЃРѕРІР°Р»РёСЃСЊ С‚РІРѕРё РѕСЂРёРіРёРЅР°Р»СЊРЅС‹Рµ С‚РµРєСЃС‚СѓСЂС‹
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            // Р’РєР»СЋС‡Р°РµРј СЃРјРµС€РёРІР°РЅРёРµ С†РІРµС‚РѕРІ (Blend) Рё СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ
             RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha); // alpha РјРµРЅСЏРµС‚СЃСЏ СЃРѕ РІСЂРµРјРµРЅРµРј
 
-            // Р РµРЅРґРµСЂ РёРєРѕРЅРєРё (СЂР°Р·РјРµСЂ 16x16, РјРѕР¶РµС€СЊ РїРѕРјРµРЅСЏС‚СЊ РЅР° 24x24 РµСЃР»Рё РјРµР»РєРѕ)
+            // Р РµРЅРґРµСЂ РёРєРѕРЅРєРё
             gui.blit(icon, -8, -8, 16, 16, 0, 0, 32, 32, 32, 32);
+
+            // РЎР±СЂР°СЃС‹РІР°РµРј С†РІРµС‚ РѕР±СЂР°С‚РЅРѕ РІ 1.0, С‡С‚РѕР±С‹ РЅРµ РїРѕРєСЂР°СЃРёС‚СЊ РґСЂСѓРіРёРµ СЌР»РµРјРµРЅС‚С‹ РёРЅС‚РµСЂС„РµР№СЃР°
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
             gui.pose().popPose();
             setFilter(icon, false);
@@ -4407,6 +4460,7 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\gui\De
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientPlacementHandler;
+import com.example.aas.item.RallyItem; // Р”РѕР±Р°РІР»РµРЅ РёРјРїРѕСЂС‚
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketRadioAction;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -4417,6 +4471,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack; // Р”РѕР±Р°РІР»РµРЅ РёРјРїРѕСЂС‚
+import software.bernie.geckolib.animatable.GeoItem;
 
 public class DefenseRadialScreen extends Screen {
 
@@ -4432,6 +4488,36 @@ public class DefenseRadialScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    private boolean isSwitching = false;
+
+    @Override
+    protected void init() {
+        super.init();
+        // РњС‹ РЅРµ РІС‹Р·С‹РІР°РµРј deploy СЃРЅРѕРІР°, РѕРЅР° Рё С‚Р°Рє РІ СЂСѓРєР°С…,
+        // РЅРѕ СЌС‚Рѕ РЅСѓР¶РЅРѕ, С‡С‚РѕР±С‹ GeckoLib Р·РЅР°Р», С‡С‚Рѕ СЌС‚Рѕ РјРµРЅСЋ С‚РѕР¶Рµ "РІР»Р°РґРµРµС‚" СЂР°С†РёРµР№
+        triggerRadioAnim("deploy");
+    }
+
+    @Override
+    public void onClose() {
+        // Р•СЃР»Рё РјС‹ РЅР°Р¶РёРјР°РµРј ESC РёР»Рё РІС‹Р±СЂР°Р»Рё РїРѕСЃС‚СЂРѕР№РєСѓ вЂ” СЃСЂР°Р±РѕС‚Р°РµС‚ СЌС‚Рѕ:
+        if (!isSwitching) {
+            triggerRadioAnim("close");
+        }
+        super.onClose();
+    }
+
+    private void triggerRadioAnim(String animName) {
+        if (this.minecraft.player != null) {
+            ItemStack stack = this.minecraft.player.getMainHandItem();
+            if (stack.getItem() instanceof RallyItem radio) {
+                long instanceId = stack.getOrCreateTag().getLong("GeckoLibID");
+                radio.triggerAnim(this.minecraft.player, instanceId, "RadioController", animName);
+            }
+        }
+    }
+
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -5366,6 +5452,12 @@ public class MapMarkerGridScreen extends Screen {
     private final int worldX, worldZ;
     private final Map<String, ResourceLocation> markers;
 
+    // РќР°СЃС‚СЂРѕР№РєРё СЃРµС‚РєРё
+    private static final int COLS = 4;
+    private static final int CELL_WIDTH = 90;  // РЁРёСЂРёРЅР° СЏС‡РµР№РєРё (Р±С‹Р»Рѕ 85)
+    private static final int CELL_HEIGHT = 90; // Р’С‹СЃРѕС‚Р° СЏС‡РµР№РєРё (Р±С‹Р»Рѕ 80)
+    private static final int BTN_WIDTH = 80;
+
     public MapMarkerGridScreen(int x, int z, String title, Map<String, ResourceLocation> markers) {
         super(Component.literal(title));
         this.worldX = x;
@@ -5375,20 +5467,24 @@ public class MapMarkerGridScreen extends Screen {
 
     @Override
     protected void init() {
-        int startX = (width - 340) / 2;
-        int startY = 50;
+        int totalWidth = COLS * CELL_WIDTH;
+        int startX = (this.width - totalWidth) / 2;
+        int startY = 40;
+
         int i = 0;
         for (String type : markers.keySet()) {
-            int row = i / 4;
-            int col = i % 4;
-            int x = startX + col * 85;
-            int y = startY + row * 80;
+            int row = i / COLS;
+            int col = i % COLS;
+            int x = startX + col * CELL_WIDTH + (CELL_WIDTH - BTN_WIDTH) / 2;
+            int y = startY + row * CELL_HEIGHT;
 
-            // РљРЅРѕРїРєР° РїРѕРґ РёРєРѕРЅРєРѕР№
+            // РљРЅРѕРїРєР° СЂР°СЃРїРѕР»РѕР¶РµРЅР° РЅРёР¶Рµ РёРєРѕРЅРєРё
             this.addRenderableWidget(Button.builder(Component.literal(type), b -> {
                 PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(worldX, worldZ, type));
+                // РџРѕСЃР»Рµ РЅР°Р¶Р°С‚РёСЏ РІРѕР·РІСЂР°С‰Р°РµРјСЃСЏ РІ РјРµРЅСЋ РѕС‚СЂСЏРґРѕРІ
                 this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
-            }).bounds(x, y + 35, 80, 20).build());
+            }).bounds(x, y + 45, BTN_WIDTH, 20).build());
+
             i++;
         }
     }
@@ -5398,22 +5494,35 @@ public class MapMarkerGridScreen extends Screen {
         this.renderBackground(gui);
         gui.drawCenteredString(font, title, width / 2, 15, 0xFFFFFF);
 
-        int i = 0;
-        int startX = (width - 340) / 2;
-        int startY = 50;
-        for (ResourceLocation icon : markers.values()) {
-            int row = i / 4;
-            int col = i % 4;
-            int x = startX + col * 85 + 24; // Р¦РµРЅС‚СЂРёСЂРѕРІР°РЅРёРµ 32px РёРєРѕРЅРєРё РІ 80px СЃР»РѕС‚Рµ
-            int y = startY + row * 80;
+        int totalWidth = COLS * CELL_WIDTH;
+        int startX = (this.width - totalWidth) / 2;
+        int startY = 40;
 
-            RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(1, 1, 1, 1);
-            // Р РµРЅРґРµСЂ РёРєРѕРЅРєРё 32x32
-            gui.blit(icon, x, y, 0, 0, 32, 32, 32, 32);
+        // Р’РђР–РќРћ: РЎР±СЂР°СЃС‹РІР°РµРј С†РІРµС‚ РІ С‡РёСЃС‚Рѕ Р±РµР»С‹Р№, С‡С‚РѕР±С‹ РёРєРѕРЅРєРё РЅРµ Р±С‹Р»Рё РєСЂР°СЃРЅС‹РјРё
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.enableBlend();
+
+        int i = 0;
+        for (ResourceLocation icon : markers.values()) {
+            int row = i / COLS;
+            int col = i % COLS;
+
+            // Р¦РµРЅС‚СЂРёСЂСѓРµРј РёРєРѕРЅРєСѓ 32x32 РІРЅСѓС‚СЂРё CELL_WIDTH
+            int iconX = startX + col * CELL_WIDTH + (CELL_WIDTH - 32) / 2;
+            int iconY = startY + row * CELL_HEIGHT + 5;
+
+            // Р РёСЃСѓРµРј РёРєРѕРЅРєСѓ
+            gui.blit(icon, iconX, iconY, 0, 0, 32, 32, 32, 32);
             i++;
         }
+
+        // Р РёСЃСѓРµРј РєРЅРѕРїРєРё (СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РјРµС‚РѕРґ)
         super.render(gui, mx, my, pt);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 }
 ==========================================
@@ -5620,6 +5729,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import com.example.aas.item.RallyItem;
+import software.bernie.geckolib.animatable.GeoItem;
 
 public class RadioRadialScreen extends Screen {
 
@@ -5633,6 +5744,37 @@ public class RadioRadialScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    // Р’РЅСѓС‚СЂРё РєР»Р°СЃСЃР° RadioRadialScreen
+
+    private boolean isSwitching = false; // Р¤Р»Р°Рі: РїРµСЂРµС…РѕРґРёРј Р»Рё РјС‹ РІ РґСЂСѓРіРѕРµ РјРµРЅСЋ
+
+    @Override
+    protected void init() {
+        super.init();
+        triggerRadioAnim("deploy"); // Р”РѕСЃС‚Р°С‚СЊ СЂР°С†РёСЋ
+    }
+
+    @Override
+    public void onClose() {
+        if (!isSwitching) {
+            triggerRadioAnim("close"); // РЈР±СЂР°С‚СЊ СЂР°С†РёСЋ, С‚РѕР»СЊРєРѕ РµСЃР»Рё Р·Р°РєСЂС‹РІР°РµРј СЃРѕРІСЃРµРј
+        }
+        super.onClose();
+    }
+
+    private void triggerRadioAnim(String animName) {
+        if (this.minecraft.player != null) {
+            ItemStack stack = this.minecraft.player.getMainHandItem();
+            if (stack.getItem() instanceof RallyItem radio) {
+                // РСЃРїРѕР»СЊР·СѓРµРј С‚РѕС‚ Р¶Рµ СЃРїРѕСЃРѕР± РїРѕР»СѓС‡РµРЅРёСЏ ID, РєРѕС‚РѕСЂС‹Р№ РјС‹ С„РёРєСЃРёР»Рё СЂР°РЅРµРµ
+                long instanceId = stack.getOrCreateTag().getLong("GeckoLibID");
+                radio.triggerAnim(this.minecraft.player, instanceId, "RadioController", animName);
+            }
+        }
+    }
+
+
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -5749,15 +5891,14 @@ public class RadioRadialScreen extends Screen {
                     PacketHandler.INSTANCE.sendToServer(new PacketRadioAction(0));
                     this.onClose();
                 }
-                else if (action == 1) {
-                    // Defenses -> РћРўРљР Р«Р’РђР•Рњ РќРћР’РћР• РњР•РќР® (РџР°РєРµС‚ РќР• С€Р»РµРј)
+                // Р’ mouseClicked РїСЂРё РїРµСЂРµС…РѕРґРµ РІ РїРѕРґРјРµРЅСЋ:
+                if (action == 1) { // Defense
+                    this.isSwitching = true;
                     Minecraft.getInstance().setScreen(new DefenseRadialScreen(this));
-                    // РќРµ РґРµР»Р°РµРј this.onClose(), setScreen СЃР°Рј Р·Р°РјРµРЅРёС‚ С‚РµРєСѓС‰РёР№ СЌРєСЂР°РЅ
                 }
-                else if (action == 2) {
-                    // Gun -> РћРўРљР Р«Р’РђР•Рњ РќРћР’РћР• РњР•РќР®
+                else if (action == 2) { // Static Gun
+                    this.isSwitching = true;
                     Minecraft.getInstance().setScreen(new StaticGunRadialScreen(this));
-                    // this РїРµСЂРµРґР°РµРј, С‡С‚РѕР±С‹ Р·РЅР°С‚СЊ, РєСѓРґР° РІРµСЂРЅСѓС‚СЊСЃСЏ РїСЂРё РЅР°Р¶Р°С‚РёРё "РќР°Р·Р°Рґ"
                 }
 
                 if (action != -1) return true;
@@ -6454,6 +6595,7 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\gui\St
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientPlacementHandler;
+import com.example.aas.item.RallyItem; // Р”РѕР±Р°РІР»РµРЅ РёРјРїРѕСЂС‚
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -6462,13 +6604,14 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack; // Р”РѕР±Р°РІР»РµРЅ РёРјРїРѕСЂС‚
+import software.bernie.geckolib.animatable.GeoItem;
 
 public class StaticGunRadialScreen extends Screen {
 
-    // === РР—РњР•РќР•РќРР• 1: РќРѕРІР°СЏ С‚РµРєСЃС‚СѓСЂР° ===
     private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("aas", "textures/gui/radial_sector_4.png");
-
     private final Screen parentScreen;
+    private boolean isSwitching = false;
 
     public StaticGunRadialScreen(Screen parent) {
         super(Component.literal("Static Guns"));
@@ -6477,6 +6620,30 @@ public class StaticGunRadialScreen extends Screen {
 
     @Override
     public boolean isPauseScreen() { return false; }
+
+    @Override
+    protected void init() {
+        super.init();
+        triggerRadioAnim("deploy");
+    }
+
+    @Override
+    public void onClose() {
+        if (!isSwitching) {
+            triggerRadioAnim("close");
+        }
+        super.onClose();
+    }
+
+    private void triggerRadioAnim(String animName) {
+        if (this.minecraft.player != null) {
+            ItemStack stack = this.minecraft.player.getMainHandItem();
+            if (stack.getItem() instanceof RallyItem radio) {
+                long instanceId = stack.getOrCreateTag().getLong("GeckoLibID");
+                radio.triggerAnim(this.minecraft.player, instanceId, "RadioController", animName);
+            }
+        }
+    }
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -7186,6 +7353,95 @@ public class AGS30Model extends GeoModel<AGS30Entity> {
     }
 }
 ==========================================
+FILE: EntrenchingToolModel.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\model\EntrenchingToolModel.java
+==========================================
+package com.example.aas.client.model;
+
+import com.example.aas.item.EntrenchingToolItem;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
+import software.bernie.geckolib.constant.DataTickets;
+import software.bernie.geckolib.core.animatable.model.CoreGeoBone;
+import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.model.GeoModel;
+import net.minecraft.util.Mth;
+
+public class EntrenchingToolModel extends GeoModel<EntrenchingToolItem> {
+    @Override public ResourceLocation getModelResource(EntrenchingToolItem animatable) { return new ResourceLocation("aas", "geo/entrenching_tool.geo.json"); }
+    @Override public ResourceLocation getTextureResource(EntrenchingToolItem animatable) { return new ResourceLocation("aas", "textures/item/entrenching_tool.png"); }
+    @Override public ResourceLocation getAnimationResource(EntrenchingToolItem animatable) { return new ResourceLocation("aas", "animations/entrenching_tool.animation.json"); }
+
+    @Override
+    public void setCustomAnimations(EntrenchingToolItem animatable, long instanceId, AnimationState<EntrenchingToolItem> animationState) {
+        super.setCustomAnimations(animatable, instanceId, animationState);
+        CoreGeoBone body = getAnimationProcessor().getBone("body");
+        if (body == null) return;
+
+        if (animationState.getData(DataTickets.ENTITY) instanceof LivingEntity living) {
+            // РџСЂРѕРІРµСЂСЏРµРј РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РїСЂРµРґРјРµС‚Р°
+            if (living.isUsingItem() && living.getUseItem().getItem() instanceof EntrenchingToolItem) {
+
+                // Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ 1 СЃРµРє = 20 С‚РёРєРѕРІ. РџРѕР»СѓС‡Р°РµРј С‚РµРєСѓС‰РёР№ РїСЂРѕРіСЂРµСЃСЃ 0.0 - 1.0
+                float ticks = (living.getTicksUsingItem() + animationState.getPartialTick());
+                float t = (ticks % 20f) / 20f;
+
+                float rx = 0, rz = 0;
+                float px = 0, py = 0, pz = 0;
+
+                // Р¤РђР—Рђ 1: 0.0 -> 0.25 (Р—Р°РјР°С… РЅР°Р·Р°Рґ Рё РІРЅРёР·)
+                if (t < 0.25f) {
+                    float p = t / 0.25f;
+                    rz = p * -50f;
+                    py = p * -10f;
+                }
+                // Р¤РђР—Рђ 2: 0.25 -> 0.5 (РЈР”РђР  Р РџР•Р Р•Р’РћР РћРў)
+                else if (t < 0.50f) {
+                    float p = (t - 0.25f) / 0.25f;
+                    rx = p * 70f; // РџРµСЂРµРІРѕСЂРѕС‚ РїРѕ X
+                    rz = -50f;
+                    px = p * -1.5f;
+                    py = -10f + (p * 3.75f); // РџРѕРґСЉРµРј РѕС‚ -10 РґРѕ -6.25
+                    pz = p * 6f; // Р’С‹РїР°Рґ РІРїРµСЂРµРґ
+                }
+                // Р¤РђР—Рђ 3: 0.5 -> 0.75 (Р’РћР—Р’Р РђРў РЎ РЈРЎРљРћР Р•РќРР•Рњ - easeIn)
+                else if (t < 0.75f) {
+                    float p = (t - 0.50f) / 0.25f;
+                    float easedCubic = p * p * p; // РўРІРѕР№ easeInCubic
+                    float easedQuart = easedCubic * p; // РўРІРѕР№ easeInQuart
+
+                    rx = Mth.lerp(easedCubic, 70f, 0f);
+                    rz = Mth.lerp(easedCubic, -50f, 25f);
+
+                    px = Mth.lerp(easedQuart, -1.5f, 2.25f);
+                    py = Mth.lerp(easedQuart, -6.25f, 0.75f);
+                    pz = Mth.lerp(easedQuart, 6f, 0f);
+                }
+                // Р¤РђР—Рђ 4: 0.75 -> 1.0 (РЈСЃРїРѕРєРѕРµРЅРёРµ)
+                else {
+                    float p = (t - 0.75f) / 0.25f;
+                    rz = Mth.lerp(p, 25f, 0f);
+                    px = Mth.lerp(p, 2.25f, 0f);
+                    py = Mth.lerp(p, 0.75f, 0f);
+                }
+
+                // РџР РРњР•РќР•РќРР• (Р’Р°Р¶РЅРѕ: РІСЂР°С‰РµРЅРёРµ РІ СЂР°РґРёР°РЅР°С…, РїРѕР·РёС†РёРё РІ РµРґРёРЅРёС†Р°С… Blockbench)
+                body.setRotX((float) Math.toRadians(rx));
+                body.setRotZ((float) Math.toRadians(rz));
+
+                body.setPosX(px);
+                body.setPosY(py);
+                body.setPosZ(pz);
+
+            } else {
+                // Р•СЃР»Рё РЅРµ РєРѕРїР°РµРј - РїР»Р°РІРЅРѕ СЃР±СЂР°СЃС‹РІР°РµРј РІ 0
+                body.setRotX(0); body.setRotZ(0);
+                body.setPosX(0); body.setPosY(0); body.setPosZ(0);
+            }
+        }
+    }
+}
+==========================================
 FILE: M2BrowningModel.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\model\M2BrowningModel.java
 ==========================================
@@ -7290,6 +7546,131 @@ public class ModelRallyPoint extends EntityModel<Entity> {
     }
 }
 ==========================================
+FILE: SquadRadioModel.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\model\SquadRadioModel.java
+==========================================
+package com.example.aas.client.model;
+
+import com.example.aas.item.RallyItem;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.CameraType;
+import net.minecraft.resources.ResourceLocation;
+import software.bernie.geckolib.core.animatable.model.CoreGeoBone;
+import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.model.GeoModel;
+
+public class SquadRadioModel extends GeoModel<RallyItem> {
+    @Override
+    public ResourceLocation getModelResource(RallyItem animatable) {
+        return new ResourceLocation("aas", "geo/squad_leader_radio.geo.json");
+    }
+
+    @Override
+    public ResourceLocation getTextureResource(RallyItem animatable) {
+        return new ResourceLocation("aas", "textures/item/squad_leader_radio.png");
+    }
+
+    @Override
+    public ResourceLocation getAnimationResource(RallyItem animatable) {
+        return new ResourceLocation("aas", "animations/squad_leader_radio.animation.json");
+    }
+
+    // === Р‘Р›РћРљРР РћР’РљРђ РђРќРРњРђР¦РР Р”Р›РЇ 3-Р“Рћ Р›РР¦Рђ ===
+    @Override
+    public void setCustomAnimations(RallyItem animatable, long instanceId, AnimationState<RallyItem> animationState) {
+        super.setCustomAnimations(animatable, instanceId, animationState);
+
+        // РџСЂРѕРІРµСЂСЏРµРј, РІ РєР°РєРѕРј СЂРµР¶РёРјРµ СЃРµР№С‡Р°СЃ РєР°РјРµСЂР°
+        // Р•СЃР»Рё СЌС‚Рѕ РќР• РІРёРґ РѕС‚ РїРµСЂРІРѕРіРѕ Р»РёС†Р° (С‚.Рµ. F5 РёР»Рё РјС‹ СЃРјРѕС‚СЂРёРј РЅР° РґСЂСѓРіРѕРіРѕ РёРіСЂРѕРєР°)
+        if (Minecraft.getInstance().options.getCameraType() != CameraType.FIRST_PERSON) {
+
+            // РќР°Рј РЅСѓР¶РЅРѕ РЅР°Р№С‚Рё РѕСЃРЅРѕРІРЅСѓСЋ РєРѕСЃС‚СЊ, РєРѕС‚РѕСЂСѓСЋ РјС‹ РґРІРёРіР°Р»Рё РІ Р°РЅРёРјР°С†РёРё.
+            // РћР±С‹С‡РЅРѕ СЌС‚Рѕ "root" РёР»Рё "body".
+            // РњС‹ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ СЃР±СЂР°СЃС‹РІР°РµРј РµС‘ РїРѕР·РёС†РёСЋ Рё РїРѕРІРѕСЂРѕС‚ РІ 0.
+            CoreGeoBone root = getAnimationProcessor().getBone("root");
+            if (root != null) {
+                root.setPosX(0);
+                root.setPosY(0);
+                root.setPosZ(0);
+                root.setRotX(0);
+                root.setRotY(0);
+                root.setRotZ(0);
+            }
+
+            // Р•СЃР»Рё Сѓ С‚РµР±СЏ Р°РЅРёРјРёСЂРѕРІР°РЅР° РєРѕСЃС‚СЊ "body", РґРѕР±Р°РІСЊ Рё РµС‘:
+            CoreGeoBone body = getAnimationProcessor().getBone("body");
+            if (body != null) {
+                body.setPosX(0);
+                body.setPosY(0);
+                body.setPosZ(0);
+                body.setRotX(0);
+                body.setRotY(0);
+                body.setRotZ(0);
+            }
+        }
+    }
+}
+==========================================
+FILE: SquadRadioRenderer.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\model\SquadRadioRenderer.java
+==========================================
+package com.example.aas.client.renderer;
+
+import com.example.aas.client.model.SquadRadioModel;
+import com.example.aas.item.RallyItem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix4f;
+import software.bernie.geckolib.renderer.GeoItemRenderer;
+
+public class SquadRadioRenderer extends GeoItemRenderer<RallyItem> {
+    // РџСѓС‚СЊ Рє РІР°С€РµР№ 2D РёРєРѕРЅРєРµ
+    private static final ResourceLocation GUI_TEXTURE = new ResourceLocation("aas", "textures/item/squad_leader_radio_gui.png");
+
+    public SquadRadioRenderer() {
+        super(new SquadRadioModel());
+    }
+
+    @Override
+    public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        // Р•СЃР»Рё СЌС‚Рѕ GUI (РёРЅРІРµРЅС‚Р°СЂСЊ, С…РѕС‚Р±Р°СЂ)
+        if (displayContext == ItemDisplayContext.GUI) {
+            render2DIcon(poseStack, bufferSource, packedOverlay);
+        } else {
+            // Р’Рѕ РІСЃРµС… РѕСЃС‚Р°Р»СЊРЅС‹С… СЃР»СѓС‡Р°СЏС… (РІ СЂСѓРєР°С…, РЅР° Р·РµРјР»Рµ, РІ СЂР°РјРєРµ) СЂРёСЃСѓРµРј 3D GeckoLib РјРѕРґРµР»СЊ
+            super.renderByItem(stack, displayContext, poseStack, bufferSource, packedLight, packedOverlay);
+        }
+    }
+
+    private void render2DIcon(PoseStack poseStack, MultiBufferSource bufferSource, int packedOverlay) {
+        poseStack.pushPose();
+
+        // РџРѕРґРєР»СЋС‡Р°РµРј С‚РµРєСЃС‚СѓСЂСѓ
+        VertexConsumer builder = bufferSource.getBuffer(RenderType.entityTranslucent(GUI_TEXTURE));
+        Matrix4f matrix = poseStack.last().pose();
+
+        // РљРѕРѕСЂРґРёРЅР°С‚С‹ РєРІР°РґСЂР°С‚Р° (РѕС‚ 0 РґРѕ 1 РїРѕ X Рё Y)
+        float min = 0.0f;
+        float max = 1.0f;
+        float z = 0.0f; // Р“Р»СѓР±РёРЅР°
+        int light = 15728880; // РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ СЏСЂРєРѕСЃС‚СЊ РґР»СЏ GUI
+
+        // РћС‚СЂРёСЃРѕРІРєР° 4 РІРµСЂС€РёРЅ (РїР»РѕСЃРєР°СЏ РєР°СЂС‚РёРЅРєР°)
+        // РљРѕРѕСЂРґРёРЅР°С‚С‹ UV РЅР°СЃС‚СЂРѕРµРЅС‹ С‚Р°Рє, С‡С‚РѕР±С‹ РєР°СЂС‚РёРЅРєР° РЅРµ Р±С‹Р»Р° РїРµСЂРµРІРµСЂРЅСѓС‚РѕР№
+        builder.vertex(matrix, min, max, z).color(255, 255, 255, 255).uv(0, 0).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, max, max, z).color(255, 255, 255, 255).uv(1, 0).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, max, min, z).color(255, 255, 255, 255).uv(1, 1).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, min, min, z).color(255, 255, 255, 255).uv(0, 1).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+
+        poseStack.popPose();
+    }
+}
+==========================================
 FILE: AGS30Renderer.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\renderer\AGS30Renderer.java
 ==========================================
@@ -7302,6 +7683,52 @@ public class AGS30Renderer extends GeoEntityRenderer<AGS30Entity> {
     public AGS30Renderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new AGS30Model());
         this.shadowRadius = 0.7f;
+    }
+}
+==========================================
+FILE: EntrenchingToolRenderer.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\renderer\EntrenchingToolRenderer.java
+==========================================
+package com.example.aas.client.renderer;
+
+import com.example.aas.client.model.EntrenchingToolModel;
+import com.example.aas.item.EntrenchingToolItem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix4f;
+import software.bernie.geckolib.renderer.GeoItemRenderer;
+
+public class EntrenchingToolRenderer extends GeoItemRenderer<EntrenchingToolItem> {
+    private static final ResourceLocation GUI_TEXTURE = new ResourceLocation("aas", "textures/item/entrenching_tool_gui.png");
+
+    public EntrenchingToolRenderer() {
+        super(new EntrenchingToolModel());
+    }
+
+    @Override
+    public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        if (displayContext == ItemDisplayContext.GUI) {
+            render2DIcon(poseStack, bufferSource, packedOverlay);
+        } else {
+            super.renderByItem(stack, displayContext, poseStack, bufferSource, packedLight, packedOverlay);
+        }
+    }
+
+    private void render2DIcon(PoseStack poseStack, MultiBufferSource bufferSource, int packedOverlay) {
+        poseStack.pushPose();
+        VertexConsumer builder = bufferSource.getBuffer(RenderType.entityTranslucent(GUI_TEXTURE));
+        Matrix4f matrix = poseStack.last().pose();
+        int light = 15728880;
+        builder.vertex(matrix, 0, 1, 0).color(255, 255, 255, 255).uv(0, 0).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, 1, 1, 0).color(255, 255, 255, 255).uv(1, 0).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, 1, 0, 0).color(255, 255, 255, 255).uv(1, 1).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, 0, 0, 0).color(255, 255, 255, 255).uv(0, 1).overlayCoords(packedOverlay).uv2(light).normal(0, 0, 1).endVertex();
+        poseStack.popPose();
     }
 }
 ==========================================
@@ -7631,6 +8058,44 @@ public class HubLoopingSound extends AbstractTickableSoundInstance {
         // РЅРѕ РґР»СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё Р»СѓС‡С€Рµ РѕСЃС‚Р°РІРёС‚СЊ РІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂРµ РёР»Рё РґРµР»Р°С‚СЊ РїСЂРѕРІРµСЂРєСѓ СЂРµРґРєРѕ.
     }
 
+    public void stopSound() {
+        this.stop();
+    }
+}
+==========================================
+FILE: RallyLoopingSound.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\sound\RallyLoopingSound.java
+==========================================
+package com.example.aas.client.sound;
+
+import com.example.aas.block.RallyPointBlockEntity;
+import com.example.aas.sound.ModSounds;
+import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+
+public class RallyLoopingSound extends AbstractTickableSoundInstance {
+    private final RallyPointBlockEntity rally;
+
+    public RallyLoopingSound(RallyPointBlockEntity rally) {
+        super(ModSounds.RALLY_IDLE.get(), SoundSource.BLOCKS, RandomSource.create());
+        this.rally = rally;
+        this.looping = true;
+        this.delay = 0;
+        this.volume = 0.4F; // Р“СЂРѕРјРєРѕСЃС‚СЊ
+        this.x = rally.getBlockPos().getX() + 0.5;
+        this.y = rally.getBlockPos().getY() + 0.5;
+        this.z = rally.getBlockPos().getZ() + 0.5;
+    }
+
+    @Override
+    public void tick() {
+        if (this.rally.isRemoved()) {
+            this.stopSound(); // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРјСЃСЏ, РµСЃР»Рё Р±Р»РѕРє СѓРґР°Р»РµРЅ
+        }
+    }
+
+    // РќРћР’Р«Р™ РњР•РўРћР”: РїРѕР·РІРѕР»СЏРµС‚ РѕСЃС‚Р°РЅРѕРІРёС‚СЊ Р·РІСѓРє РёР·РІРЅРµ
     public void stopSound() {
         this.stop();
     }
@@ -8102,6 +8567,40 @@ public class AASOverlay {
         }
         if (ClientData.isMapOpen || ClientData.mapTransition > 0) {
             renderSideMap(gui, mc, width, height, event.getPartialTick());
+        }
+    }
+
+    private static void renderDownedUI(GuiGraphics gui, Minecraft mc, int width) {
+        String currentKit = mc.player.getPersistentData().getString("AAS_CurrentKit");
+        boolean amIMedic = "Medic".equalsIgnoreCase(currentKit);
+        long now = System.currentTimeMillis();
+        int yOffset = 60;
+
+        for (Integer id : ClientData.DOWNED_PLAYERS) {
+            Entity entity = mc.level.getEntity(id);
+            if (entity instanceof net.minecraft.world.entity.player.Player downed && downed != mc.player) {
+                // РџСЂРѕРІРµСЂРєР° РЅР° СЃРѕСЋР·РЅРёРєР°
+                if (mc.player.getTeam() != null && downed.getTeam() != null && mc.player.getTeam().isAlliedTo(downed.getTeam())) {
+
+                    long lastShout = downed.getPersistentData().getLong("AAS_LastMedicShoutTimeMS");
+                    boolean isShouting = (now - lastShout < 3000);
+
+                    // РњРµРґРёРє РІРёРґРёС‚ РІСЃРµС… РІСЃРµРіРґР°, РѕСЃС‚Р°Р»СЊРЅС‹Рµ С‚РѕР»СЊРєРѕ РєРѕРіРґР° СЃРѕСЋР·РЅРёРє РєСЂРёС‡РёС‚
+                    if (amIMedic || isShouting) {
+                        int distance = (int) mc.player.distanceTo(downed);
+                        if (distance < 150) {
+                            String name = downed.getScoreboardName();
+                            String text = "вњљ " + name + " [" + distance + "m]";
+                            int x = width - mc.font.width(text) - 10;
+
+                            int bgColor = isShouting ? 0xAAFF0000 : 0x80AA0000;
+                            gui.fill(x - 2, yOffset - 1, width - 5, yOffset + 9, bgColor);
+                            gui.drawString(mc.font, text, x, yOffset, 0xFFFFFF, false);
+                            yOffset += 12;
+                        }
+                    }
+                }
+            }
         }
     }
     // PATH: src\main\java\com\example\aas\client\AASOverlay.java
@@ -8617,10 +9116,12 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\Client
 ==========================================
 package com.example.aas.client;
 
+import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import java.util.*;
+import com.example.aas.network.MapPlayerInfo;
 
 public class ClientData {
     // ... СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РїРѕР»СЏ ...
@@ -8728,26 +9229,6 @@ public class ClientEvents {
         ClientData.addChatMessage(event.getMessage());
     }
 
-    @SubscribeEvent
-    public static void onRenderHand(RenderHandEvent event) {
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null) return;
-
-        if (player.isUsingItem() && !player.isScoping()) {
-            ItemStack stack = event.getItemStack();
-            if (stack.getItem() instanceof EntrenchingToolItem) {
-                if (event.getHand() == player.getUsedItemHand()) {
-                    PoseStack poseStack = event.getPoseStack();
-                    float useTime = player.getTicksUsingItem() + event.getPartialTick();
-                    float cycleSpeed = 10.0f;
-                    float cycle = (useTime % cycleSpeed) / cycleSpeed;
-                    float wave = Mth.sin(cycle * Mth.PI);
-                    float depth = 2.5f;
-                    poseStack.translate(0.0, wave * depth, 0.0);
-                }
-            }
-        }
-    }
 
     // РћР‘РЄР•Р”РРќР•РќРќР«Р™ РњР•РўРћР” РўРРљРђ
     @SubscribeEvent
@@ -8962,7 +9443,47 @@ public class ClientHooks {
     public static void openCrateMenu(int entityId) {
         net.minecraft.client.Minecraft.getInstance().setScreen(new com.example.aas.client.gui.CrateRadialScreen(entityId));
     }
+    // Р’ С„Р°Р№Р»Рµ src/main/java/com/example/aas/client/ClientHooks.java
 
+    public static void tryOpenRadioMenu(net.minecraft.world.entity.player.Player player) {
+        if (player.isCreative()) {
+            openRadioMenu();
+            return;
+        }
+
+        if (player.getTeam() == null) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You must join a TEAM (Blue/Red) first!").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return;
+        }
+
+        String playerName = player.getScoreboardName();
+        boolean isInSquad = false;
+        boolean isLeader = false;
+
+        // Р—РґРµСЃСЊ Р±РµР·РѕРїР°СЃРЅРѕ РёСЃРїРѕР»СЊР·СѓРµРј ClientData, С‚Р°Рє РєР°Рє РјС‹ РІ РєР»РёРµРЅС‚СЃРєРѕРј РєР»Р°СЃСЃРµ
+        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
+            if (s.members.contains(playerName)) {
+                isInSquad = true;
+                if (s.leader.equals(playerName)) {
+                    isLeader = true;
+                }
+                break;
+            }
+        }
+
+        if (!isInSquad) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You must join a SQUAD first! Press 'K'.").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return;
+        }
+
+        if (!isLeader) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You must be a Squad Leader to use this!").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return;
+        }
+
+        // Р•СЃР»Рё РІСЃС‘ РѕРє - РѕС‚РєСЂС‹РІР°РµРј РјРµРЅСЋ
+        openRadioMenu();
+    }
     public static Object playHubSound(HubBlockEntity hub) {
         HubLoopingSound newSound = new HubLoopingSound(hub);
         Minecraft.getInstance().getSoundManager().play(newSound);
@@ -9338,8 +9859,8 @@ public class ClientPlacementHandler {
         if (structureId == 11) cost = 10;
         if (structureId == 12) cost = 15;
         if (structureId == 13) cost = 25;
-        if (structureId == 20) cost = 50;
-        if (structureId == 21) cost = 50;
+        if (structureId == 20) cost = 100;
+        if (structureId == 21) cost = 100;
         if (structureId == 22) cost = 200;
         if (structureId == 23) cost = 200;
 
@@ -9400,35 +9921,6 @@ public class ClientPlacementHandler {
 
         // РРЅР°С‡Рµ РїСЂРѕРІРµСЂСЏРµРј РєРѕР»РёС‡РµСЃС‚РІРѕ РјР°С‚РѕРІ
         return totalMaterials >= cost;
-    }
-}
-==========================================
-FILE: MapPlayerInfo.java
-PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\MapPlayerInfo.java
-==========================================
-// PATH: src/main/java/com/example/aas/client/MapPlayerInfo.java
-package com.example.aas.client;
-
-public class MapPlayerInfo {
-    public String name;
-    public double x, z;
-    public float rot;
-    public int squadId;
-    public boolean isLeader;
-    public boolean isDowned;
-    public long lastShoutTime;
-    public boolean inVehicle; // Р­С‚Рѕ РїРѕР»Рµ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ Р·РґРµСЃСЊ!
-
-    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle) {
-        this.name = name;
-        this.x = x;
-        this.z = z;
-        this.rot = rot;
-        this.squadId = squadId;
-        this.isLeader = isLeader;
-        this.isDowned = isDowned;
-        this.lastShoutTime = lastShoutTime;
-        this.inVehicle = inVehicle;
     }
 }
 ==========================================
@@ -9773,7 +10265,7 @@ public class ModCommands {
         ChatFormatting color = teamName.equalsIgnoreCase("blue") ? ChatFormatting.BLUE : ChatFormatting.RED;
         PlayerTeam team = scoreboard.getPlayerTeam(internalTeamName);
         if (team == null) team = scoreboard.addPlayerTeam(internalTeamName);
-        team.setColor(color); team.setAllowFriendlyFire(false);
+        team.setColor(color);
         scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
         source.sendSuccess(() -> Component.literal("Player joined " + internalTeamName).withStyle(color), true);
         return 1;
@@ -10344,12 +10836,13 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\entity\AGS30G
 // PATH: src\main\java\com\example\aas\entity\AGS30GrenadeEntity.java
 package com.example.aas.entity;
 
-import com.example.aas.config.AASConfig; // РРјРїРѕСЂС‚ РєРѕРЅС„РёРіР°
+import com.example.aas.config.AASConfig;
 import com.example.aas.item.ModItems;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.server.level.ServerLevel; // Р”РћР‘РђР’Р›Р•РќРћ
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -10358,6 +10851,7 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB; // Р”РћР‘РђР’Р›Р•РќРћ
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -10434,18 +10928,68 @@ public class AGS30GrenadeEntity extends Projectile implements ItemSupplier {
 
     private void explode() {
         if (!this.level().isClientSide) {
+            ServerLevel serverLevel = (ServerLevel) this.level();
             double distanceSq = this.distanceToSqr(originX, originY, originZ);
-            if (distanceSq < 160) { // РќРµ РІР·СЂС‹РІР°РµС‚СЃСЏ СЃР»РёС€РєРѕРј Р±Р»РёР·РєРѕ Рє СЃС‚СЂРµР»РєСѓ (Р±РµР·РѕРїР°СЃРЅР°СЏ Р·РѕРЅР°)
+
+            // Р‘РµР·РѕРїР°СЃРЅР°СЏ Р·РѕРЅР° РґР»СЏ СЃС‚СЂРµР»РєР° (С‡С‚РѕР±С‹ РЅРµ РїРѕРґРѕСЂРІР°С‚СЊСЃСЏ РЅР° РІС‹Р»РµС‚Рµ)
+            if (distanceSq < 160) {
                 this.discard();
                 return;
             }
 
-            // РџР РћР’Р•Р РљРђ РљРћРќР¤РР“Рђ
+            // 1. РџРЈРЎРљРђР•Рњ 12 РћРЎРљРћР›РћР§РќР«РҐ Р›РЈР§Р•Р™
+            spawnShrapnel(serverLevel);
+
+            // 2. РЎРўРђРќР”РђР РўРќР«Р™ Р’Р—Р Р«Р’ (РґР»СЏ РІРёР·СѓР°Р»СЊРЅС‹С… СЌС„С„РµРєС‚РѕРІ Рё СЂР°Р·СЂСѓС€РµРЅРёСЏ Р±Р»РѕРєРѕРІ)
             boolean canDestroy = AASConfig.AGS_PROJECTILE_DESTRUCTION.get();
             Level.ExplosionInteraction interaction = canDestroy ? Level.ExplosionInteraction.BLOCK : Level.ExplosionInteraction.NONE;
 
-            this.level().explode(this, this.getX(), this.getY(), this.getZ(), 3F, interaction);
+            // РњРѕС‰РЅРѕСЃС‚СЊ РІР·СЂС‹РІР° РјРѕР¶РЅРѕ С‡СѓС‚СЊ СѓРјРµРЅСЊС€РёС‚СЊ (РЅР°РїСЂРёРјРµСЂ, РґРѕ 1.5), С‚Р°Рє РєР°Рє РѕСЃРЅРѕРІРЅРѕР№ СѓСЂРѕРЅ С‚РµРїРµСЂСЊ РѕС‚ Р»СѓС‡РµР№
+            this.level().explode(this, this.getX(), this.getY(), this.getZ(), 2.0F, interaction);
+
             this.discard();
+        }
+    }
+
+    private void spawnShrapnel(ServerLevel level) {
+        Vec3 center = this.position().add(0, 0.2, 0); // Р¦РµРЅС‚СЂ РІР·СЂС‹РІР°
+        int count = 24; // РљРѕР»РёС‡РµСЃС‚РІРѕ Р»СѓС‡РµР№
+
+        for (int i = 0; i < count; i++) {
+            // РђР»РіРѕСЂРёС‚Рј СЂР°СЃРїСЂРµРґРµР»РµРЅРёСЏ С‚РѕС‡РµРє РЅР° СЃС„РµСЂРµ (Fibonacci Sphere)
+            // Р­С‚Рѕ СЃРѕР·РґР°СЃС‚ СЂР°РІРЅРѕРјРµСЂРЅС‹Р№ СЂР°Р·Р»РµС‚ РІРѕ РІСЃРµС… РЅР°РїСЂР°РІР»РµРЅРёСЏС… (РІРІРµСЂС…, РІРЅРёР·, РІ Р±РѕРєР°)
+            double y = 1.0 - (i / (double) (count - 1)) * 2.0; // РѕС‚ 1 РґРѕ -1
+            double radiusAtY = Math.sqrt(1.0 - y * y); // СЂР°РґРёСѓСЃ РєСЂСѓРіР° РЅР° СЌС‚РѕР№ РІС‹СЃРѕС‚Рµ
+
+            double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0)); // "Р—РѕР»РѕС‚РѕР№ СѓРіРѕР»"
+            double theta = goldenAngle * i;
+
+            double x = Math.cos(theta) * radiusAtY;
+            double z = Math.sin(theta) * radiusAtY;
+
+            // РќР°РїСЂР°РІР»РµРЅРёРµ Р»СѓС‡Р° РІ 3D
+            Vec3 direction = new Vec3(x, y, z).normalize();
+            Vec3 endPos = center.add(direction.scale(3.5)); // Р”Р»РёРЅР° 2 Р±Р»РѕРєР°
+
+            // 1. РџСЂРѕРІРµСЂРєР° Р±Р»РѕРєРѕРІ (РїСЂРµРїСЏС‚СЃС‚РІРёР№)
+            BlockHitResult blockHit = level.clip(new net.minecraft.world.level.ClipContext(
+                    center, endPos, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                    net.minecraft.world.level.ClipContext.Fluid.NONE, this));
+
+            Vec3 finalTargetPos = (blockHit.getType() == HitResult.Type.MISS) ? endPos : blockHit.getLocation();
+
+
+            // 2. РџСЂРѕРІРµСЂРєР° РїРѕРїР°РґР°РЅРёСЏ РІ С…РёС‚Р±РѕРєСЃ РїРµСЂСЃРѕРЅР°Р¶Р°
+            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+                    level, this, center, finalTargetPos,
+                    new AABB(center, finalTargetPos).inflate(0.2), // РўРѕР»С‰РёРЅР° Р»СѓС‡Р°
+                    e -> e instanceof LivingEntity && !e.isSpectator());
+
+            if (entityHit != null && entityHit.getEntity() instanceof LivingEntity victim) {
+                // РќР°РЅРѕСЃРёРј 20 СѓСЂРѕРЅР°
+                victim.hurt(level.damageSources().explosion(this, this.getOwner()), 20.0F);
+                level.sendParticles(ParticleTypes.FLASH, entityHit.getLocation().x, entityHit.getLocation().y, entityHit.getLocation().z, 1, 0, 0, 0, 0);
+            }
         }
     }
 
@@ -11416,17 +11960,11 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\GameLo
 ==========================================
 package com.example.aas.events;
 
+import com.example.aas.network.*;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.server.level.ServerLevel;
 import com.example.aas.block.RallyPointBlock;
 import com.example.aas.item.ModItems;
-import com.example.aas.network.PacketHandler;
-import com.example.aas.network.PacketSyncGameData;
-import com.example.aas.network.PacketSyncPoint;
-import com.example.aas.network.PacketSyncSquads;
-import com.example.aas.network.PacketSquadAction;
-import com.example.aas.network.PacketSyncMapPlayers;
-import com.example.aas.world.AASWorldData;
 import com.example.aas.block.RallyPointBlockEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -11436,7 +11974,6 @@ import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -11469,8 +12006,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraftforge.network.PacketDistributor;
-import com.example.aas.network.PacketSyncDownedState;
 
 @Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class GameLogicEvents {
@@ -11635,7 +12170,7 @@ public class GameLogicEvents {
                 }
 
                 if (!bluePlayers.isEmpty()) {
-                    List<com.example.aas.client.MapPlayerInfo> blueInfo = buildPlayerInfo(bluePlayers, data);
+                    List<MapPlayerInfo> blueInfo = buildPlayerInfo(bluePlayers, data);
                     PacketSyncMapPlayers packet = new PacketSyncMapPlayers(blueInfo);
                     for (ServerPlayer bp : bluePlayers) {
                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> bp), packet);
@@ -11643,7 +12178,7 @@ public class GameLogicEvents {
                 }
 
                 if (!redPlayers.isEmpty()) {
-                    List<com.example.aas.client.MapPlayerInfo> redInfo = buildPlayerInfo(redPlayers, data);
+                    List<MapPlayerInfo> redInfo = buildPlayerInfo(redPlayers, data);
                     PacketSyncMapPlayers packet = new PacketSyncMapPlayers(redInfo);
                     for (ServerPlayer rp : redPlayers) {
                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> rp), packet);
@@ -11843,8 +12378,8 @@ public class GameLogicEvents {
     }
 
     // === Р’РЎРџРћРњРћР“РђРўР•Р›Р¬РќР«Р™ РњР•РўРћР” Р”Р›РЇ РЎР‘РћР Рђ Р”РђРќРќР«РҐ РћР‘ РР“Р РћРљРђРҐ ===
-    private static List<com.example.aas.client.MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, AASWorldData data) {
-        List<com.example.aas.client.MapPlayerInfo> infoList = new ArrayList<>();
+    private static List<MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, AASWorldData data) {
+        List<MapPlayerInfo> infoList = new ArrayList<>();
 
         for (ServerPlayer p : players) {
             String pName = p.getScoreboardName();
@@ -11866,7 +12401,7 @@ public class GameLogicEvents {
             long shout = p.getPersistentData().getLong("AAS_LastMedicShoutTimeMS");
 
             // 3. Р”РѕР±Р°РІР»СЏРµРј РІ СЃРїРёСЃРѕРє РћР”РРќ СЂР°Р· СЃРѕ РІСЃРµРјРё 9 Р°СЂРіСѓРјРµРЅС‚Р°РјРё
-            infoList.add(new com.example.aas.client.MapPlayerInfo(
+            infoList.add(new MapPlayerInfo(
                     pName,
                     p.getX(),
                     p.getZ(),
@@ -12723,6 +13258,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraft.tags.BlockTags;
 import net.minecraftforge.common.Tags;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 @Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class InteractionEvents {
@@ -12731,25 +13268,26 @@ public class InteractionEvents {
     public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
         if (com.example.aas.config.AASConfig.PREVENT_BLOCK_BREAKING.get()) {
             Player player = event.getEntity();
-            if (!player.isCreative()) {
-                Level level = event.getLevel();
-                boolean isStarted = false;
+            if (player.isCreative()) return;
 
-                if (!level.isClientSide) {
-                    isStarted = com.example.aas.world.AASWorldData.get((net.minecraft.server.level.ServerLevel) level).isGameStarted;
-                } else {
-                    isStarted = com.example.aas.client.ClientData.isGameStarted;
-                }
+            Level level = event.getLevel();
+            boolean isStarted = false;
 
-                if (isStarted) {
-                    BlockState state = level.getBlockState(event.getPos());
+            // РџСЂРѕРІРµСЂРєР° РЅР° СЃРµСЂРІРµСЂРµ
+            if (level instanceof ServerLevel serverLevel) {
+                isStarted = com.example.aas.world.AASWorldData.get(serverLevel).isGameStarted;
+            }
+            // РџСЂРѕРІРµСЂРєР° РЅР° РєР»РёРµРЅС‚Рµ (РёСЃРїРѕР»СЊР·СѓРµРј Р±РµР·РѕРїР°СЃРЅС‹Р№ СЃРїРѕСЃРѕР±, С‡С‚РѕР±С‹ СЃРµСЂРІРµСЂ РЅРµ РєСЂР°С€РЅСѓР»СЃСЏ)
+            else if (level.isClientSide) {
+                isStarted = com.example.aas.client.ClientData.isGameStarted;
+            }
 
-                    // РџР РћР’Р•Р РљРђ Р‘Р•Р›РћР“Рћ РЎРџРРЎРљРђ
-                    if (isBlockWhitelisted(state)) {
-                        return; // Р Р°Р·СЂРµС€Р°РµРј Р»РѕРјР°С‚СЊ
-                    }
+            if (isStarted) {
+                BlockState state = level.getBlockState(event.getPos());
 
-                    event.setCanceled(true); // Р—Р°РїСЂРµС‰Р°РµРј Р»РѕРјР°С‚СЊ РІСЃС‘ РѕСЃС‚Р°Р»СЊРЅРѕРµ
+                // Р•СЃР»Рё Р±Р»РѕРєР° РќР•Рў РІ Р±РµР»РѕРј СЃРїРёСЃРєРµ вЂ” Р·Р°РїСЂРµС‰Р°РµРј РїРѕ РЅРµРјСѓ РґР°Р¶Рµ СЃС‚СѓС‡Р°С‚СЊ
+                if (!isBlockWhitelisted(state)) {
+                    event.setCanceled(true);
                 }
             }
         }
@@ -13031,9 +13569,14 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\item\Entrench
 ==========================================
 package com.example.aas.item;
 
-import com.example.aas.block.*; // РРјРїРѕСЂС‚РёСЂСѓРµС‚ РІСЃРµ Р±Р»РѕРєРё Рё TileEntity
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
+import com.example.aas.block.*;
+import com.example.aas.client.renderer.EntrenchingToolRenderer;
+import com.example.aas.sound.ModSounds;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
@@ -13046,227 +13589,38 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.*;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class EntrenchingToolItem extends Item {
+import java.util.function.Consumer;
+
+public class EntrenchingToolItem extends Item implements GeoItem {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public EntrenchingToolItem() {
         super(new Properties().stacksTo(1));
     }
 
-    @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        HitResult hit = player.pick(4.5D, 0.0F, false);
-
-        if (hit.getType() == HitResult.Type.BLOCK) {
-            BlockHitResult blockHit = (BlockHitResult) hit;
-            BlockPos pos = blockHit.getBlockPos();
-            BlockState state = level.getBlockState(pos);
-
-            // 1. РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЌС‚Рѕ РѕРґРёРЅ РёР· РЅР°С€РёС… Р±Р»РѕРєРѕРІ
-            if (state.is(ModBlocks.HUB_BLOCK.get()) ||
-                    state.is(ModBlocks.WALL_BLOCK.get()) ||
-                    state.is(ModBlocks.BARBED_WIRE_BLOCK.get()) ||
-                    state.is(ModBlocks.M2_CONSTRUCTION_BLOCK.get()) ||
-                    state.is(ModBlocks.AGS_CONSTRUCTION_BLOCK.get()) ||
-                    state.is(ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()) ||
-                    state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get())) {
-
-                // 2. РџР РћР’Р•Р РљРђ: Р•СЃР»Рё СѓР¶Рµ РїРѕСЃС‚СЂРѕРµРЅРѕ - РєРѕРїР°С‚СЊ РЅРµР»СЊР·СЏ
-                if (isConstructed(state)) {
-                    if (level.isClientSide) {
-                        player.displayClientMessage(Component.literal("Structure already built!"), true);
-                    }
-                    return InteractionResultHolder.fail(player.getItemInHand(hand));
-                }
-
-                // 3. РџРѕР»СѓС‡Р°РµРј Entity Рё РЅР°С‡РёРЅР°РµРј РґРµР№СЃС‚РІРёРµ
-                BlockEntity be = level.getBlockEntity(pos);
-
-                // --- HUB ---
-                if (be instanceof HubBlockEntity hub) {
-                    if (canDigHub(player, hub)) {
-                        player.startUsingItem(hand);
-                        return InteractionResultHolder.consume(player.getItemInHand(hand));
-                    } else {
-                        sendEnemyMessage(level, player);
-                    }
-                }
-                // --- WALL ---
-                else if (be instanceof WallBlockEntity wall) {
-                    if (canDigWall(player, wall)) {
-                        player.startUsingItem(hand);
-                        return InteractionResultHolder.consume(player.getItemInHand(hand));
-                    } else {
-                        sendEnemyMessage(level, player);
-                    }
-                }
-                // --- BARBED WIRE ---
-                else if (be instanceof BarbedWireBlockEntity wire) {
-                    if (canDigWire(player, wire)) {
-                        player.startUsingItem(hand);
-                        return InteractionResultHolder.consume(player.getItemInHand(hand));
-                    } else {
-                        sendEnemyMessage(level, player);
-                    }
-                }
-                // --- STATIC WEAPONS (M2, AGS, Mortar, TOW) ---
-                // Р”Р»СЏ С‚РµС…РЅРёРєРё С‚РѕР¶Рµ СЃС‚РѕРёС‚ РґРѕР±Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ, РЅРѕ РїРѕРєР° СЂР°Р·СЂРµС€Р°РµРј РІСЃРµРј (РёР»Рё РїРѕ Р»РѕРіРёРєРµ РЅРёР¶Рµ)
-                else if (be instanceof M2ConstructionBlockEntity ||
-                        be instanceof AGSConstructionBlockEntity ||
-                        be instanceof MortarConstructionBlockEntity ||
-                        be instanceof TOWConstructionBlockEntity) {
-
-                    player.startUsingItem(hand);
-                    return InteractionResultHolder.consume(player.getItemInHand(hand));
-                }
-            }
+    // 1. Р СѓС‡РЅРѕР№ ID РґР»СЏ NBT (С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ РѕС€РёР±РѕРє "cannot find symbol")
+    private long getOrAssignID(ItemStack stack, Level level) {
+        if (!stack.getOrCreateTag().contains("GeckoLibID")) {
+            stack.getOrCreateTag().putLong("GeckoLibID", level.getRandom().nextLong());
         }
-        return InteractionResultHolder.pass(player.getItemInHand(hand));
+        return stack.getOrCreateTag().getLong("GeckoLibID");
     }
 
     @Override
-    public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int count) {
-        if (entity instanceof Player player) {
-            HitResult hit = player.pick(4.5D, 0.0F, false);
-
-            if (hit.getType() == HitResult.Type.BLOCK) {
-                BlockHitResult blockHit = (BlockHitResult) hit;
-                BlockPos pos = blockHit.getBlockPos();
-                BlockState state = level.getBlockState(pos);
-
-                // 1. Р•СЃР»Рё Р±Р»РѕРє РґРѕСЃС‚СЂРѕРёР»СЃСЏ РІ РїСЂРѕС†РµСЃСЃРµ РєРѕРїР°РЅРёСЏ - РѕСЃС‚Р°РЅР°РІР»РёРІР°РµРјСЃСЏ
-                if (isConstructed(state)) {
-                    player.stopUsingItem();
-                    return;
-                }
-
-                BlockEntity be = level.getBlockEntity(pos);
-                boolean isValidTarget = false;
-
-                // --- HUB LOGIC ---
-                if (be instanceof HubBlockEntity hub) {
-                    if (canDigHub(player, hub)) {
-                        isValidTarget = true;
-                        if (!level.isClientSide) {
-                            hub.addProgress();
-                            if (player.isCreative()) hub.addCreativeProgress(40);
-                        }
-                    }
-                }
-                // --- WALL LOGIC ---
-                else if (be instanceof WallBlockEntity wall) {
-                    if (canDigWall(player, wall)) {
-                        isValidTarget = true;
-                        if (!level.isClientSide) {
-                            wall.addProgress();
-                            if (player.isCreative()) wall.addCreativeProgress(40);
-                        }
-                    }
-                }
-                // --- WIRE LOGIC ---
-                else if (be instanceof BarbedWireBlockEntity wire) {
-                    if (canDigWire(player, wire)) {
-                        isValidTarget = true;
-                        if (!level.isClientSide) {
-                            wire.addProgress();
-                            if (player.isCreative()) wire.addCreativeProgress(40);
-                        }
-                    }
-                }
-                // --- M2 BROWNING LOGIC ---
-                else if (be instanceof M2ConstructionBlockEntity m2) {
-                    // Р—РґРµСЃСЊ С‚РѕР¶Рµ РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ РєРѕРјР°РЅРґС‹, РµСЃР»Рё РЅСѓР¶РЅРѕ
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        m2.addProgress();
-                        if (player.isCreative()) m2.addCreativeProgress(100);
-                    }
-                }
-                // --- AGS-30 LOGIC ---
-                else if (be instanceof AGSConstructionBlockEntity ags) {
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        ags.addProgress();
-                        if (player.isCreative()) ags.addCreativeProgress(100);
-                    }
-                }
-                // --- MORTAR LOGIC ---
-                else if (be instanceof MortarConstructionBlockEntity mortar) {
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        mortar.addProgress();
-                        if (player.isCreative()) mortar.addCreativeProgress(100);
-                    }
-                }
-                // --- TOW LOGIC ---
-                else if (be instanceof TOWConstructionBlockEntity tow) {
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        tow.addProgress();
-                        if (player.isCreative()) tow.addCreativeProgress(100);
-                    }
-                }
-
-                if (!isValidTarget) player.stopUsingItem();
-            } else {
-                // Р•СЃР»Рё РёРіСЂРѕРє РѕС‚РІРµР» РІР·РіР»СЏРґ РѕС‚ Р±Р»РѕРєР°
-                player.stopUsingItem();
-            }
-        }
+    public boolean onEntitySwing(ItemStack stack, LivingEntity entity) {
+        return true; // Р¤РёРєСЃ РґРµСЂРіР°РЅСЊСЏ СЂСѓРєРё
     }
 
-    // === Р’РЎРџРћРњРћР“РђРўР•Р›Р¬РќР«Р• РњР•РўРћР”Р« ===
-
-    private boolean isConstructed(BlockState state) {
-        if (state.hasProperty(WallBlock.CONSTRUCTED)) {
-            return state.getValue(WallBlock.CONSTRUCTED);
-        }
-        if (state.hasProperty(HubBlock.CONSTRUCTED)) {
-            return state.getValue(HubBlock.CONSTRUCTED);
-        }
-        if (state.hasProperty(BarbedWireBlock.CONSTRUCTED)) {
-            return state.getValue(BarbedWireBlock.CONSTRUCTED);
-        }
-        return false;
-    }
-
-    // === РРЎРџР РђР’Р›Р•РќРќР«Р• РњР•РўРћР”Р« РџР РћР’Р•Р РљР РљРћРњРђРќР”Р« ===
-
-    private boolean canDigHub(Player player, HubBlockEntity hub) {
-        if (player.isCreative()) return true; // РљСЂРµР°С‚РёРІ РјРѕР¶РµС‚ РєРѕРїР°С‚СЊ РІСЃРµ
-        if (player.getTeam() == null) return false; // Р‘РµР· РєРѕРјР°РЅРґС‹ РЅРµР»СЊР·СЏ РІ РІС‹Р¶РёРІР°РЅРёРё
-
-        String structureTeam = hub.getTeam();
-        // Р•СЃР»Рё СЃС‚СЂСѓРєС‚СѓСЂР° РЅРµР№С‚СЂР°Р»СЊРЅР°СЏ, СЂР°Р·СЂРµС€Р°РµРј РєРѕРїР°С‚СЊ (РёР»Рё Р·Р°РїСЂРµС‰Р°РµРј, РїРѕ РІР°С€РµРјСѓ Р¶РµР»Р°РЅРёСЋ)
-        if (structureTeam.equals("NEUTRAL")) return true;
-
-        return player.getTeam().getName().equalsIgnoreCase(structureTeam);
-    }
-
-    private boolean canDigWall(Player player, WallBlockEntity wall) {
-        if (player.isCreative()) return true;
-        if (player.getTeam() == null) return false;
-
-        String structureTeam = wall.getTeam();
-        if (structureTeam.equals("NEUTRAL")) return true;
-
-        return player.getTeam().getName().equalsIgnoreCase(structureTeam);
-    }
-
-    private boolean canDigWire(Player player, BarbedWireBlockEntity wire) {
-        if (player.isCreative()) return true;
-        if (player.getTeam() == null) return false;
-
-        String structureTeam = wire.getTeam();
-        if (structureTeam.equals("NEUTRAL")) return true;
-
-        return player.getTeam().getName().equalsIgnoreCase(structureTeam);
-    }
-
-    private void sendEnemyMessage(Level level, Player player) {
-        if (level.isClientSide) {
-            player.displayClientMessage(Component.literal("Cannot build enemy structures!"), true);
-        }
+    @Override
+    public int getUseDuration(ItemStack stack) {
+        return 72000;
     }
 
     @Override
@@ -13275,8 +13629,110 @@ public class EntrenchingToolItem extends Item {
     }
 
     @Override
-    public int getUseDuration(ItemStack stack) {
-        return 72000;
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack itemstack = player.getItemInHand(hand);
+        HitResult hit = player.pick(4.5D, 0.0F, false);
+
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            BlockState state = level.getBlockState(((BlockHitResult) hit).getBlockPos());
+
+            if (isAASConstruction(state) && !isConstructed(state)) {
+                // Р’РљР›Р®Р§РђР•Рњ РђРќРРњРђР¦РР® РўР РР“Р“Р•Р РћРњ (РєР°Рє РІ СЂР°С†РёРё)
+                if (!level.isClientSide) {
+                    long id = getOrAssignID(itemstack, level);
+                    this.triggerAnim(player, id, "ShovelController", "dig");
+                }
+
+                player.startUsingItem(hand);
+                return InteractionResultHolder.consume(itemstack);
+            }
+        }
+        return InteractionResultHolder.pass(itemstack);
+    }
+
+    @Override
+    public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int count) {
+        if (entity instanceof Player player && !level.isClientSide) {
+            HitResult hit = player.pick(4.5D, 0.0F, false);
+            if (hit instanceof BlockHitResult blockHit) {
+                BlockState state = level.getBlockState(blockHit.getBlockPos());
+                BlockEntity be = level.getBlockEntity(blockHit.getBlockPos());
+
+                if (isAASConstruction(state) && !isConstructed(state)) {
+                    int elapsed = getUseDuration(stack) - count;
+                    if (elapsed % 20 == 10) {
+                        level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.SHOVEL_DIG.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+                        ((ServerLevel)level).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), blockHit.getBlockPos().getX() + 0.5, blockHit.getBlockPos().getY() + 1.1, blockHit.getBlockPos().getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.1);
+                    }
+                    addProgressToBE(be, player);
+                } else {
+                    stopDigging(player, stack);
+                }
+            } else {
+                stopDigging(player, stack);
+            }
+        }
+    }
+
+    @Override
+    public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
+        stopDigging(entity, stack);
+    }
+
+    private void stopDigging(LivingEntity entity, ItemStack stack) {
+        if (entity instanceof Player player && !player.level().isClientSide) {
+            long id = getOrAssignID(stack, player.level());
+            // Р’Р«РљР›Р®Р§РђР•Рњ РђРќРРњРђР¦РР® РўР РР“Р“Р•Р РћРњ
+            this.triggerAnim(player, id, "ShovelController", "stop");
+            player.stopUsingItem();
+        }
+    }
+
+    // РљРћРќРўР РћР›Р›Р•Р  (РљРѕРїРёСЏ Р»РѕРіРёРєРё Р Р°РґРёРѕ)
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "ShovelController", 5, event -> PlayState.CONTINUE)
+                .triggerableAnim("dig", RawAnimation.begin().thenLoop("animation.shovel.dig"))
+                .triggerableAnim("stop", RawAnimation.begin().thenPlay("animation.nothing"))
+        );
+    }
+
+    private boolean isAASConstruction(BlockState state) {
+        return state.is(ModBlocks.HUB_BLOCK.get()) || state.is(ModBlocks.WALL_BLOCK.get()) ||
+                state.is(ModBlocks.BARBED_WIRE_BLOCK.get()) || state.is(ModBlocks.M2_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.AGS_CONSTRUCTION_BLOCK.get()) || state.is(ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get());
+    }
+
+    private boolean isConstructed(BlockState state) {
+        if (state.hasProperty(WallBlock.CONSTRUCTED)) return state.getValue(WallBlock.CONSTRUCTED);
+        if (state.hasProperty(HubBlock.CONSTRUCTED)) return state.getValue(HubBlock.CONSTRUCTED);
+        if (state.hasProperty(BarbedWireBlock.CONSTRUCTED)) return state.getValue(BarbedWireBlock.CONSTRUCTED);
+        return false;
+    }
+
+    private void addProgressToBE(BlockEntity be, Player player) {
+        if (be instanceof HubBlockEntity b) b.addProgress();
+        else if (be instanceof WallBlockEntity b) b.addProgress();
+        else if (be instanceof BarbedWireBlockEntity b) b.addProgress();
+        else if (be instanceof M2ConstructionBlockEntity b) b.addProgress();
+        else if (be instanceof AGSConstructionBlockEntity b) b.addProgress();
+        else if (be instanceof MortarConstructionBlockEntity b) b.addProgress();
+        else if (be instanceof TOWConstructionBlockEntity b) b.addProgress();
+    }
+
+    @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
+
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(new IClientItemExtensions() {
+            private EntrenchingToolRenderer renderer;
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) renderer = new EntrenchingToolRenderer();
+                return renderer;
+            }
+        });
     }
 }
 ==========================================
@@ -13450,6 +13906,11 @@ public class ModItems {
     // === РЎРЈР©Р•РЎРўР’РЈР®Р©РђРЇ Р‘РћР•Р’РђРЇ РўР•РҐРќРРљРђ ===
     public static final RegistryObject<Item> AMMO_BAG = ITEMS.register("ammo_bag",
             () -> new BlockItem(ModBlocks.AMMO_BAG_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<Item> WALL_ITEM = ITEMS.register("wall_block",
+            () -> new BlockItem(ModBlocks.WALL_BLOCK.get(), new Item.Properties()));
+
+    public static final RegistryObject<Item> BARBED_WIRE_ITEM = ITEMS.register("barbed_wire",
+            () -> new BlockItem(ModBlocks.BARBED_WIRE_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLUE_APC = ITEMS.register("blue_apc",
             () -> new VehicleMarkerItem("BLUE", "APC", 20));
     public static final RegistryObject<Item> BLUE_TANK = ITEMS.register("blue_tank",
@@ -13537,9 +13998,12 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\item\RallyIte
 package com.example.aas.item;
 
 import com.example.aas.client.ClientData;
+import com.example.aas.sound.ModSounds;
 import com.example.aas.client.ClientHooks;
+import com.example.aas.client.renderer.SquadRadioRenderer;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -13547,63 +14011,83 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.*;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class RallyItem extends Item {
+import java.util.function.Consumer;
+
+public class RallyItem extends Item implements GeoItem {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public RallyItem() {
         super(new Properties().stacksTo(1));
     }
 
+    // === Р›РћР“РРљРђ РџР РћР’Р•Р РћРљ Р РћРўРљР Р«РўРРЇ РњР•РќР® ===
+    // Р’ С„Р°Р№Р»Рµ src/main/java/com/example/aas/item/RallyItem.java
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        if (level.isClientSide) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-
-                // === 0. CREATIVE BYPASS ===
-                if (player.isCreative()) {
-                    ClientHooks.openRadioMenu();
-                    return;
-                }
-
-                // === 1. РџР РћР’Р•Р РљРђ РљРћРњРђРќР”Р« (TEAM) ===
-                if (player.getTeam() == null) {
-                    player.displayClientMessage(Component.literal("You must join a TEAM (Blue/Red) first!").withStyle(ChatFormatting.RED), true);
-                    return;
-                }
-
-                // === 2. РџР РћР’Р•Р РљРђ РћРўР РЇР”Рђ (SQUAD) ===
-                String playerName = player.getScoreboardName();
-                boolean isInSquad = false;
-                boolean isLeader = false;
-
-                for (AASWorldData.Squad s : ClientData.clientSquads) {
-                    if (s.members.contains(playerName)) {
-                        isInSquad = true;
-                        if (s.leader.equals(playerName)) {
-                            isLeader = true;
-                        }
-                        break;
-                    }
-                }
-
-                if (!isInSquad) {
-                    player.displayClientMessage(Component.literal("You must join a SQUAD first! Press 'K'.").withStyle(ChatFormatting.RED), true);
-                    return;
-                }
-
-                // === 3. РџР РћР’Р•Р РљРђ Р›РР”Р•Р Рђ ===
-                if (!isLeader) {
-                    player.displayClientMessage(Component.literal("You must be a Squad Leader to use this!").withStyle(ChatFormatting.RED), true);
-                    return;
-                }
-
-                // Р’СЃРµ РїСЂРѕРІРµСЂРєРё РїСЂРѕР№РґРµРЅС‹
-                ClientHooks.openRadioMenu();
-            });
+        if (!level.isClientSide) {
+            // Р—РІСѓРє РЅР° СЃРµСЂРІРµСЂРµ (СЃР»С‹С€Р°С‚ РІСЃРµ)
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    ModSounds.RADIO_OPEN.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+        } else {
+            // Р’С‹Р·РѕРІ Р»РѕРіРёРєРё С‡РµСЂРµР· DistExecutor (Р±РµР·РѕРїР°СЃРЅРѕ РґР»СЏ СЃРµСЂРІРµСЂР°)
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () ->
+                    com.example.aas.client.ClientHooks.tryOpenRadioMenu(player)
+            );
         }
-        return InteractionResultHolder.pass(player.getItemInHand(hand));
+        return InteractionResultHolder.consume(player.getItemInHand(hand));
+    }
+
+    // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ, С‡С‚РѕР±С‹ РЅРµ РґСѓР±Р»РёСЂРѕРІР°С‚СЊ РєРѕРґ
+    private boolean canOpenMenu(Player player) {
+        if (player.isCreative()) return true;
+        // РўСѓС‚ РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ Р»РѕРіРёРєСѓ РїСЂРѕРІРµСЂРєРё РѕС‚СЂСЏРґР° (С‡РµСЂРµР· ClientData),
+        // РЅРѕ СѓР±РµРґРёС‚РµСЃСЊ, С‡С‚Рѕ ClientData С‚РѕР¶Рµ РІС‹Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІРЅСѓС‚СЂРё DistExecutor
+        return true;
+    }
+
+    // === GECKOLIB Р Р•Р“РРЎРўР РђР¦РРЇ Р Р•РќР”Р•Р Р•Р Рђ ===
+    // Р’РЅСѓС‚СЂРё РєР»Р°СЃСЃР° RallyItem
+    @Override
+    public boolean onEntitySwing(ItemStack stack, net.minecraft.world.entity.LivingEntity entity) {
+        // Р’РѕР·РІСЂР°С‰Р°СЏ true, РјС‹ РіРѕРІРѕСЂРёРј РёРіСЂРµ: "РЇ СЃР°Рј СѓРїСЂР°РІР»СЏСЋ Р°РЅРёРјР°С†РёРµР№, СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РІР·РјР°С… РЅРµ РЅСѓР¶РµРЅ".
+        return true;
+    }
+
+    @Override
+    public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
+        consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
+            private com.example.aas.client.renderer.SquadRadioRenderer renderer;
+
+            @Override
+            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (this.renderer == null) {
+                    this.renderer = new com.example.aas.client.renderer.SquadRadioRenderer();
+                }
+                return this.renderer;
+            }
+        });
+    }
+
+    // === GECKOLIB РљРћРќРўР РћР›Р›Р•Р  РђРќРРњРђР¦РР™ ===
+    @Override
+    public void registerControllers(software.bernie.geckolib.core.animation.AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new software.bernie.geckolib.core.animation.AnimationController<>(this, "RadioController", 5, event -> software.bernie.geckolib.core.object.PlayState.CONTINUE)
+                .triggerableAnim("deploy", software.bernie.geckolib.core.animation.RawAnimation.begin().thenPlayAndHold("animation.radio.deploy"))
+                .triggerableAnim("close", software.bernie.geckolib.core.animation.RawAnimation.begin().thenPlay("animation.radio.close"))
+        );
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return cache;
     }
 }
 ==========================================
@@ -14073,6 +14557,23 @@ public class PlayerSkinMixin {
     }
 }
 ==========================================
+FILE: ClientPacketHandler.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\ClientPacketHandler.java
+==========================================
+package com.example.aas.network;
+
+import com.example.aas.client.ClientData;
+// РРјРїРѕСЂС‚ MapPlayerInfo СѓРґР°Р»РµРЅ, С‚Р°Рє РєР°Рє РѕРЅРё РІ РѕРґРЅРѕРј РїР°РєРµС‚Рµ
+
+public class ClientPacketHandler {
+    public static void handleSyncMap(PacketSyncMapPlayers msg) {
+        ClientData.mapPlayers.clear();
+        for (MapPlayerInfo info : msg.getPlayers()) { // РСЃРїРѕР»СЊР·СѓР№С‚Рµ РіРµС‚С‚РµСЂ РёР»Рё РїСЂСЏРјРѕР№ РґРѕСЃС‚СѓРї
+            ClientData.mapPlayers.put(info.name, info);
+        }
+    }
+}
+==========================================
 FILE: DownedHandler.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\DownedHandler.java
 ==========================================
@@ -14178,28 +14679,39 @@ public class DownedHandler {
         String victimName = player.getScoreboardName();
         String killerName = player.getPersistentData().getString("AAS_KnockedBy");
 
+        // РџР РћР’Р•Р РљРђ: РЈС‡РёС‚С‹РІР°РµРј РІР°РЅРёР»СЊРЅРѕРµ РїСЂР°РІРёР»Рѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ СЃРјРµСЂС‚РµР№
+        boolean showMessages = player.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_SHOWDEATHMESSAGES);
+
+        if (showMessages) {
+            net.minecraft.network.chat.MutableComponent logMsg;
+
+            if (killerName != null && !killerName.isEmpty()) {
+                logMsg = Component.literal(victimName)
+                        .withStyle(ChatFormatting.WHITE)
+                        .append(Component.literal(" was finished by ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(killerName).withStyle(ChatFormatting.GOLD));
+            } else {
+                logMsg = Component.literal(victimName)
+                        .withStyle(ChatFormatting.WHITE)
+                        .append(Component.literal(" has bled out").withStyle(ChatFormatting.GRAY));
+            }
+            // Р Р°СЃСЃС‹Р»Р°РµРј, С‚РѕР»СЊРєРѕ РµСЃР»Рё РїСЂР°РІРёР»Рѕ РІРєР»СЋС‡РµРЅРѕ
+            player.server.getPlayerList().broadcastSystemMessage(logMsg, false);
+        }
+
+        // РЎС‚Р°С‚РёСЃС‚РёРєСѓ СѓР±РёР№С†Рµ РЅР°С‡РёСЃР»СЏРµРј РІ Р»СЋР±РѕРј СЃР»СѓС‡Р°Рµ (РґР°Р¶Рµ РµСЃР»Рё С‡Р°С‚ РјРѕР»С‡РёС‚)
         if (killerName != null && !killerName.isEmpty()) {
-            Component deathMsg = Component.literal(victimName)
-                    .withStyle(ChatFormatting.WHITE)
-                    .append(Component.literal(" died because of ").withStyle(ChatFormatting.GRAY))
-                    .append(Component.literal(killerName).withStyle(ChatFormatting.GOLD));
-
-            player.server.getPlayerList().broadcastSystemMessage(deathMsg, false);
-
             ServerPlayer killer = player.server.getPlayerList().getPlayerByName(killerName);
             if (killer != null) {
                 killer.awardStat(net.minecraft.stats.Stats.PLAYER_KILLS);
             }
-        } else {
-            Component suicideMsg = Component.literal(victimName)
-                    .withStyle(ChatFormatting.WHITE)
-                    .append(Component.literal(" has bled out").withStyle(ChatFormatting.GRAY));
-            player.server.getPlayerList().broadcastSystemMessage(suicideMsg, false);
         }
 
+        // РћС‡РёСЃС‚РєР° Рё СЃРјРµСЂС‚СЊ
         player.getPersistentData().remove("AAS_KnockedBy");
         player.getPersistentData().putBoolean("AAS_GivingUp", true);
         player.getPersistentData().putBoolean("AAS_IsDowned", false);
+
         player.kill();
     }
 
@@ -14241,6 +14753,35 @@ public class DownedHandler {
         player.setPose(net.minecraft.world.entity.Pose.STANDING);
 
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
+    }
+}
+==========================================
+FILE: MapPlayerInfo.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\MapPlayerInfo.java
+==========================================
+// PATH: src/main/java/com/example/aas/client/MapPlayerInfo.java
+package com.example.aas.network;
+
+public class MapPlayerInfo {
+    public String name;
+    public double x, z;
+    public float rot;
+    public int squadId;
+    public boolean isLeader;
+    public boolean isDowned;
+    public long lastShoutTime;
+    public boolean inVehicle; // Р­С‚Рѕ РїРѕР»Рµ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ Р·РґРµСЃСЊ!
+
+    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle) {
+        this.name = name;
+        this.x = x;
+        this.z = z;
+        this.rot = rot;
+        this.squadId = squadId;
+        this.isLeader = isLeader;
+        this.isDowned = isDowned;
+        this.lastShoutTime = lastShoutTime;
+        this.inVehicle = inVehicle;
     }
 }
 ==========================================
@@ -14950,13 +15491,12 @@ public class PacketPasteTeam {
 FILE: PacketPlaceMapMarker.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketPlaceMapMarker.java
 ==========================================
+// PATH: src/main/java/com/example/aas/network/PacketPlaceMapMarker.java
 package com.example.aas.network;
 
 import com.example.aas.world.AASWorldData;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -14988,12 +15528,12 @@ public class PacketPlaceMapMarker {
             ServerPlayer player = ctx.get().getSender();
             if (player == null || player.getTeam() == null) return;
 
-            ServerLevel level = (ServerLevel) player.level();
+            ServerLevel level = player.serverLevel();
             AASWorldData data = AASWorldData.get(level);
             String team = player.getTeam().getName().toUpperCase();
 
-            long expiry = level.getGameTime() + 3600; // 3 РјРёРЅСѓС‚С‹
-
+            // Р›РѕРіРёРєР° СЃРµСЂРІРµСЂР°: СЃС‚Р°РІРёРј РјРµС‚РєСѓ РІ РґР°РЅРЅС‹Рµ РјРёСЂР°
+            long expiry = level.getGameTime() + 3600;
             data.activeMarkers.add(new AASWorldData.MapMarker(
                     new BlockPos(msg.x, 64, msg.z),
                     msg.type,
@@ -15003,21 +15543,7 @@ public class PacketPlaceMapMarker {
             data.setDirty();
             PacketHandler.sendToAllClients(level, data);
 
-            // === Р›РћР“РРљРђ Р§РђРўРђ Р”Р›РЇ РљРћРњРђРќР”Р« ===
-            String markerName = msg.type.replace("_", " ").toUpperCase();
-            Component chatMessage = Component.literal("[Tactical Map] ")
-                    .withStyle(ChatFormatting.GOLD)
-                    .append(Component.literal(player.getScoreboardName() + " placed marker: ")
-                            .withStyle(ChatFormatting.WHITE))
-                    .append(Component.literal(markerName)
-                            .withStyle(ChatFormatting.YELLOW));
-
-            // Р Р°СЃСЃС‹Р»Р°РµРј РІСЃРµРј РёРіСЂРѕРєР°Рј С‚РѕР№ Р¶Рµ РєРѕРјР°РЅРґС‹ РІ СЌС‚РѕРј РјРёСЂРµ
-            for (ServerPlayer p : level.players()) {
-                if (p.getTeam() != null && p.getTeam().isAlliedTo(player.getTeam())) {
-                    p.sendSystemMessage(chatMessage);
-                }
-            }
+            // РќРРљРђРљРРҐ setScreen РўРЈРў Р‘Р«РўР¬ РќР• Р”РћР›Р–РќРћ!
         });
         ctx.get().setPacketHandled(true);
     }
@@ -15044,6 +15570,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
+import com.example.aas.sound.ModSounds;
 
 import java.util.function.Supplier;
 
@@ -15244,34 +15771,37 @@ public class PacketRadioAction {
         // Р’Р«РџРћР›РќР•РќРР•: Р•СЃР»Рё СЃРѕСЋР·РЅРёРє СЂСЏРґРѕРј РР›Р РёРіСЂРѕРє РІ РєСЂРµР°С‚РёРІРµ
         if (allies >= 1 || player.isCreative()) {
 
-            // РЈРґР°Р»СЏРµРј СЃС‚Р°СЂС‹Р№ Р±Р»РѕРє СЂР°Р»Р»РёРєР° СЌС‚РѕРіРѕ РѕС‚СЂСЏРґР°, РµСЃР»Рё РѕРЅ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+            // 1. РЈР”РђР›Р•РќРР• РЎРўРђР РћР“Рћ Р РђР›РРљРђ Р‘Р•Р— РЁРўР РђР¤Рђ
             if (squad.rallyPos != null && level.isLoaded(squad.rallyPos)) {
-                if (level.getBlockState(squad.rallyPos).getBlock() instanceof RallyPointBlock) {
-                    level.removeBlock(squad.rallyPos, false);
+                // РџС‹С‚Р°РµРјСЃСЏ РЅР°Р№С‚Рё BlockEntity СЃС‚Р°СЂРѕРіРѕ СЂР°Р»РёРєР°
+                BlockEntity oldBe = level.getBlockEntity(squad.rallyPos);
+                if (oldBe instanceof RallyPointBlockEntity rbe) {
+                    // Р“Р›РђР’РќРћР•: СЃС‚Р°РІРёРј С„Р»Р°Рі Decay, С‡С‚РѕР±С‹ РїСЂРё СѓРґР°Р»РµРЅРёРё Р±Р»РѕРєР° РќР• СЃРЅСЏР»РёСЃСЊ С‚РёРєРµС‚С‹
+                    rbe.isDecay = true;
                 }
+                // РўРµРїРµСЂСЊ СѓРґР°Р»СЏРµРј Р±Р»РѕРє - С€С‚СЂР°С„Р° РЅРµ Р±СѓРґРµС‚
+                level.removeBlock(squad.rallyPos, false);
             }
 
-            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РЅРѕРІС‹Р№ Р±Р»РѕРє СЂР°Р»Р»РёРєР°
+            // 2. РЈРЎРўРђРќРћР’РљРђ РќРћР’РћР“Рћ Р‘Р›РћРљРђ
             BlockState rallyState = team.equals("BLUE") ? ModBlocks.BLUE_RALLY_BLOCK.get().defaultBlockState() : ModBlocks.RED_RALLY_BLOCK.get().defaultBlockState();
             level.setBlock(pos, rallyState, 3);
 
-            // РџСЂРёРІСЏР·С‹РІР°РµРј ID РѕС‚СЂСЏРґР° Рє Р±Р»РѕРєСѓ (РґР»СЏ С€С‚СЂР°С„РѕРІ РїСЂРё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё)
+            // РџСЂРёРІСЏР·С‹РІР°РµРј ID РѕС‚СЂСЏРґР° Рє РЅРѕРІРѕРјСѓ Р±Р»РѕРєСѓ
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof RallyPointBlockEntity rbe) {
                 rbe.setSquadId(squad.id);
             }
 
-            // РЎРћРҐР РђРќР•РќРР• Р”РђРќРќР«РҐ Р’ РЎРљР’РђР”
+
+            // РЎРѕС…СЂР°РЅСЏРµРј РґР°РЅРЅС‹Рµ
             squad.rallyPos = pos;
             squad.rallyDimension = level.dimension().location().toString();
+            squad.rallyExpiryTick = level.getGameTime() + 12000; // 10 РјРёРЅСѓС‚
 
-            // РЈРЎРўРђРќРћР’РљРђ РўРђР™РњР•Р Рђ (10 РјРёРЅСѓС‚ = 12000 С‚РёРєРѕРІ)
-            squad.rallyExpiryTick = level.getGameTime() + 12000;
-
-            // РЎРѕРѕР±С‰РµРЅРёРµ РѕР± СѓСЃРїРµС€РЅРѕР№ СѓСЃС‚Р°РЅРѕРІРєРµ (РўРµРїРµСЂСЊ СЃРєРѕР±РєРё Р·Р°РєСЂС‹С‚С‹ РїСЂР°РІРёР»СЊРЅРѕ)
             player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
 
-            // РћР±РЅРѕРІР»СЏРµРј СЃРїРёСЃРєРё РґР»СЏ РіР»РѕР±Р°Р»СЊРЅРѕР№ РєР°СЂС‚С‹
+            // РћР±РЅРѕРІР»РµРЅРёРµ РґР°РЅРЅС‹С… РјРёСЂР°
             if (team.equals("BLUE")) {
                 data.blueRallies.add(pos);
             } else {
@@ -15279,8 +15809,6 @@ public class PacketRadioAction {
             }
 
             data.setDirty();
-
-            // РЎРРќРҐР РћРќРР—РђР¦РРЇ: Р§С‚РѕР±С‹ РёРєРѕРЅРєР° РїРѕСЏРІРёР»Р°СЃСЊ РЅР° РєР°СЂС‚Рµ Рё РІ РјРµРЅСЋ
             PacketHandler.sendToAllClients(level, data);
             PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
 
@@ -16634,15 +17162,16 @@ public class PacketSquadChat {
 FILE: PacketSquadMarker.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketSquadMarker.java
 ==========================================
+// PATH: src/main/java/com/example/aas/network/PacketSquadMarker.java
 package com.example.aas.network;
 
 import com.example.aas.world.AASWorldData;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
 import java.util.function.Supplier;
-import net.minecraft.server.level.ServerLevel;
 
 public class PacketSquadMarker {
     private final int x, z, type;
@@ -16668,22 +17197,17 @@ public class PacketSquadMarker {
             AASWorldData data = AASWorldData.get(level);
             long expiry = level.getGameTime() + 6000;
 
-            boolean found = false;
             for (AASWorldData.Squad s : data.squads) {
                 if (s.leader.equals(player.getScoreboardName())) {
                     s.marker = new AASWorldData.SquadMarker(msg.x, msg.z, msg.type, expiry);
                     data.setDirty();
 
-                    // РџРµС‡Р°С‚Р°РµРј РІ РєРѕРЅСЃРѕР»СЊ СЃРµСЂРІРµСЂР° РґР»СЏ РїСЂРѕРІРµСЂРєРё
-                    System.out.println("AAS DEBUG: Marker set by " + s.leader + " at " + msg.x + ", " + msg.z + " type: " + msg.type);
-
-                    // РЎРРќРҐР РћРќРР—РђР¦РРЇ: РѕС‚РїСЂР°РІР»СЏРµРј РІСЃРµРј РІ СЌС‚РѕРј РјРёСЂРµ РѕР±РЅРѕРІР»РµРЅРЅС‹Рµ РґР°РЅРЅС‹Рµ Рѕ СЃРєРІР°РґР°С…
-                    PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
-                    found = true;
+                    // РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РґР°РЅРЅС‹С…
+                    PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension),
+                            new PacketSyncSquads(data.squads));
                     break;
                 }
             }
-            if (!found) System.out.println("AAS DEBUG: Player " + player.getScoreboardName() + " tried to set marker but isn't a SL!");
         });
         ctx.get().setPacketHandled(true);
     }
@@ -16937,22 +17461,25 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\Packe
 ==========================================
 package com.example.aas.network;
 
-import com.example.aas.client.ClientData;
-import com.example.aas.client.MapPlayerInfo;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+
+// РЈР”РђР›РРўР• Р’РЎР• РРњРџРћР РўР« .client.* РћРўРЎР®Р”Рђ!
 
 public class PacketSyncMapPlayers {
     private final List<MapPlayerInfo> players;
 
     public PacketSyncMapPlayers(List<MapPlayerInfo> players) {
         this.players = players;
+    }
+
+    public List<MapPlayerInfo> getPlayers() {
+        return this.players;
     }
 
     public static void encode(PacketSyncMapPlayers msg, FriendlyByteBuf buf) {
@@ -16966,7 +17493,7 @@ public class PacketSyncMapPlayers {
             buf.writeBoolean(p.isLeader);
             buf.writeBoolean(p.isDowned);
             buf.writeLong(p.lastShoutTime);
-            buf.writeBoolean(p.inVehicle); // Р”РћР‘РђР’РРўР¬ Р­РўРЈ РЎРўР РћРљРЈ
+            buf.writeBoolean(p.inVehicle);
         }
     }
 
@@ -16975,15 +17502,9 @@ public class PacketSyncMapPlayers {
         List<MapPlayerInfo> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             list.add(new MapPlayerInfo(
-                    buf.readUtf(),      // name
-                    buf.readDouble(),   // x
-                    buf.readDouble(),   // z
-                    buf.readFloat(),    // rot
-                    buf.readInt(),      // squadId
-                    buf.readBoolean(),  // isLeader
-                    buf.readBoolean(),  // isDowned
-                    buf.readLong(),     // lastShoutTime
-                    buf.readBoolean()   // inVehicle (Р”РћР‘РђР’РРўР¬ Р­РўРћ Р§РўР•РќРР•)
+                    buf.readUtf(), buf.readDouble(), buf.readDouble(),
+                    buf.readFloat(), buf.readInt(), buf.readBoolean(),
+                    buf.readBoolean(), buf.readLong(), buf.readBoolean()
             ));
         }
         return new PacketSyncMapPlayers(list);
@@ -16991,13 +17512,9 @@ public class PacketSyncMapPlayers {
 
     public static void handle(PacketSyncMapPlayers msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                // РћР±РЅРѕРІР»СЏРµРј РґР°РЅРЅС‹Рµ РЅР° РєР»РёРµРЅС‚Рµ
-                ClientData.mapPlayers.clear();
-                for (MapPlayerInfo info : msg.players) {
-                    ClientData.mapPlayers.put(info.name, info);
-                }
-            });
+            // РСЃРїРѕР»СЊР·СѓРµРј DistExecutor, РЅРѕ РІС‹Р·С‹РІР°РµРј РјРµС‚РѕРґ С‡РµСЂРµР· РёРЅС‚РµСЂС„РµР№СЃ РёР»Рё ClientHooks
+            // С‡С‚РѕР±С‹ РЅРµ "РїР°С‡РєР°С‚СЊ" РёРјРїРѕСЂС‚С‹ РїР°РєРµС‚Р°
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientPacketHandler.handleSyncMap(msg));
         });
         ctx.get().setPacketHandled(true);
     }
@@ -17191,7 +17708,6 @@ public class PacketTeamSelect {
                 if (team == null) {
                     team = scoreboard.addPlayerTeam(internalTeamName);
                     team.setColor(color);
-                    team.setAllowFriendlyFire(false);
                     team.setSeeFriendlyInvisibles(true);
                 }
 
@@ -17650,7 +18166,7 @@ import net.minecraftforge.registries.RegistryObject;
 public class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
             DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, "aas");
-
+    public static final RegistryObject<SoundEvent> RALLY_IDLE = registerSoundEvent("rally_idle");
     public static final RegistryObject<SoundEvent> HUB_IDLE = registerSoundEvent("hub_idle");
     public static final RegistryObject<SoundEvent> M2_LOAD = registerSoundEvent("m2_load");
     public static final RegistryObject<SoundEvent> M2_UNLOAD = registerSoundEvent("m2_unload");
@@ -17658,8 +18174,9 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> PLAYER_DOWNED = registerSoundEvent("player_downed");
     public static final RegistryObject<SoundEvent> AGS_SHOOT = registerSoundEvent("ags_shoot");
     public static final RegistryObject<SoundEvent> HELP_SCREAM = registerSoundEvent("help_scream");
-    // Р”РћР‘РђР’Р›РЇР•Рњ Р­РўРЈ РЎРўР РћРљРЈ:
+    public static final RegistryObject<SoundEvent> RADIO_OPEN = registerSoundEvent("radio_open");
     public static final RegistryObject<SoundEvent> M2_SHOOT = registerSoundEvent("m2_shoot");
+    public static final RegistryObject<SoundEvent> SHOVEL_DIG = registerSoundEvent("shovel_dig");
 
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation id = new ResourceLocation("aas", name);
@@ -18321,6 +18838,59 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\animations\ag
 	}
 }
 ==========================================
+FILE: entrenching_tool.animation.json
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\animations\entrenching_tool.animation.json
+==========================================
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.shovel.dig": {
+			"loop": true,
+			"animation_length": 1,
+			"bones": {
+				"body": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.25": {
+							"vector": [0, 0, -50]
+						},
+						"0.5": {
+							"vector": [70, 0, -50]
+						},
+						"0.75": {
+							"vector": [0, 0, 25],
+							"easing": "easeInCubic"
+						},
+						"1.0": {
+							"vector": [0, 0, 0]
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.25": {
+							"vector": [0, -10, 0]
+						},
+						"0.5": {
+							"vector": [-1.5, -6.25, 6]
+						},
+						"0.75": {
+							"vector": [2.25, 0.75, 0],
+							"easing": "easeInQuart"
+						},
+						"1.0": {
+							"vector": [0, 0, 0]
+						}
+					}
+				}
+			}
+		}
+	}
+}
+==========================================
 FILE: m2_browning.animation.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\animations\m2_browning.animation.json
 ==========================================
@@ -18345,6 +18915,70 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\animations\m2
 		}
 	},
 	"geckolib_format_version": 2
+}
+==========================================
+FILE: squad_leader_radio.animation.json
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\animations\squad_leader_radio.animation.json
+==========================================
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.radio.deploy": {
+			"animation_length": 0.25,
+			"bones": {
+				"root": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.25": {
+							"vector": [27.1515, -25, 0],
+							"easing": "linear"
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.25": {
+							"vector": [9, 0, 0],
+							"easing": "linear"
+						}
+					}
+				},
+				"body": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					}
+				}
+			}
+		},
+		"animation.radio.close": {
+			"animation_length": 0.25,
+			"bones": {
+				"root": {
+					"rotation": {
+						"0.0": {
+							"vector": [27.1515, -25, 0],
+							"easing": "easeInQuart"
+						},
+						"0.25": {
+							"vector": [0, 0, 0]
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [9, 0, 0],
+							"easing": "easeInQuart"
+						},
+						"0.25": {
+							"vector": [0, 0, 0]
+						}
+					}
+				}
+			}
+		}
+	}
 }
 ==========================================
 FILE: ags_ammo_stack.json
@@ -18855,6 +19489,199 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\geo\ags_30_no
 	]
 }
 ==========================================
+FILE: entrenching_tool.geo.json
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\geo\entrenching_tool.geo.json
+==========================================
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.Entrenching Tool - Converted - Converted",
+				"texture_width": 32,
+				"texture_height": 32,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 2.5,
+				"visible_bounds_offset": [0, 0.75, 0]
+			},
+			"bones": [
+				{
+					"name": "root",
+					"pivot": [0, 0, 0]
+				},
+				{
+					"name": "body",
+					"parent": "root",
+					"pivot": [0.5, -0.25, -0.5],
+					"rotation": [0, 0, 25],
+					"cubes": [
+						{
+							"origin": [0, -2, -1],
+							"size": [1, 8, 1],
+							"uv": {
+								"north": {"uv": [3, 6], "uv_size": [1, 8]},
+								"east": {"uv": [4, 6], "uv_size": [1, 8]},
+								"south": {"uv": [5, 6], "uv_size": [1, 8]},
+								"west": {"uv": [6, 6], "uv_size": [1, 8]},
+								"up": {"uv": [16, 5], "uv_size": [1, 1]},
+								"down": {"uv": [7, 17], "uv_size": [1, -1]}
+							}
+						},
+						{
+							"origin": [-0.25, 4, -1.25],
+							"size": [1.5, 2, 1.5],
+							"uv": {
+								"north": {"uv": [13, 6], "uv_size": [1.5, 2]},
+								"east": {"uv": [7, 13], "uv_size": [1.5, 2]},
+								"south": {"uv": [13, 8], "uv_size": [1.5, 2]},
+								"west": {"uv": [9, 13], "uv_size": [1.5, 2]},
+								"up": {"uv": [3, 15], "uv_size": [1.5, 1.5]},
+								"down": {"uv": [5, 16.5], "uv_size": [1.5, -1.5]}
+							}
+						},
+						{
+							"origin": [-1.5, -7, -1],
+							"size": [1, 6, 1],
+							"pivot": [-1.5, -7, 0],
+							"rotation": [0, 0, 10],
+							"uv": {
+								"north": {"uv": [7, 6], "uv_size": [1, 6]},
+								"east": {"uv": [8, 6], "uv_size": [1, 6]},
+								"south": {"uv": [9, 0], "uv_size": [1, 6]},
+								"west": {"uv": [9, 6], "uv_size": [1, 6]},
+								"up": {"uv": [6, 14], "uv_size": [1, 1]},
+								"down": {"uv": [16, 3], "uv_size": [1, -1]}
+							}
+						},
+						{
+							"origin": [1.5, -7.25, -1],
+							"size": [1, 6, 1],
+							"pivot": [1.5, -7.25, 0],
+							"rotation": [0, 0, -10],
+							"uv": {
+								"north": {"uv": [10, 0], "uv_size": [1, 6]},
+								"east": {"uv": [10, 6], "uv_size": [1, 6]},
+								"south": {"uv": [11, 0], "uv_size": [1, 6]},
+								"west": {"uv": [11, 6], "uv_size": [1, 6]},
+								"up": {"uv": [16, 3], "uv_size": [1, 1]},
+								"down": {"uv": [16, 5], "uv_size": [1, -1]}
+							}
+						},
+						{
+							"origin": [-0.75, -2, -1.25],
+							"size": [2.5, 1, 1.5],
+							"uv": {
+								"north": {"uv": [12, 11], "uv_size": [2.5, 1]},
+								"east": {"uv": [13, 15], "uv_size": [1.5, 1]},
+								"south": {"uv": [3, 14], "uv_size": [2.5, 1]},
+								"west": {"uv": [15, 15], "uv_size": [1.5, 1]},
+								"up": {"uv": [11, 12], "uv_size": [2.5, 1.5]},
+								"down": {"uv": [13, 5.5], "uv_size": [2.5, -1.5]}
+							}
+						},
+						{
+							"origin": [-1.5, -7.75, -1.25],
+							"size": [4, 1, 1.5],
+							"uv": {
+								"north": {"uv": [7, 12], "uv_size": [4, 1]},
+								"east": {"uv": [16, 0], "uv_size": [1.5, 1]},
+								"south": {"uv": [12, 10], "uv_size": [4, 1]},
+								"west": {"uv": [16, 1], "uv_size": [1.5, 1]},
+								"up": {"uv": [12, 0], "uv_size": [4, 1.5]},
+								"down": {"uv": [12, 3.5], "uv_size": [4, -1.5]}
+							}
+						},
+						{
+							"origin": [-1.67554, 5.85311, -0.91318],
+							"size": [2.5, 6, 1],
+							"pivot": [-0.16795, 5.85311, 0],
+							"rotation": [0, 10, 0],
+							"uv": {
+								"north": {"uv": [0, 0], "uv_size": [2.5, 6]},
+								"east": {"uv": [0, 12], "uv_size": [1, 6]},
+								"south": {"uv": [3, 0], "uv_size": [2.5, 6]},
+								"west": {"uv": [1, 12], "uv_size": [1, 6]},
+								"up": {"uv": [11, 14], "uv_size": [2.5, 1]},
+								"down": {"uv": [14, 13], "uv_size": [2.5, -1]}
+							}
+						},
+						{
+							"origin": [-0.92554, 11.85311, -0.91318],
+							"size": [1.75, 1, 1],
+							"pivot": [-0.16795, 5.85311, 0],
+							"rotation": [0, 10, 0],
+							"uv": {
+								"north": {"uv": [9, 15], "uv_size": [1.75, 1]},
+								"east": {"uv": [10, 16], "uv_size": [1, 1]},
+								"south": {"uv": [15, 9], "uv_size": [1.75, 1]},
+								"west": {"uv": [16, 10], "uv_size": [1, 1]},
+								"up": {"uv": [11, 15], "uv_size": [1.75, 1]},
+								"down": {"uv": [15, 12], "uv_size": [1.75, -1]}
+							}
+						},
+						{
+							"origin": [0.07446, 12.85311, -0.91318],
+							"size": [0.75, 1, 1],
+							"pivot": [-0.16795, 5.85311, 0],
+							"rotation": [0, 10, 0],
+							"uv": {
+								"north": {"uv": [17, 3], "uv_size": [0.75, 1]},
+								"east": {"uv": [13, 16], "uv_size": [1, 1]},
+								"south": {"uv": [4, 17], "uv_size": [0.75, 1]},
+								"west": {"uv": [14, 16], "uv_size": [1, 1]},
+								"up": {"uv": [17, 4], "uv_size": [0.75, 1]},
+								"down": {"uv": [5, 18], "uv_size": [0.75, -1]}
+							}
+						},
+						{
+							"origin": [0.33749, 5.85311, -1.18792],
+							"size": [2.5, 6, 1],
+							"pivot": [-0.16795, 5.85311, 0],
+							"rotation": [0, -10, 0],
+							"uv": {
+								"north": {"uv": [0, 6], "uv_size": [2.5, 6]},
+								"east": {"uv": [2, 12], "uv_size": [1, 6]},
+								"south": {"uv": [6, 0], "uv_size": [2.5, 6]},
+								"west": {"uv": [12, 4], "uv_size": [1, 6]},
+								"up": {"uv": [14, 13], "uv_size": [2.5, 1]},
+								"down": {"uv": [14, 15], "uv_size": [2.5, -1]}
+							}
+						},
+						{
+							"origin": [0.33749, 11.85311, -1.18792],
+							"size": [1.75, 1, 1],
+							"pivot": [-0.16795, 5.85311, 0],
+							"rotation": [0, -10, 0],
+							"uv": {
+								"north": {"uv": [15, 6], "uv_size": [1.75, 1]},
+								"east": {"uv": [8, 16], "uv_size": [1, 1]},
+								"south": {"uv": [7, 15], "uv_size": [1.75, 1]},
+								"west": {"uv": [9, 16], "uv_size": [1, 1]},
+								"up": {"uv": [15, 7], "uv_size": [1.75, 1]},
+								"down": {"uv": [15, 9], "uv_size": [1.75, -1]}
+							}
+						},
+						{
+							"origin": [0.33749, 12.85311, -1.18792],
+							"size": [0.8, 1, 1],
+							"pivot": [-0.16795, 5.85311, 0],
+							"rotation": [0, -10, 0],
+							"uv": {
+								"north": {"uv": [15, 16], "uv_size": [0.75, 1]},
+								"east": {"uv": [11, 16], "uv_size": [1, 1]},
+								"south": {"uv": [16, 16], "uv_size": [0.75, 1]},
+								"west": {"uv": [12, 16], "uv_size": [1, 1]},
+								"up": {"uv": [17, 2], "uv_size": [0.75, 1]},
+								"down": {"uv": [3, 18], "uv_size": [0.75, -1]}
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}
+==========================================
 FILE: m2_browning.geo.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\geo\m2_browning.geo.json
 ==========================================
@@ -18995,6 +19822,191 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\geo\m2_browni
 					"cubes": [
 						{"origin": [-24, 11, 0], "size": [17, 1, 1], "uv": [0, 6]},
 						{"origin": [-10, 10, -1], "size": [3, 3, 3], "uv": [0, 23]}
+					]
+				}
+			]
+		}
+	]
+}
+==========================================
+FILE: squad_leader_radio.geo.json
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\geo\squad_leader_radio.geo.json
+==========================================
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.squade_radio - Converted - Converted",
+				"texture_width": 16,
+				"texture_height": 16,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 2.5,
+				"visible_bounds_offset": [0, 0.75, 0]
+			},
+			"bones": [
+				{
+					"name": "root",
+					"pivot": [0, 0, 0],
+					"rotation": [0, 25, 0]
+				},
+				{
+					"name": "body",
+					"parent": "root",
+					"pivot": [0, 0, 0],
+					"cubes": [
+						{
+							"origin": [-2, 0, -1],
+							"size": [3, 4, 1],
+							"uv": {
+								"north": {"uv": [0, 0], "uv_size": [3, 4]},
+								"east": {"uv": [0, 4], "uv_size": [1, 4]},
+								"south": {"uv": [3, 0], "uv_size": [3, 4]},
+								"west": {"uv": [1, 4], "uv_size": [1, 4]},
+								"up": {"uv": [2, 4], "uv_size": [3, 1]},
+								"down": {"uv": [2, 6], "uv_size": [3, -1]}
+							}
+						},
+						{
+							"origin": [-2.3, 4, -0.8],
+							"size": [0.8, 0.5, 0.8],
+							"pivot": [-1.5, 4, 0.2],
+							"rotation": [0, -45, 0],
+							"uv": {
+								"north": {"uv": [6, 8], "uv_size": [0.75, 0.5]},
+								"east": {"uv": [7, 8], "uv_size": [0.75, 0.5]},
+								"south": {"uv": [8, 8], "uv_size": [0.75, 0.5]},
+								"west": {"uv": [0, 9], "uv_size": [0.75, 0.5]},
+								"up": {"uv": [0, 8], "uv_size": [0.75, 0.75]},
+								"down": {"uv": [1, 8.75], "uv_size": [0.75, -0.75]}
+							}
+						},
+						{
+							"origin": [1, 2.5, -0.8],
+							"size": [0.2, 1.1, 0.6],
+							"uv": {
+								"north": {"uv": [6, 8], "uv_size": [0.75, 0.5]},
+								"east": {"uv": [7, 8], "uv_size": [0.75, 0.5]},
+								"south": {"uv": [8, 8], "uv_size": [0.75, 0.5]},
+								"west": {"uv": [0, 9], "uv_size": [0.75, 0.5]},
+								"up": {"uv": [0, 8], "uv_size": [0.75, 0.75]},
+								"down": {"uv": [1, 8.75], "uv_size": [0.75, -0.75]}
+							}
+						},
+						{
+							"origin": [-1.8, 2.5, -1.1],
+							"size": [2.6, 1.1, 0.1],
+							"uv": {
+								"north": {"uv": [6, 8], "uv_size": [0.75, 0.5]},
+								"east": {"uv": [7, 8], "uv_size": [0.75, 0.5]},
+								"south": {"uv": [8, 8], "uv_size": [0.75, 0.5]},
+								"west": {"uv": [0, 9], "uv_size": [0.75, 0.5]},
+								"up": {"uv": [0, 8], "uv_size": [0.75, 0.75]},
+								"down": {"uv": [1, 8.75], "uv_size": [0.75, -0.75]}
+							}
+						},
+						{
+							"origin": [-0.5, 4.5, -0.7],
+							"size": [0.6, 1.7, 0.6],
+							"pivot": [0.2, 4.5, 0.2],
+							"rotation": [0, -45, 0],
+							"uv": {
+								"north": {"uv": [4, 6], "uv_size": [0.5, 1.75]},
+								"east": {"uv": [6, 4], "uv_size": [0.5, 1.75]},
+								"south": {"uv": [6, 6], "uv_size": [0.5, 1.75]},
+								"west": {"uv": [7, 0], "uv_size": [0.5, 1.75]},
+								"up": {"uv": [7, 9], "uv_size": [0.5, 0.5]},
+								"down": {"uv": [8, 9.5], "uv_size": [0.5, -0.5]}
+							}
+						},
+						{
+							"origin": [-0.4, 6.2, -0.6],
+							"size": [0.4, 3.3, 0.4],
+							"pivot": [0.2, 6.2, 0.2],
+							"rotation": [0, -45, 0],
+							"uv": {
+								"north": {"uv": [5, 4], "uv_size": [0.5, 3.25]},
+								"east": {"uv": [6, 0], "uv_size": [0.5, 3.25]},
+								"south": {"uv": [2, 6], "uv_size": [0.5, 3.25]},
+								"west": {"uv": [3, 6], "uv_size": [0.5, 3.25]},
+								"up": {"uv": [9, 8], "uv_size": [0.5, 0.5]},
+								"down": {"uv": [9, 9.5], "uv_size": [0.5, -0.5]}
+							}
+						},
+						{
+							"origin": [-0.6, 4, -0.8],
+							"size": [0.8, 0.5, 0.8],
+							"pivot": [0.2, 4, 0.2],
+							"rotation": [0, -45, 0],
+							"uv": {
+								"north": {"uv": [1, 9], "uv_size": [0.75, 0.5]},
+								"east": {"uv": [4, 9], "uv_size": [0.75, 0.5]},
+								"south": {"uv": [5, 9], "uv_size": [0.75, 0.5]},
+								"west": {"uv": [6, 9], "uv_size": [0.75, 0.5]},
+								"up": {"uv": [4, 8], "uv_size": [0.75, 0.75]},
+								"down": {"uv": [5, 8.75], "uv_size": [0.75, -0.75]}
+							}
+						},
+						{
+							"origin": [0.7, 2.9, 0],
+							"size": [0.2, 1, 0.1],
+							"uv": {
+								"north": {"uv": [0, 10], "uv_size": [0.25, 1]},
+								"east": {"uv": [1, 10], "uv_size": [0.25, 1]},
+								"south": {"uv": [2, 10], "uv_size": [0.25, 1]},
+								"west": {"uv": [10, 2], "uv_size": [0.25, 1]},
+								"up": {"uv": [7, 10], "uv_size": [0.25, 0.25]},
+								"down": {"uv": [10, 7.25], "uv_size": [0.25, -0.25]}
+							}
+						},
+						{
+							"origin": [-1.9, 2.9, 0],
+							"size": [0.2, 1, 0.1],
+							"uv": {
+								"north": {"uv": [3, 10], "uv_size": [0.25, 1]},
+								"east": {"uv": [10, 3], "uv_size": [0.25, 1]},
+								"south": {"uv": [4, 10], "uv_size": [0.25, 1]},
+								"west": {"uv": [10, 4], "uv_size": [0.25, 1]},
+								"up": {"uv": [8, 10], "uv_size": [0.25, 0.25]},
+								"down": {"uv": [10, 8.25], "uv_size": [0.25, -0.25]}
+							}
+						},
+						{
+							"origin": [-1.7, 3.7, 0],
+							"size": [2.4, 0.2, 0.1],
+							"uv": {
+								"north": {"uv": [7, 2], "uv_size": [2.5, 0.25]},
+								"east": {"uv": [9, 10], "uv_size": [0.25, 0.25]},
+								"south": {"uv": [7, 3], "uv_size": [2.5, 0.25]},
+								"west": {"uv": [10, 9], "uv_size": [0.25, 0.25]},
+								"up": {"uv": [7, 4], "uv_size": [2.5, 0.25]},
+								"down": {"uv": [7, 5.25], "uv_size": [2.5, -0.25]}
+							}
+						},
+						{
+							"origin": [-1.7, 2.9, 0],
+							"size": [2.4, 0.2, 0.1],
+							"uv": {
+								"north": {"uv": [7, 6], "uv_size": [2.5, 0.25]},
+								"east": {"uv": [10, 10], "uv_size": [0.25, 0.25]},
+								"south": {"uv": [7, 7], "uv_size": [2.5, 0.25]},
+								"west": {"uv": [0, 11], "uv_size": [0.25, 0.25]},
+								"up": {"uv": [8, 0], "uv_size": [2.5, 0.25]},
+								"down": {"uv": [8, 1.25], "uv_size": [2.5, -0.25]}
+							}
+						},
+						{
+							"origin": [0.3, 2.5, 0],
+							"size": [0.4, 0.2, 0.1],
+							"uv": {
+								"north": {"uv": [5, 10], "uv_size": [0.5, 0.25]},
+								"east": {"uv": [11, 0], "uv_size": [0.25, 0.25]},
+								"south": {"uv": [10, 5], "uv_size": [0.5, 0.25]},
+								"west": {"uv": [1, 11], "uv_size": [0.25, 0.25]},
+								"up": {"uv": [6, 10], "uv_size": [0.5, 0.25]},
+								"down": {"uv": [10, 6.25], "uv_size": [0.5, -0.25]}
+							}
+						}
 					]
 				}
 			]
@@ -22069,76 +23081,185 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\
 	},
 	"elements": [
 		{
-			"from": [0, 0, 0],
-			"to": [16, 6, 16],
+			"from": [-2, 1, 4],
+			"to": [-1, 8, 12],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-4, 0, 2]},
 			"faces": {
-				"north": {"uv": [4, 14.5, 8, 16], "texture": "#0"},
-				"east": {"uv": [0, 14.5, 4, 16], "texture": "#0"},
-				"south": {"uv": [12, 14.5, 16, 16], "texture": "#0"},
-				"west": {"uv": [8, 14.5, 12, 16], "texture": "#0"},
-				"up": {"uv": [8, 14.5, 4, 10.5], "texture": "#0"},
-				"down": {"uv": [12, 10.5, 8, 14.5], "texture": "#0"}
+				"north": {"uv": [10, 0.75, 10.25, 2.5], "texture": "#0"},
+				"east": {"uv": [6.25, 6.5, 8.25, 8.25], "texture": "#0"},
+				"south": {"uv": [10, 4.25, 10.25, 6], "texture": "#0"},
+				"west": {"uv": [0, 6.75, 2, 8.5], "texture": "#0"},
+				"up": {"uv": [5.25, 11.5, 5, 9.5], "texture": "#0"},
+				"down": {"uv": [5.5, 9.5, 5.25, 11.5], "texture": "#0"}
 			}
 		},
 		{
-			"from": [11, 6, 4],
-			"to": [15, 8, 6],
-			"rotation": {"angle": 0, "axis": "y", "origin": [16, 0, 4]},
+			"from": [14, 0, 13],
+			"to": [17, 5, 15],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [17, 0, 14]},
 			"faces": {
-				"north": {"uv": [13.5, 8, 14.5, 8.5], "texture": "#0"},
-				"east": {"uv": [13, 8, 13.5, 8.5], "texture": "#0"},
-				"south": {"uv": [15, 8, 16, 8.5], "texture": "#0"},
-				"west": {"uv": [14.5, 8, 15, 8.5], "texture": "#0"},
-				"up": {"uv": [14.5, 8, 13.5, 7.5], "texture": "#0"},
-				"down": {"uv": [15.5, 7.5, 14.5, 8], "texture": "#0"}
+				"north": {"uv": [7.5, 5, 8.25, 6.25], "texture": "#0"},
+				"east": {"uv": [5.75, 7, 6.25, 8.25], "texture": "#0"},
+				"south": {"uv": [2.75, 9.25, 3.5, 10.5], "texture": "#0"},
+				"west": {"uv": [9.25, 6.25, 9.75, 7.5], "texture": "#0"},
+				"up": {"uv": [10.5, 3.25, 9.75, 2.75], "texture": "#0"},
+				"down": {"uv": [10.75, 9.5, 10, 10], "texture": "#0"}
 			}
 		},
 		{
-			"from": [4, 6, 3],
-			"to": [11, 9, 8],
-			"rotation": {"angle": 0, "axis": "y", "origin": [4, 6, 4]},
+			"from": [14, 0, 1],
+			"to": [17, 5, 3],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [17, 0, 3]},
 			"faces": {
-				"north": {"uv": [11.25, 9.75, 13, 10.5], "texture": "#0"},
-				"east": {"uv": [10, 9.75, 11.25, 10.5], "texture": "#0"},
-				"south": {"uv": [14.25, 9.75, 16, 10.5], "texture": "#0"},
-				"west": {"uv": [13, 9.75, 14.25, 10.5], "texture": "#0"},
-				"up": {"uv": [13, 9.75, 11.25, 8.5], "texture": "#0"},
-				"down": {"uv": [14.75, 8.5, 13, 9.75], "texture": "#0"}
+				"north": {"uv": [3.5, 9.25, 4.25, 10.5], "texture": "#0"},
+				"east": {"uv": [9.25, 7.5, 9.75, 8.75], "texture": "#0"},
+				"south": {"uv": [9.25, 5, 10, 6.25], "texture": "#0"},
+				"west": {"uv": [9.25, 8.75, 9.75, 10], "texture": "#0"},
+				"up": {"uv": [10.75, 10.5, 10, 10], "texture": "#0"},
+				"down": {"uv": [11, 0.75, 10.25, 1.25], "texture": "#0"}
 			}
-		}
-	],
-	"groups": [
+		},
 		{
-			"name": "Rally",
-			"origin": [8, 8, 8],
-			"scope": 0,
-			"color": 0,
-			"children": [0, 1, 2]
-		}
-	]
-}
-==========================================
-FILE: crate_dropped.json
-PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\crate_dropped.json
-==========================================
-{
-	"credit": "Made with Blockbench",
-	"parent": "block/block",
-	"textures": {
-		"0": "aas:block/crate_dropped",
-		"particle": "aas:block/crate_dropped"
-	},
-	"elements": [
-		{
-			"from": [0, 0, 0],
-			"to": [16, 8, 16],
+			"from": [8.1, 12, 4],
+			"to": [12.1, 12.5, 12],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [13.1, 12, 14]},
 			"faces": {
-				"north": {"uv": [8, 0, 16, 4], "texture": "#0"},
-				"east": {"uv": [8, 4, 16, 8], "texture": "#0"},
-				"south": {"uv": [8, 8, 16, 12], "texture": "#0"},
-				"west": {"uv": [8, 12, 16, 16], "texture": "#0"},
-				"up": {"uv": [8, 8, 0, 0], "texture": "#0"},
-				"down": {"uv": [8, 8, 0, 16], "texture": "#0"}
+				"north": {"uv": [10, 2.5, 11, 2.75], "texture": "#0"},
+				"east": {"uv": [9.5, 3.25, 11.5, 3.5], "texture": "#0"},
+				"south": {"uv": [10.25, 5.5, 11.25, 5.75], "texture": "#0"},
+				"west": {"uv": [9.5, 3.5, 11.5, 3.75], "texture": "#0"},
+				"up": {"uv": [9.25, 7, 8.25, 5], "texture": "#0"},
+				"down": {"uv": [6.75, 8.25, 5.75, 10.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [13, 0, 3],
+			"to": [18, 13, 13],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [18, 0, 14]},
+			"faces": {
+				"north": {"uv": [6.25, 0, 7.5, 3.25], "texture": "#0"},
+				"east": {"uv": [0, 3.5, 2.5, 6.75], "texture": "#0"},
+				"south": {"uv": [6.25, 3.25, 7.5, 6.5], "texture": "#0"},
+				"west": {"uv": [2.5, 3.5, 5, 6.75], "texture": "#0"},
+				"up": {"uv": [3.25, 9.25, 2, 6.75], "texture": "#0"},
+				"down": {"uv": [4.5, 6.75, 3.25, 9.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.8, 1, 4],
+			"to": [18.8, 6, 12],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [20.8, 1, 14]},
+			"faces": {
+				"north": {"uv": [10.25, 1.25, 10.5, 2.5], "texture": "#0"},
+				"east": {"uv": [7.5, 2.5, 9.5, 3.75], "texture": "#0"},
+				"south": {"uv": [10.25, 4.25, 10.5, 5.5], "texture": "#0"},
+				"west": {"uv": [7.5, 3.75, 9.5, 5], "texture": "#0"},
+				"up": {"uv": [5.75, 11.5, 5.5, 9.5], "texture": "#0"},
+				"down": {"uv": [10, 0.75, 9.75, 2.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14.2, 9, 4],
+			"to": [15.2, 12, 12],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [17.2, 8, 14]},
+			"faces": {
+				"north": {"uv": [10.25, 8.5, 10.5, 9.25], "texture": "#0"},
+				"east": {"uv": [0, 8.5, 2, 9.25], "texture": "#0"},
+				"south": {"uv": [9.75, 10.25, 10, 11], "texture": "#0"},
+				"west": {"uv": [8.75, 0, 10.75, 0.75], "texture": "#0"},
+				"up": {"uv": [10, 8.25, 9.75, 6.25], "texture": "#0"},
+				"down": {"uv": [10, 8.25, 9.75, 10.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-1, 0, 3],
+			"to": [4, 14, 13],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1, 0, 2]},
+			"faces": {
+				"north": {"uv": [5, 0, 6.25, 3.5], "texture": "#0"},
+				"east": {"uv": [0, 0, 2.5, 3.5], "texture": "#0"},
+				"south": {"uv": [5, 3.5, 6.25, 7], "texture": "#0"},
+				"west": {"uv": [2.5, 0, 5, 3.5], "texture": "#0"},
+				"up": {"uv": [5.75, 9.5, 4.5, 7], "texture": "#0"},
+				"down": {"uv": [8.75, 0, 7.5, 2.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [5.3, 12.9, 4],
+			"to": [9.3, 13.9, 12],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [4.3, 12.9, 2]},
+			"faces": {
+				"north": {"uv": [5.75, 10.25, 6.75, 10.5], "texture": "#0"},
+				"east": {"uv": [9.5, 3.75, 11.5, 4], "texture": "#0"},
+				"south": {"uv": [10.25, 5.75, 11.25, 6], "texture": "#0"},
+				"west": {"uv": [9.5, 4, 11.5, 4.25], "texture": "#0"},
+				"up": {"uv": [7.75, 10.25, 6.75, 8.25], "texture": "#0"},
+				"down": {"uv": [9.25, 7, 8.25, 9], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 2],
+			"to": [3, 7, 3],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [0, 0, 2]},
+			"faces": {
+				"north": {"uv": [8.75, 0.75, 9.5, 2.5], "texture": "#0"},
+				"east": {"uv": [10, 6, 10.25, 7.75], "texture": "#0"},
+				"south": {"uv": [0.5, 9.25, 1.25, 11], "texture": "#0"},
+				"west": {"uv": [10, 7.75, 10.25, 9.5], "texture": "#0"},
+				"up": {"uv": [8.25, 6.5, 7.5, 6.25], "texture": "#0"},
+				"down": {"uv": [11, 9.25, 10.25, 9.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 13],
+			"to": [3, 7, 14],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [0, 0, 13]},
+			"faces": {
+				"north": {"uv": [1.25, 9.25, 2, 11], "texture": "#0"},
+				"east": {"uv": [9.25, 10, 9.5, 11.75], "texture": "#0"},
+				"south": {"uv": [2, 9.25, 2.75, 11], "texture": "#0"},
+				"west": {"uv": [9.5, 10, 9.75, 11.75], "texture": "#0"},
+				"up": {"uv": [11.25, 1.5, 10.5, 1.25], "texture": "#0"},
+				"down": {"uv": [11.25, 1.5, 10.5, 1.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [9.2, 10.3, 9.4],
+			"to": [11.6, 12.3, 11.6],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [9, 10.3, 10]},
+			"faces": {
+				"north": {"uv": [9.5, 4.25, 10, 4.75], "texture": "#0"},
+				"east": {"uv": [10.25, 6, 10.75, 6.5], "texture": "#0"},
+				"south": {"uv": [10.25, 6.5, 10.75, 7], "texture": "#0"},
+				"west": {"uv": [6.75, 10.25, 7.25, 10.75], "texture": "#0"},
+				"up": {"uv": [10.75, 7.5, 10.25, 7], "texture": "#0"},
+				"down": {"uv": [7.75, 10.25, 7.25, 10.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [6.7, 21, 10],
+			"to": [7.7, 31, 11],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [5.7, 18, 10]},
+			"faces": {
+				"north": {"uv": [4.25, 9.25, 4.5, 11.75], "texture": "#0"},
+				"east": {"uv": [9.5, 0.75, 9.75, 3.25], "texture": "#0"},
+				"south": {"uv": [4.5, 9.5, 4.75, 12], "texture": "#0"},
+				"west": {"uv": [4.75, 9.5, 5, 12], "texture": "#0"},
+				"up": {"uv": [4.75, 7, 4.5, 6.75], "texture": "#0"},
+				"down": {"uv": [5, 6.75, 4.75, 7], "texture": "#0"}
+			}
+		},
+		{
+			"from": [9.3, 11, 9.7],
+			"to": [10.9, 22, 11.3],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [8.6, 11, 10]},
+			"faces": {
+				"north": {"uv": [7.75, 8.25, 8.25, 11], "texture": "#0"},
+				"east": {"uv": [8.25, 9, 8.75, 11.75], "texture": "#0"},
+				"south": {"uv": [8.75, 9, 9.25, 11.75], "texture": "#0"},
+				"west": {"uv": [0, 9.25, 0.5, 12], "texture": "#0"},
+				"up": {"uv": [10.75, 8, 10.25, 7.5], "texture": "#0"},
+				"down": {"uv": [10.75, 8, 10.25, 8.5], "texture": "#0"}
 			}
 		}
 	],
@@ -22146,8 +23267,363 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\
 		{
 			"name": "group",
 			"origin": [8, 8, 8],
+			"scope": 0,
 			"color": 0,
-			"children": [0]
+			"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+		}
+	]
+}
+==========================================
+FILE: crate_dropped.json
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\crate_dropped.json
+==========================================
+{ "credit": "Made with Blockbench", "parent": "block/block", "textures": { "0": "aas:block/crate_dropped", "particle": "aas:block/crate_dropped" },
+	"elements": [
+		{
+			"from": [0, 0, 0],
+			"to": [2, 2, 2],
+			"faces": {
+				"north": {"uv": [8, 4.5, 8.5, 5], "texture": "#0"},
+				"east": {"uv": [8, 8.25, 8.5, 8.75], "texture": "#0"},
+				"south": {"uv": [8.5, 0, 9, 0.5], "texture": "#0"},
+				"west": {"uv": [8.5, 0.5, 9, 1], "texture": "#0"},
+				"up": {"uv": [9, 1.5, 8.5, 1], "texture": "#0"},
+				"down": {"uv": [9, 1.5, 8.5, 2], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14, 0, 0],
+			"to": [16, 2, 2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 0, 0]},
+			"faces": {
+				"north": {"uv": [8.5, 4.5, 9, 5], "texture": "#0"},
+				"east": {"uv": [6, 8.5, 6.5, 9], "texture": "#0"},
+				"south": {"uv": [6.5, 8.5, 7, 9], "texture": "#0"},
+				"west": {"uv": [7, 8.5, 7.5, 9], "texture": "#0"},
+				"up": {"uv": [8, 9, 7.5, 8.5], "texture": "#0"},
+				"down": {"uv": [9, 8.25, 8.5, 8.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [7, 0, 0],
+			"to": [9, 2, 2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 0, 0]},
+			"faces": {
+				"north": {"uv": [8.75, 2, 9.25, 2.5], "texture": "#0"},
+				"east": {"uv": [8.75, 2.5, 9.25, 3], "texture": "#0"},
+				"south": {"uv": [8.75, 3, 9.25, 3.5], "texture": "#0"},
+				"west": {"uv": [8.75, 6, 9.25, 6.5], "texture": "#0"},
+				"up": {"uv": [9.25, 7, 8.75, 6.5], "texture": "#0"},
+				"down": {"uv": [9.25, 7, 8.75, 7.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 14],
+			"to": [2, 2, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0, 0, 14]},
+			"faces": {
+				"north": {"uv": [8, 8.75, 8.5, 9.25], "texture": "#0"},
+				"east": {"uv": [8.5, 8.75, 9, 9.25], "texture": "#0"},
+				"south": {"uv": [0, 9, 0.5, 9.5], "texture": "#0"},
+				"west": {"uv": [9, 0, 9.5, 0.5], "texture": "#0"},
+				"up": {"uv": [1, 9.5, 0.5, 9], "texture": "#0"},
+				"down": {"uv": [9.5, 0.5, 9, 1], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14, 0, 14],
+			"to": [16, 2, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 0, 14]},
+			"faces": {
+				"north": {"uv": [1, 9, 1.5, 9.5], "texture": "#0"},
+				"east": {"uv": [9, 1, 9.5, 1.5], "texture": "#0"},
+				"south": {"uv": [1.5, 9, 2, 9.5], "texture": "#0"},
+				"west": {"uv": [9, 1.5, 9.5, 2], "texture": "#0"},
+				"up": {"uv": [2.5, 9.5, 2, 9], "texture": "#0"},
+				"down": {"uv": [3, 9, 2.5, 9.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [7, 0, 14],
+			"to": [9, 2, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 0, 14]},
+			"faces": {
+				"north": {"uv": [9, 3.5, 9.5, 4], "texture": "#0"},
+				"east": {"uv": [9, 4, 9.5, 4.5], "texture": "#0"},
+				"south": {"uv": [9, 4.5, 9.5, 5], "texture": "#0"},
+				"west": {"uv": [9, 5, 9.5, 5.5], "texture": "#0"},
+				"up": {"uv": [9.5, 6, 9, 5.5], "texture": "#0"},
+				"down": {"uv": [6.5, 9, 6, 9.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 7],
+			"to": [2, 2, 9],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0, 0, 7]},
+			"faces": {
+				"north": {"uv": [6.5, 9, 7, 9.5], "texture": "#0"},
+				"east": {"uv": [7, 9, 7.5, 9.5], "texture": "#0"},
+				"south": {"uv": [7.5, 9, 8, 9.5], "texture": "#0"},
+				"west": {"uv": [9, 7.5, 9.5, 8], "texture": "#0"},
+				"up": {"uv": [9.5, 8.5, 9, 8], "texture": "#0"},
+				"down": {"uv": [9.5, 8.5, 9, 9], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14, 0, 7],
+			"to": [16, 2, 9],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 0, 7]},
+			"faces": {
+				"north": {"uv": [9, 9, 9.5, 9.5], "texture": "#0"},
+				"east": {"uv": [9.25, 2, 9.75, 2.5], "texture": "#0"},
+				"south": {"uv": [9.25, 2.5, 9.75, 3], "texture": "#0"},
+				"west": {"uv": [3, 9.25, 3.5, 9.75], "texture": "#0"},
+				"up": {"uv": [9.75, 3.5, 9.25, 3], "texture": "#0"},
+				"down": {"uv": [4, 9.25, 3.5, 9.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [7, 0, 7],
+			"to": [9, 2, 9],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 0, 7]},
+			"faces": {
+				"north": {"uv": [4, 9.25, 4.5, 9.75], "texture": "#0"},
+				"east": {"uv": [4.5, 9.25, 5, 9.75], "texture": "#0"},
+				"south": {"uv": [5, 9.25, 5.5, 9.75], "texture": "#0"},
+				"west": {"uv": [5.5, 9.25, 6, 9.75], "texture": "#0"},
+				"up": {"uv": [9.75, 6.5, 9.25, 6], "texture": "#0"},
+				"down": {"uv": [9.75, 6.5, 9.25, 7], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0.1, 2],
+			"to": [2, 0.1, 14],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0, 0.1, 2]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 3, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 3, 0], "texture": "#0"},
+				"up": {"uv": [3.5, 9.25, 3, 6.25], "texture": "#0"},
+				"down": {"uv": [4, 6.25, 3.5, 9.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [7, 0.1, 2],
+			"to": [9, 0.1, 14],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 0.1, 2]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 3, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 3, 0], "texture": "#0"},
+				"up": {"uv": [4.5, 9.25, 4, 6.25], "texture": "#0"},
+				"down": {"uv": [5, 6.25, 4.5, 9.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14, 0.1, 2],
+			"to": [16, 0.1, 14],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 0.1, 2]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 3, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 3, 0], "texture": "#0"},
+				"up": {"uv": [5.5, 9.25, 5, 6.25], "texture": "#0"},
+				"down": {"uv": [6, 6.25, 5.5, 9.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 1.9, 0],
+			"to": [16, 1.9, 2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 1.9, 0]},
+			"faces": {
+				"north": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"up": {"uv": [7.5, 3.5, 3.5, 3], "texture": "#0"},
+				"down": {"uv": [7.5, 3.5, 3.5, 4], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 1.9, 7],
+			"to": [16, 1.9, 9],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 1.9, 7]},
+			"faces": {
+				"north": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"up": {"uv": [4, 4.5, 0, 4], "texture": "#0"},
+				"down": {"uv": [8, 4, 4, 4.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 1.9, 14],
+			"to": [16, 1.9, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 1.9, 14]},
+			"faces": {
+				"north": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"up": {"uv": [4, 5, 0, 4.5], "texture": "#0"},
+				"down": {"uv": [8, 4.5, 4, 5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 1.9, 0],
+			"to": [2, 1.9, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0, 1.9, 2]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"up": {"uv": [0.5, 9, 0, 5], "texture": "#0"},
+				"down": {"uv": [1, 5, 0.5, 9], "texture": "#0"}
+			}
+		},
+		{
+			"from": [7, 1.9, 0],
+			"to": [9, 1.9, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 1.9, 2]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"up": {"uv": [1.5, 9, 1, 5], "texture": "#0"},
+				"down": {"uv": [2, 5, 1.5, 9], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14, 1.9, 0],
+			"to": [16, 1.9, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 1.9, 2]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"east": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"south": {"uv": [0, 0, 0.5, 0], "texture": "#0"},
+				"west": {"uv": [0, 0, 4, 0], "texture": "#0"},
+				"up": {"uv": [2.5, 9, 2, 5], "texture": "#0"},
+				"down": {"uv": [3, 5, 2.5, 9], "texture": "#0"}
+			}
+		},
+		{
+			"from": [6.4, 2, 1.8],
+			"to": [12.4, 6, 6.8],
+			"rotation": {"angle": 22.5, "axis": "y", "origin": [5.4, 2, 3.8]},
+			"faces": {
+				"north": {"uv": [7, 0, 8.5, 1], "texture": "#0"},
+				"east": {"uv": [7.5, 2.75, 8.75, 3.75], "texture": "#0"},
+				"south": {"uv": [7, 1, 8.5, 2], "texture": "#0"},
+				"west": {"uv": [7.75, 5, 9, 6], "texture": "#0"},
+				"up": {"uv": [4.5, 6.25, 3, 5], "texture": "#0"},
+				"down": {"uv": [6, 5, 4.5, 6.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [1, 2, 11],
+			"to": [15, 5, 15],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 2, 13]},
+			"faces": {
+				"north": {"uv": [3.5, 0, 7, 0.75], "texture": "#0"},
+				"east": {"uv": [6, 7.75, 7, 8.5], "texture": "#0"},
+				"south": {"uv": [3.5, 0.75, 7, 1.5], "texture": "#0"},
+				"west": {"uv": [7.75, 6, 8.75, 6.75], "texture": "#0"},
+				"up": {"uv": [3.5, 1, 0, 0], "texture": "#0"},
+				"down": {"uv": [3.5, 1, 0, 2], "texture": "#0"}
+			}
+		},
+		{
+			"from": [1, 2, 6.7],
+			"to": [15, 5, 10.7],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7, 2, 8.7]},
+			"faces": {
+				"north": {"uv": [3.5, 1.5, 7, 2.25], "texture": "#0"},
+				"east": {"uv": [7.75, 6.75, 8.75, 7.5], "texture": "#0"},
+				"south": {"uv": [3.5, 2.25, 7, 3], "texture": "#0"},
+				"west": {"uv": [7, 7.75, 8, 8.5], "texture": "#0"},
+				"up": {"uv": [3.5, 3, 0, 2], "texture": "#0"},
+				"down": {"uv": [3.5, 3, 0, 4], "texture": "#0"}
+			}
+		},
+		{
+			"from": [3, 5, 7],
+			"to": [10, 8, 11],
+			"rotation": {"angle": -45, "axis": "y", "origin": [4, 5, 9]},
+			"faces": {
+				"north": {"uv": [7, 2, 8.75, 2.75], "texture": "#0"},
+				"east": {"uv": [8, 3.75, 9, 4.5], "texture": "#0"},
+				"south": {"uv": [6, 7, 7.75, 7.75], "texture": "#0"},
+				"west": {"uv": [8, 7.5, 9, 8.25], "texture": "#0"},
+				"up": {"uv": [7.75, 6, 6, 5], "texture": "#0"},
+				"down": {"uv": [7.75, 6, 6, 7], "texture": "#0"}
+			}
+		},
+		{
+			"from": [15.9, 2.4, 7.7],
+			"to": [15.9, 3.4, 9.7],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [13.9, 1.4, 7.7]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"east": {"uv": [9.25, 7, 9.75, 7.25], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"west": {"uv": [9.25, 7.25, 9.75, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.5, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [15.9, 2.4, 12],
+			"to": [15.9, 3.4, 14],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [13.9, 1.4, 12]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"east": {"uv": [8, 9.25, 8.5, 9.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"west": {"uv": [8.5, 9.25, 9, 9.5], "texture": "#0"},
+				"up": {"uv": [0, 0.5, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.4, 3.9, 12],
+			"to": [0.4, 4.9, 14],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.6, 2.9, 12]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"east": {"uv": [0, 9.5, 0.5, 9.75], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"west": {"uv": [9.5, 0, 10, 0.25], "texture": "#0"},
+				"up": {"uv": [0, 0.5, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.4, 3.9, 7.8],
+			"to": [0.4, 4.9, 9.8],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.6, 2.9, 7.8]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"east": {"uv": [7, 2.75, 7.5, 3], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.25], "texture": "#0"},
+				"west": {"uv": [7.5, 3.75, 8, 4], "texture": "#0"},
+				"up": {"uv": [0, 0.5, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.5], "texture": "#0"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "group",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 		}
 	]
 }
@@ -22156,158 +23632,1011 @@ FILE: hub_base.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\hub_base.json
 ==========================================
 {
-  "credit": "Made with Blockbench",
-  "parent": "block/block",
-  "render_type": "minecraft:translucent",
-  "textures": {
-    "0": "aas:block/hub_ghost",
-    "particle": "aas:block/hub_ghost"
-  },
-  "elements": [
-    {
-      "from": [0, 0, 0],
-      "to": [16, 8, 16],
-      "faces": {
-        "north": {"uv": [2, 2, 4, 3], "texture": "#0"},
-        "east": {"uv": [0, 2, 2, 3], "texture": "#0"},
-        "south": {"uv": [6, 2, 8, 3], "texture": "#0"},
-        "west": {"uv": [4, 2, 6, 3], "texture": "#0"},
-        "up": {"uv": [4, 2, 2, 0], "texture": "#0"},
-        "down": {"uv": [6, 0, 4, 2], "texture": "#0"}
-      }
-    },
-    {
-      "from": [0, 15, 4],
-      "to": [4, 17, 6],
-      "rotation": {"origin": [5, 7, 3], "axis": "z", "angle": -45},
-      "faces": {
-        "north": {"uv": [4.75, 5.375, 5.25, 5.625], "texture": "#0"},
-        "east": {"uv": [4.5, 5.375, 4.75, 5.625], "texture": "#0"},
-        "south": {"uv": [5.5, 5.375, 6, 5.625], "texture": "#0"},
-        "west": {"uv": [5.25, 5.375, 5.5, 5.625], "texture": "#0"},
-        "up": {"uv": [5.25, 5.375, 4.75, 5.125], "texture": "#0"},
-        "down": {"uv": [5.75, 5.125, 5.25, 5.375], "texture": "#0"}
-      }
-    },
-    {
-      "from": [9, 13, 3],
-      "to": [16, 16, 8],
-      "rotation": {"origin": [9, 13, 4], "axis": "z", "angle": -45},
-      "faces": {
-        "north": {"uv": [5.125, 4.75, 6, 5.125], "texture": "#0"},
-        "east": {"uv": [4.5, 4.75, 5.125, 5.125], "texture": "#0"},
-        "south": {"uv": [6.625, 4.75, 7.5, 5.125], "texture": "#0"},
-        "west": {"uv": [6, 4.75, 6.625, 5.125], "texture": "#0"},
-        "up": {"uv": [6, 4.75, 5.125, 4.125], "texture": "#0"},
-        "down": {"uv": [6.875, 4.125, 6, 4.75], "texture": "#0"}
-      }
-    },
-    {
-      "from": [0, 8, 0],
-      "to": [8, 16, 10],
-      "rotation": {"origin": [1, 8, 1], "axis": "y", "angle": 0},
-      "faces": {
-        "north": {"uv": [1.25, 4.25, 2.25, 5.25], "texture": "#0"},
-        "east": {"uv": [0, 4.25, 1.25, 5.25], "texture": "#0"},
-        "south": {"uv": [3.5, 4.25, 4.5, 5.25], "texture": "#0"},
-        "west": {"uv": [2.25, 4.25, 3.5, 5.25], "texture": "#0"},
-        "up": {"uv": [2.25, 4.25, 1.25, 3], "texture": "#0"},
-        "down": {"uv": [3.25, 3, 2.25, 4.25], "texture": "#0"}
-      }
-    },
-    {
-      "from": [0, 15, 8],
-      "to": [8, 15, 17],
-      "rotation": {"origin": [15, 13, 9], "axis": "x", "angle": 45},
-      "faces": {
-        "north": {"uv": [5.625, 4.125, 6.625, 4.125], "texture": "#0"},
-        "east": {"uv": [4.5, 4.125, 5.625, 4.125], "texture": "#0"},
-        "south": {"uv": [7.75, 4.125, 8.75, 4.125], "texture": "#0"},
-        "west": {"uv": [6.625, 4.125, 7.75, 4.125], "texture": "#0"},
-        "up": {"uv": [6.625, 4.125, 5.625, 3], "texture": "#0"},
-        "down": {"uv": [7.625, 3, 6.625, 4.125], "texture": "#0"}
-      }
-    }
-  ]
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"render_type": "minecraft:translucent",
+	"texture_size": [128, 128],
+	"textures": {
+		"0": "aas:block/hub_ghost",
+		"particle": "aas:block/hub_ghost"
+	},
+	"elements": [
+		{
+			"from": [0, 0, 3],
+			"to": [16, 7, 13],
+			"faces": {
+				"north": {"uv": [1, 4.5, 3, 5.375], "texture": "#0"},
+				"east": {"uv": [4.375, 5.875, 5.625, 6.75], "texture": "#0"},
+				"south": {"uv": [5, 0, 7, 0.875], "texture": "#0"},
+				"west": {"uv": [5.625, 5.875, 6.875, 6.75], "texture": "#0"},
+				"up": {"uv": [2, 1.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [2, 1.25, 0, 2.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [1.4, 14, 2.6],
+			"to": [9.9, 19, 11.6],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-0.1, 14, -0.9]},
+			"faces": {
+				"north": {"uv": [3.125, 6.625, 4.25, 7.25], "texture": "#0"},
+				"east": {"uv": [4.25, 6.75, 5.375, 7.375], "texture": "#0"},
+				"south": {"uv": [5.375, 6.75, 6.5, 7.375], "texture": "#0"},
+				"west": {"uv": [6.5, 6.75, 7.625, 7.375], "texture": "#0"},
+				"up": {"uv": [6.125, 3.75, 5, 2.625], "texture": "#0"},
+				"down": {"uv": [6.125, 3.75, 5, 4.875], "texture": "#0"}
+			}
+		},
+		{
+			"from": [2.4, 0, -1.4],
+			"to": [10.9, 8, 1.6],
+			"rotation": {"angle": 0, "axis": "x", "origin": [1.9, 0, -4.9]},
+			"faces": {
+				"north": {"uv": [5, 4.875, 6.125, 5.875], "texture": "#0"},
+				"east": {"uv": [3.25, 4.5, 3.625, 5.5], "texture": "#0"},
+				"south": {"uv": [1, 5.375, 2.125, 6.375], "texture": "#0"},
+				"west": {"uv": [3.625, 4.5, 4, 5.5], "texture": "#0"},
+				"up": {"uv": [7.25, 5.875, 6.125, 5.5], "texture": "#0"},
+				"down": {"uv": [8, 5.875, 6.875, 6.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [3.4, 8.1, -0.7],
+			"to": [4.4, 8.6, 0.8],
+			"rotation": {"angle": 0, "axis": "x", "origin": [2.9, 6.1, -4.2]},
+			"faces": {
+				"north": {"uv": [4.25, 6.625, 4.375, 6.75], "texture": "#0"},
+				"east": {"uv": [3.25, 5.5, 3.5, 5.625], "texture": "#0"},
+				"south": {"uv": [4.125, 7.25, 4.25, 7.375], "texture": "#0"},
+				"west": {"uv": [3.5, 5.5, 3.75, 5.625], "texture": "#0"},
+				"up": {"uv": [5, 5.875, 4.875, 5.625], "texture": "#0"},
+				"down": {"uv": [3.25, 6.375, 3.125, 6.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [6.6, 17, 11.6],
+			"to": [8.6, 18, 12.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [6.1, 15, 8.1]},
+			"faces": {
+				"north": {"uv": [3.75, 5.5, 4, 5.625], "texture": "#0"},
+				"east": {"uv": [7.375, 7.375, 7.5, 7.5], "texture": "#0"},
+				"south": {"uv": [4.625, 7.375, 4.875, 7.5], "texture": "#0"},
+				"west": {"uv": [0, 7.5, 0.125, 7.625], "texture": "#0"},
+				"up": {"uv": [5.125, 7.5, 4.875, 7.375], "texture": "#0"},
+				"down": {"uv": [5.375, 7.375, 5.125, 7.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [9, 0, 14],
+			"to": [25, 1, 22],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0, 14]},
+			"faces": {
+				"north": {"uv": [6.875, 6.625, 8.875, 6.75], "texture": "#0"},
+				"east": {"uv": [7, 5.375, 8, 5.5], "texture": "#0"},
+				"south": {"uv": [7, 2.5, 9, 2.625], "texture": "#0"},
+				"west": {"uv": [7.25, 5.5, 8.25, 5.625], "texture": "#0"},
+				"up": {"uv": [2, 3.5, 0, 2.5], "texture": "#0"},
+				"down": {"uv": [4, 2.5, 2, 3.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [18, 0, -2],
+			"to": [26, 1, 13],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0, 5]},
+			"faces": {
+				"north": {"uv": [7.25, 5.625, 8.25, 5.75], "texture": "#0"},
+				"east": {"uv": [7, 4.625, 8.875, 4.75], "texture": "#0"},
+				"south": {"uv": [7.25, 5.75, 8.25, 5.875], "texture": "#0"},
+				"west": {"uv": [7, 4.75, 8.875, 4.875], "texture": "#0"},
+				"up": {"uv": [5, 1.875, 4, 0], "texture": "#0"},
+				"down": {"uv": [5, 1.875, 4, 3.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [19, 0.3, -1],
+			"to": [25, 1.3, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0.3, 5]},
+			"faces": {
+				"north": {"uv": [7.25, 5.625, 8.25, 5.75], "texture": "#0"},
+				"east": {"uv": [7, 4.625, 8.875, 4.75], "texture": "#0"},
+				"south": {"uv": [7.25, 5.75, 8.25, 5.875], "texture": "#0"},
+				"west": {"uv": [7, 4.75, 8.875, 4.875], "texture": "#0"},
+				"up": {"uv": [5, 1.875, 4, 0], "texture": "#0"},
+				"down": {"uv": [5, 1.875, 4, 3.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.9, 7, 2.1],
+			"to": [16.9, 14, 12.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0.9, 7, -0.9]},
+			"faces": {
+				"north": {"uv": [5, 0.875, 7, 1.75], "texture": "#0"},
+				"east": {"uv": [6.125, 2.625, 7.375, 3.5], "texture": "#0"},
+				"south": {"uv": [5, 1.75, 7, 2.625], "texture": "#0"},
+				"west": {"uv": [6.125, 3.5, 7.375, 4.375], "texture": "#0"},
+				"up": {"uv": [4, 1.25, 2, 0], "texture": "#0"},
+				"down": {"uv": [4, 1.25, 2, 2.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-9, 0, -2],
+			"to": [-1, 1, 13],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-9, 0, 5]},
+			"faces": {
+				"north": {"uv": [7.375, 2.625, 8.375, 2.75], "texture": "#0"},
+				"east": {"uv": [7, 4.875, 8.875, 5], "texture": "#0"},
+				"south": {"uv": [7.375, 2.75, 8.375, 2.875], "texture": "#0"},
+				"west": {"uv": [7, 5, 8.875, 5.125], "texture": "#0"},
+				"up": {"uv": [5, 5.625, 4, 3.75], "texture": "#0"},
+				"down": {"uv": [1, 4.5, 0, 6.375], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-8, 0.5, -1],
+			"to": [-2, 1.5, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-9, 0.5, 5]},
+			"faces": {
+				"north": {"uv": [7.375, 2.625, 8.375, 2.75], "texture": "#0"},
+				"east": {"uv": [7, 4.875, 8.875, 5], "texture": "#0"},
+				"south": {"uv": [7.375, 2.75, 8.375, 2.875], "texture": "#0"},
+				"west": {"uv": [7, 5, 8.875, 5.125], "texture": "#0"},
+				"up": {"uv": [5, 5.625, 4, 3.75], "texture": "#0"},
+				"down": {"uv": [1, 4.5, 0, 6.375], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-8, 0, 14],
+			"to": [8, 1, 22],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-8, 0, 14]},
+			"faces": {
+				"north": {"uv": [7, 4.375, 9, 4.5], "texture": "#0"},
+				"east": {"uv": [7.375, 2.875, 8.375, 3], "texture": "#0"},
+				"south": {"uv": [7, 4.5, 9, 4.625], "texture": "#0"},
+				"west": {"uv": [7.375, 3, 8.375, 3.125], "texture": "#0"},
+				"up": {"uv": [2, 4.5, 0, 3.5], "texture": "#0"},
+				"down": {"uv": [4, 3.5, 2, 4.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-7, 0.4, 15],
+			"to": [7, 1.4, 21],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-8, 0.4, 14]},
+			"faces": {
+				"north": {"uv": [7, 4.375, 9, 4.5], "texture": "#0"},
+				"east": {"uv": [7.375, 2.875, 8.375, 3], "texture": "#0"},
+				"south": {"uv": [7, 4.5, 9, 4.625], "texture": "#0"},
+				"west": {"uv": [7.375, 3, 8.375, 3.125], "texture": "#0"},
+				"up": {"uv": [2, 4.5, 0, 3.5], "texture": "#0"},
+				"down": {"uv": [4, 3.5, 2, 4.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [10, 0.4, 15],
+			"to": [24, 1.4, 21],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0.4, 14]},
+			"faces": {
+				"north": {"uv": [7, 4.375, 9, 4.5], "texture": "#0"},
+				"east": {"uv": [7.375, 2.875, 8.375, 3], "texture": "#0"},
+				"south": {"uv": [7, 4.5, 9, 4.625], "texture": "#0"},
+				"west": {"uv": [7.375, 3, 8.375, 3.125], "texture": "#0"},
+				"up": {"uv": [2, 4.5, 0, 3.5], "texture": "#0"},
+				"down": {"uv": [4, 3.5, 2, 4.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [11, 14, 3],
+			"to": [18, 15, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 14, 6]},
+			"faces": {
+				"north": {"uv": [7.375, 3.125, 8.25, 3.25], "texture": "#0"},
+				"east": {"uv": [7, 5.125, 8.125, 5.25], "texture": "#0"},
+				"south": {"uv": [7.375, 3.25, 8.25, 3.375], "texture": "#0"},
+				"west": {"uv": [7, 5.25, 8.125, 5.375], "texture": "#0"},
+				"up": {"uv": [7, 5.5, 6.125, 4.375], "texture": "#0"},
+				"down": {"uv": [0.875, 6.375, 0, 7.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [10, 14, 3.1],
+			"to": [11, 21, 11.9],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [10, 18, 6]},
+			"faces": {
+				"north": {"uv": [3, 4.5, 3.125, 5.375], "texture": "#0"},
+				"east": {"uv": [0.875, 6.375, 2, 7.25], "texture": "#0"},
+				"south": {"uv": [3.125, 4.5, 3.25, 5.375], "texture": "#0"},
+				"west": {"uv": [2, 6.375, 3.125, 7.25], "texture": "#0"},
+				"up": {"uv": [3.5, 8.375, 3.375, 7.25], "texture": "#0"},
+				"down": {"uv": [3.625, 7.25, 3.5, 8.375], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.4, 10.2, 8.1],
+			"to": [17.4, 11.2, 9.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15.4, 10.2, 7.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [0.125, 7.5, 0.25, 7.625], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [0.25, 7.5, 0.375, 7.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.4, 10.2, 5.1],
+			"to": [17.4, 11.2, 6.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15.4, 10.2, 4.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [0.375, 7.5, 0.5, 7.625], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [0.5, 7.5, 0.625, 7.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.8, 9.3, 6.1],
+			"to": [17.8, 10.3, 8.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15.8, 9.3, 5.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [5.375, 7.375, 5.625, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [5.625, 7.375, 5.875, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [16.6, 3.2, 9.1],
+			"to": [16.6, 4.2, 10.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [14.6, 3.2, 8.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [0.625, 7.5, 0.75, 7.625], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [0.75, 7.5, 0.875, 7.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [16.6, 3.2, 6.1],
+			"to": [16.6, 4.2, 7.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [14.6, 3.2, 5.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.125, 7.625, 1.25], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 1.25, 7.625, 1.375], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17, 2.3, 7.1],
+			"to": [17, 3.3, 9.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15, 2.3, 6.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [5.875, 7.375, 6.125, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [6.125, 7.375, 6.375, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.2, 10.8, 6.1],
+			"to": [0.2, 11.8, 8.1],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.8, 10.8, 5.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [6.375, 7.375, 6.625, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [6.625, 7.375, 6.875, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.6, 11.7, 5.1],
+			"to": [0.6, 12.7, 6.1],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.4, 11.7, 4.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.375, 7.625, 1.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 1.5, 7.625, 1.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.6, 11.7, 8.1],
+			"to": [0.6, 12.7, 9.1],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.4, 11.7, 7.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.625, 7.625, 1.75], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 1.75, 7.625, 1.875], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.8, 3.8, 7],
+			"to": [-0.8, 4.8, 9],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-2.8, 3.8, 6]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [6.875, 7.375, 7.125, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.125, 7.375, 7.375, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.4, 4.7, 9],
+			"to": [-0.4, 5.7, 10],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-2.4, 4.7, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.875, 7.625, 2], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 2, 7.625, 2.125], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.4, 4.7, 6],
+			"to": [-0.4, 5.7, 7],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-2.4, 4.7, 5]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 2.125, 7.625, 2.25], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 2.25, 7.625, 2.375], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.4, 19, 2.6],
+			"to": [8.9, 22, 10.6],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-0.1, 19, -0.9]},
+			"faces": {
+				"north": {"uv": [6.875, 6.25, 8, 6.625], "texture": "#0"},
+				"east": {"uv": [7, 0.375, 8, 0.75], "texture": "#0"},
+				"south": {"uv": [7, 0, 8.125, 0.375], "texture": "#0"},
+				"west": {"uv": [7, 0.75, 8, 1.125], "texture": "#0"},
+				"up": {"uv": [3.25, 6.375, 2.125, 5.375], "texture": "#0"},
+				"down": {"uv": [4.375, 5.625, 3.25, 6.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [1.8, 20.5, 10.6],
+			"to": [2.8, 21.5, 11.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [1.3, 18.5, 7.1]},
+			"faces": {
+				"north": {"uv": [7.5, 2.375, 7.625, 2.5], "texture": "#0"},
+				"east": {"uv": [4.625, 7.5, 4.75, 7.625], "texture": "#0"},
+				"south": {"uv": [4.75, 7.5, 4.875, 7.625], "texture": "#0"},
+				"west": {"uv": [4.875, 7.5, 5, 7.625], "texture": "#0"},
+				"up": {"uv": [5.125, 7.625, 5, 7.5], "texture": "#0"},
+				"down": {"uv": [5.25, 7.5, 5.125, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 1],
+			"to": [1, 15, 2],
+			"rotation": {"angle": -22.5, "axis": "x", "origin": [0, 0, 0]},
+			"faces": {
+				"north": {"uv": [1.375, 7.25, 1.5, 9.125], "texture": "#0"},
+				"east": {"uv": [1.5, 7.25, 1.625, 9.125], "texture": "#0"},
+				"south": {"uv": [1.625, 7.25, 1.75, 9.125], "texture": "#0"},
+				"west": {"uv": [1.75, 7.25, 1.875, 9.125], "texture": "#0"},
+				"up": {"uv": [5.375, 7.625, 5.25, 7.5], "texture": "#0"},
+				"down": {"uv": [5.5, 7.5, 5.375, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, -11],
+			"to": [1, 15, -10],
+			"rotation": {"angle": 22.5, "axis": "x", "origin": [0, 0, -12]},
+			"faces": {
+				"north": {"uv": [1.875, 7.25, 2, 9.125], "texture": "#0"},
+				"east": {"uv": [2, 7.25, 2.125, 9.125], "texture": "#0"},
+				"south": {"uv": [2.125, 7.25, 2.25, 9.125], "texture": "#0"},
+				"west": {"uv": [2.25, 7.25, 2.375, 9.125], "texture": "#0"},
+				"up": {"uv": [5.625, 7.625, 5.5, 7.5], "texture": "#0"},
+				"down": {"uv": [5.75, 7.5, 5.625, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-6, 0, -5],
+			"to": [-5, 15, -4],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-6, 0, -6]},
+			"faces": {
+				"north": {"uv": [2.375, 7.25, 2.5, 9.125], "texture": "#0"},
+				"east": {"uv": [2.5, 7.25, 2.625, 9.125], "texture": "#0"},
+				"south": {"uv": [2.625, 7.25, 2.75, 9.125], "texture": "#0"},
+				"west": {"uv": [2.75, 7.25, 2.875, 9.125], "texture": "#0"},
+				"up": {"uv": [5.875, 7.625, 5.75, 7.5], "texture": "#0"},
+				"down": {"uv": [6, 7.5, 5.875, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [6, 0, -5],
+			"to": [7, 15, -4],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [6, 0, -6]},
+			"faces": {
+				"north": {"uv": [2.875, 7.25, 3, 9.125], "texture": "#0"},
+				"east": {"uv": [3, 7.25, 3.125, 9.125], "texture": "#0"},
+				"south": {"uv": [3.125, 7.25, 3.25, 9.125], "texture": "#0"},
+				"west": {"uv": [3.25, 7.25, 3.375, 9.125], "texture": "#0"},
+				"up": {"uv": [6.125, 7.625, 6, 7.5], "texture": "#0"},
+				"down": {"uv": [6.25, 7.5, 6.125, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.3, 13, -5.3],
+			"to": [1.3, 24, -3.7],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-1, 13, -5]},
+			"faces": {
+				"north": {"uv": [7, 1.125, 7.25, 2.5], "texture": "#0"},
+				"east": {"uv": [0.875, 7.25, 1.125, 8.625], "texture": "#0"},
+				"south": {"uv": [1.125, 7.25, 1.375, 8.625], "texture": "#0"},
+				"west": {"uv": [7.25, 1.125, 7.5, 2.5], "texture": "#0"},
+				"up": {"uv": [4.625, 5.875, 4.375, 5.625], "texture": "#0"},
+				"down": {"uv": [4.875, 5.625, 4.625, 5.875], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.8, 12.3, -5.6],
+			"to": [1.6, 14.3, -3.4],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-1, 12.3, -5]},
+			"faces": {
+				"north": {"uv": [7.375, 3.375, 7.625, 3.625], "texture": "#0"},
+				"east": {"uv": [7.375, 3.625, 7.625, 3.875], "texture": "#0"},
+				"south": {"uv": [7.375, 3.875, 7.625, 4.125], "texture": "#0"},
+				"west": {"uv": [4.125, 7.375, 4.375, 7.625], "texture": "#0"},
+				"up": {"uv": [7.625, 4.375, 7.375, 4.125], "texture": "#0"},
+				"down": {"uv": [4.625, 7.375, 4.375, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 24, -5],
+			"to": [1, 32, -4],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-1, 21, -5]},
+			"faces": {
+				"north": {"uv": [3.625, 7.25, 3.75, 8.25], "texture": "#0"},
+				"east": {"uv": [3.75, 7.25, 3.875, 8.25], "texture": "#0"},
+				"south": {"uv": [3.875, 7.25, 4, 8.25], "texture": "#0"},
+				"west": {"uv": [4, 7.25, 4.125, 8.25], "texture": "#0"},
+				"up": {"uv": [6.375, 7.625, 6.25, 7.5], "texture": "#0"},
+				"down": {"uv": [6.5, 7.5, 6.375, 7.625], "texture": "#0"}
+			}
+		}
+	],
+	"display": {},
+	"groups": [
+		{
+			"name": "group",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
+		}
+	]
 }
 ==========================================
 FILE: hub_solid.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\hub_solid.json
 ==========================================
 {
-  "credit": "Made with Blockbench",
-  "parent": "block/block",
-  "render_type": "minecraft:cutout",
-  "textures": {
-    "0": "aas:block/hub_solid",
-    "particle": "aas:block/hub_solid"
-  },
-  "elements": [
-    {
-      "from": [0, 0, 0],
-      "to": [16, 8, 16],
-      "faces": {
-        "north": {"uv": [2, 2, 4, 3], "texture": "#0"},
-        "east": {"uv": [0, 2, 2, 3], "texture": "#0"},
-        "south": {"uv": [6, 2, 8, 3], "texture": "#0"},
-        "west": {"uv": [4, 2, 6, 3], "texture": "#0"},
-        "up": {"uv": [4, 2, 2, 0], "texture": "#0"},
-        "down": {"uv": [6, 0, 4, 2], "texture": "#0"}
-      }
-    },
-    {
-      "from": [0, 15, 4],
-      "to": [4, 17, 6],
-      "rotation": {"origin": [5, 7, 3], "axis": "z", "angle": -45},
-      "faces": {
-        "north": {"uv": [4.75, 5.375, 5.25, 5.625], "texture": "#0"},
-        "east": {"uv": [4.5, 5.375, 4.75, 5.625], "texture": "#0"},
-        "south": {"uv": [5.5, 5.375, 6, 5.625], "texture": "#0"},
-        "west": {"uv": [5.25, 5.375, 5.5, 5.625], "texture": "#0"},
-        "up": {"uv": [5.25, 5.375, 4.75, 5.125], "texture": "#0"},
-        "down": {"uv": [5.75, 5.125, 5.25, 5.375], "texture": "#0"}
-      }
-    },
-    {
-      "from": [9, 13, 3],
-      "to": [16, 16, 8],
-      "rotation": {"origin": [9, 13, 4], "axis": "z", "angle": -45},
-      "faces": {
-        "north": {"uv": [5.125, 4.75, 6, 5.125], "texture": "#0"},
-        "east": {"uv": [4.5, 4.75, 5.125, 5.125], "texture": "#0"},
-        "south": {"uv": [6.625, 4.75, 7.5, 5.125], "texture": "#0"},
-        "west": {"uv": [6, 4.75, 6.625, 5.125], "texture": "#0"},
-        "up": {"uv": [6, 4.75, 5.125, 4.125], "texture": "#0"},
-        "down": {"uv": [6.875, 4.125, 6, 4.75], "texture": "#0"}
-      }
-    },
-    {
-      "from": [0, 8, 0],
-      "to": [8, 16, 10],
-      "rotation": {"origin": [1, 8, 1], "axis": "y", "angle": 0},
-      "faces": {
-        "north": {"uv": [1.25, 4.25, 2.25, 5.25], "texture": "#0"},
-        "east": {"uv": [0, 4.25, 1.25, 5.25], "texture": "#0"},
-        "south": {"uv": [3.5, 4.25, 4.5, 5.25], "texture": "#0"},
-        "west": {"uv": [2.25, 4.25, 3.5, 5.25], "texture": "#0"},
-        "up": {"uv": [2.25, 4.25, 1.25, 3], "texture": "#0"},
-        "down": {"uv": [3.25, 3, 2.25, 4.25], "texture": "#0"}
-      }
-    },
-    {
-      "from": [0, 15, 8],
-      "to": [8, 15, 17],
-      "rotation": {"origin": [15, 13, 9], "axis": "x", "angle": 45},
-      "faces": {
-        "north": {"uv": [5.625, 4.125, 6.625, 4.125], "texture": "#0"},
-        "east": {"uv": [4.5, 4.125, 5.625, 4.125], "texture": "#0"},
-        "south": {"uv": [7.75, 4.125, 8.75, 4.125], "texture": "#0"},
-        "west": {"uv": [6.625, 4.125, 7.75, 4.125], "texture": "#0"},
-        "up": {"uv": [6.625, 4.125, 5.625, 3], "texture": "#0"},
-        "down": {"uv": [7.625, 3, 6.625, 4.125], "texture": "#0"}
-      }
-    }
-  ]
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"texture_size": [128, 128],
+	"textures": {
+		"0": "aas:block/hub_solid",
+		"particle": "aas:block/hub_solid"
+	},
+	"elements": [
+		{
+			"from": [0, 0, 3],
+			"to": [16, 7, 13],
+			"faces": {
+				"north": {"uv": [1, 4.5, 3, 5.375], "texture": "#0"},
+				"east": {"uv": [4.375, 5.875, 5.625, 6.75], "texture": "#0"},
+				"south": {"uv": [5, 0, 7, 0.875], "texture": "#0"},
+				"west": {"uv": [5.625, 5.875, 6.875, 6.75], "texture": "#0"},
+				"up": {"uv": [2, 1.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [2, 1.25, 0, 2.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [1.4, 14, 2.6],
+			"to": [9.9, 19, 11.6],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-0.1, 14, -0.9]},
+			"faces": {
+				"north": {"uv": [3.125, 6.625, 4.25, 7.25], "texture": "#0"},
+				"east": {"uv": [4.25, 6.75, 5.375, 7.375], "texture": "#0"},
+				"south": {"uv": [5.375, 6.75, 6.5, 7.375], "texture": "#0"},
+				"west": {"uv": [6.5, 6.75, 7.625, 7.375], "texture": "#0"},
+				"up": {"uv": [6.125, 3.75, 5, 2.625], "texture": "#0"},
+				"down": {"uv": [6.125, 3.75, 5, 4.875], "texture": "#0"}
+			}
+		},
+		{
+			"from": [2.4, 0, -1.4],
+			"to": [10.9, 8, 1.6],
+			"rotation": {"angle": 0, "axis": "x", "origin": [1.9, 0, -4.9]},
+			"faces": {
+				"north": {"uv": [5, 4.875, 6.125, 5.875], "texture": "#0"},
+				"east": {"uv": [3.25, 4.5, 3.625, 5.5], "texture": "#0"},
+				"south": {"uv": [1, 5.375, 2.125, 6.375], "texture": "#0"},
+				"west": {"uv": [3.625, 4.5, 4, 5.5], "texture": "#0"},
+				"up": {"uv": [7.25, 5.875, 6.125, 5.5], "texture": "#0"},
+				"down": {"uv": [8, 5.875, 6.875, 6.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [3.4, 8.1, -0.7],
+			"to": [4.4, 8.6, 0.8],
+			"rotation": {"angle": 0, "axis": "x", "origin": [2.9, 6.1, -4.2]},
+			"faces": {
+				"north": {"uv": [4.25, 6.625, 4.375, 6.75], "texture": "#0"},
+				"east": {"uv": [3.25, 5.5, 3.5, 5.625], "texture": "#0"},
+				"south": {"uv": [4.125, 7.25, 4.25, 7.375], "texture": "#0"},
+				"west": {"uv": [3.5, 5.5, 3.75, 5.625], "texture": "#0"},
+				"up": {"uv": [5, 5.875, 4.875, 5.625], "texture": "#0"},
+				"down": {"uv": [3.25, 6.375, 3.125, 6.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [6.6, 17, 11.6],
+			"to": [8.6, 18, 12.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [6.1, 15, 8.1]},
+			"faces": {
+				"north": {"uv": [3.75, 5.5, 4, 5.625], "texture": "#0"},
+				"east": {"uv": [7.375, 7.375, 7.5, 7.5], "texture": "#0"},
+				"south": {"uv": [4.625, 7.375, 4.875, 7.5], "texture": "#0"},
+				"west": {"uv": [0, 7.5, 0.125, 7.625], "texture": "#0"},
+				"up": {"uv": [5.125, 7.5, 4.875, 7.375], "texture": "#0"},
+				"down": {"uv": [5.375, 7.375, 5.125, 7.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [9, 0, 14],
+			"to": [25, 1, 22],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0, 14]},
+			"faces": {
+				"north": {"uv": [6.875, 6.625, 8.875, 6.75], "texture": "#0"},
+				"east": {"uv": [7, 5.375, 8, 5.5], "texture": "#0"},
+				"south": {"uv": [7, 2.5, 9, 2.625], "texture": "#0"},
+				"west": {"uv": [7.25, 5.5, 8.25, 5.625], "texture": "#0"},
+				"up": {"uv": [2, 3.5, 0, 2.5], "texture": "#0"},
+				"down": {"uv": [4, 2.5, 2, 3.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [18, 0, -2],
+			"to": [26, 1, 13],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0, 5]},
+			"faces": {
+				"north": {"uv": [7.25, 5.625, 8.25, 5.75], "texture": "#0"},
+				"east": {"uv": [7, 4.625, 8.875, 4.75], "texture": "#0"},
+				"south": {"uv": [7.25, 5.75, 8.25, 5.875], "texture": "#0"},
+				"west": {"uv": [7, 4.75, 8.875, 4.875], "texture": "#0"},
+				"up": {"uv": [5, 1.875, 4, 0], "texture": "#0"},
+				"down": {"uv": [5, 1.875, 4, 3.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [19, 0.3, -1],
+			"to": [25, 1.3, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0.3, 5]},
+			"faces": {
+				"north": {"uv": [7.25, 5.625, 8.25, 5.75], "texture": "#0"},
+				"east": {"uv": [7, 4.625, 8.875, 4.75], "texture": "#0"},
+				"south": {"uv": [7.25, 5.75, 8.25, 5.875], "texture": "#0"},
+				"west": {"uv": [7, 4.75, 8.875, 4.875], "texture": "#0"},
+				"up": {"uv": [5, 1.875, 4, 0], "texture": "#0"},
+				"down": {"uv": [5, 1.875, 4, 3.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.9, 7, 2.1],
+			"to": [16.9, 14, 12.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0.9, 7, -0.9]},
+			"faces": {
+				"north": {"uv": [5, 0.875, 7, 1.75], "texture": "#0"},
+				"east": {"uv": [6.125, 2.625, 7.375, 3.5], "texture": "#0"},
+				"south": {"uv": [5, 1.75, 7, 2.625], "texture": "#0"},
+				"west": {"uv": [6.125, 3.5, 7.375, 4.375], "texture": "#0"},
+				"up": {"uv": [4, 1.25, 2, 0], "texture": "#0"},
+				"down": {"uv": [4, 1.25, 2, 2.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-9, 0, -2],
+			"to": [-1, 1, 13],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-9, 0, 5]},
+			"faces": {
+				"north": {"uv": [7.375, 2.625, 8.375, 2.75], "texture": "#0"},
+				"east": {"uv": [7, 4.875, 8.875, 5], "texture": "#0"},
+				"south": {"uv": [7.375, 2.75, 8.375, 2.875], "texture": "#0"},
+				"west": {"uv": [7, 5, 8.875, 5.125], "texture": "#0"},
+				"up": {"uv": [5, 5.625, 4, 3.75], "texture": "#0"},
+				"down": {"uv": [1, 4.5, 0, 6.375], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-8, 0.5, -1],
+			"to": [-2, 1.5, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-9, 0.5, 5]},
+			"faces": {
+				"north": {"uv": [7.375, 2.625, 8.375, 2.75], "texture": "#0"},
+				"east": {"uv": [7, 4.875, 8.875, 5], "texture": "#0"},
+				"south": {"uv": [7.375, 2.75, 8.375, 2.875], "texture": "#0"},
+				"west": {"uv": [7, 5, 8.875, 5.125], "texture": "#0"},
+				"up": {"uv": [5, 5.625, 4, 3.75], "texture": "#0"},
+				"down": {"uv": [1, 4.5, 0, 6.375], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-8, 0, 14],
+			"to": [8, 1, 22],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-8, 0, 14]},
+			"faces": {
+				"north": {"uv": [7, 4.375, 9, 4.5], "texture": "#0"},
+				"east": {"uv": [7.375, 2.875, 8.375, 3], "texture": "#0"},
+				"south": {"uv": [7, 4.5, 9, 4.625], "texture": "#0"},
+				"west": {"uv": [7.375, 3, 8.375, 3.125], "texture": "#0"},
+				"up": {"uv": [2, 4.5, 0, 3.5], "texture": "#0"},
+				"down": {"uv": [4, 3.5, 2, 4.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-7, 0.4, 15],
+			"to": [7, 1.4, 21],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-8, 0.4, 14]},
+			"faces": {
+				"north": {"uv": [7, 4.375, 9, 4.5], "texture": "#0"},
+				"east": {"uv": [7.375, 2.875, 8.375, 3], "texture": "#0"},
+				"south": {"uv": [7, 4.5, 9, 4.625], "texture": "#0"},
+				"west": {"uv": [7.375, 3, 8.375, 3.125], "texture": "#0"},
+				"up": {"uv": [2, 4.5, 0, 3.5], "texture": "#0"},
+				"down": {"uv": [4, 3.5, 2, 4.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [10, 0.4, 15],
+			"to": [24, 1.4, 21],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0.4, 14]},
+			"faces": {
+				"north": {"uv": [7, 4.375, 9, 4.5], "texture": "#0"},
+				"east": {"uv": [7.375, 2.875, 8.375, 3], "texture": "#0"},
+				"south": {"uv": [7, 4.5, 9, 4.625], "texture": "#0"},
+				"west": {"uv": [7.375, 3, 8.375, 3.125], "texture": "#0"},
+				"up": {"uv": [2, 4.5, 0, 3.5], "texture": "#0"},
+				"down": {"uv": [4, 3.5, 2, 4.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [11, 14, 3],
+			"to": [18, 15, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [14, 14, 6]},
+			"faces": {
+				"north": {"uv": [7.375, 3.125, 8.25, 3.25], "texture": "#0"},
+				"east": {"uv": [7, 5.125, 8.125, 5.25], "texture": "#0"},
+				"south": {"uv": [7.375, 3.25, 8.25, 3.375], "texture": "#0"},
+				"west": {"uv": [7, 5.25, 8.125, 5.375], "texture": "#0"},
+				"up": {"uv": [7, 5.5, 6.125, 4.375], "texture": "#0"},
+				"down": {"uv": [0.875, 6.375, 0, 7.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [10, 14, 3.1],
+			"to": [11, 21, 11.9],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [10, 18, 6]},
+			"faces": {
+				"north": {"uv": [3, 4.5, 3.125, 5.375], "texture": "#0"},
+				"east": {"uv": [0.875, 6.375, 2, 7.25], "texture": "#0"},
+				"south": {"uv": [3.125, 4.5, 3.25, 5.375], "texture": "#0"},
+				"west": {"uv": [2, 6.375, 3.125, 7.25], "texture": "#0"},
+				"up": {"uv": [3.5, 8.375, 3.375, 7.25], "texture": "#0"},
+				"down": {"uv": [3.625, 7.25, 3.5, 8.375], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.4, 10.2, 8.1],
+			"to": [17.4, 11.2, 9.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15.4, 10.2, 7.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [0.125, 7.5, 0.25, 7.625], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [0.25, 7.5, 0.375, 7.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.4, 10.2, 5.1],
+			"to": [17.4, 11.2, 6.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15.4, 10.2, 4.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [0.375, 7.5, 0.5, 7.625], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [0.5, 7.5, 0.625, 7.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.8, 9.3, 6.1],
+			"to": [17.8, 10.3, 8.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15.8, 9.3, 5.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [5.375, 7.375, 5.625, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [5.625, 7.375, 5.875, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [16.6, 3.2, 9.1],
+			"to": [16.6, 4.2, 10.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [14.6, 3.2, 8.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [0.625, 7.5, 0.75, 7.625], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [0.75, 7.5, 0.875, 7.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [16.6, 3.2, 6.1],
+			"to": [16.6, 4.2, 7.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [14.6, 3.2, 5.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.125, 7.625, 1.25], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 1.25, 7.625, 1.375], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17, 2.3, 7.1],
+			"to": [17, 3.3, 9.1],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [15, 2.3, 6.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [5.875, 7.375, 6.125, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [6.125, 7.375, 6.375, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.2, 10.8, 6.1],
+			"to": [0.2, 11.8, 8.1],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.8, 10.8, 5.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [6.375, 7.375, 6.625, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [6.625, 7.375, 6.875, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.6, 11.7, 5.1],
+			"to": [0.6, 12.7, 6.1],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.4, 11.7, 4.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.375, 7.625, 1.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 1.5, 7.625, 1.625], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.6, 11.7, 8.1],
+			"to": [0.6, 12.7, 9.1],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1.4, 11.7, 7.1]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.625, 7.625, 1.75], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 1.75, 7.625, 1.875], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.8, 3.8, 7],
+			"to": [-0.8, 4.8, 9],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-2.8, 3.8, 6]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [6.875, 7.375, 7.125, 7.5], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.125, 7.375, 7.375, 7.5], "texture": "#0"},
+				"up": {"uv": [0, 0.25, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.4, 4.7, 9],
+			"to": [-0.4, 5.7, 10],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-2.4, 4.7, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 1.875, 7.625, 2], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 2, 7.625, 2.125], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.4, 4.7, 6],
+			"to": [-0.4, 5.7, 7],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-2.4, 4.7, 5]},
+			"faces": {
+				"north": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"east": {"uv": [7.5, 2.125, 7.625, 2.25], "texture": "#0"},
+				"south": {"uv": [0, 0, 0, 0.125], "texture": "#0"},
+				"west": {"uv": [7.5, 2.25, 7.625, 2.375], "texture": "#0"},
+				"up": {"uv": [0, 0.125, 0, 0], "texture": "#0"},
+				"down": {"uv": [0, 0, 0, 0.125], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0.4, 19, 2.6],
+			"to": [8.9, 22, 10.6],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-0.1, 19, -0.9]},
+			"faces": {
+				"north": {"uv": [6.875, 6.25, 8, 6.625], "texture": "#0"},
+				"east": {"uv": [7, 0.375, 8, 0.75], "texture": "#0"},
+				"south": {"uv": [7, 0, 8.125, 0.375], "texture": "#0"},
+				"west": {"uv": [7, 0.75, 8, 1.125], "texture": "#0"},
+				"up": {"uv": [3.25, 6.375, 2.125, 5.375], "texture": "#0"},
+				"down": {"uv": [4.375, 5.625, 3.25, 6.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [1.8, 20.5, 10.6],
+			"to": [2.8, 21.5, 11.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [1.3, 18.5, 7.1]},
+			"faces": {
+				"north": {"uv": [7.5, 2.375, 7.625, 2.5], "texture": "#0"},
+				"east": {"uv": [4.625, 7.5, 4.75, 7.625], "texture": "#0"},
+				"south": {"uv": [4.75, 7.5, 4.875, 7.625], "texture": "#0"},
+				"west": {"uv": [4.875, 7.5, 5, 7.625], "texture": "#0"},
+				"up": {"uv": [5.125, 7.625, 5, 7.5], "texture": "#0"},
+				"down": {"uv": [5.25, 7.5, 5.125, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 1],
+			"to": [1, 15, 2],
+			"rotation": {"angle": -22.5, "axis": "x", "origin": [0, 0, 0]},
+			"faces": {
+				"north": {"uv": [1.375, 7.25, 1.5, 9.125], "texture": "#0"},
+				"east": {"uv": [1.5, 7.25, 1.625, 9.125], "texture": "#0"},
+				"south": {"uv": [1.625, 7.25, 1.75, 9.125], "texture": "#0"},
+				"west": {"uv": [1.75, 7.25, 1.875, 9.125], "texture": "#0"},
+				"up": {"uv": [5.375, 7.625, 5.25, 7.5], "texture": "#0"},
+				"down": {"uv": [5.5, 7.5, 5.375, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, -11],
+			"to": [1, 15, -10],
+			"rotation": {"angle": 22.5, "axis": "x", "origin": [0, 0, -12]},
+			"faces": {
+				"north": {"uv": [1.875, 7.25, 2, 9.125], "texture": "#0"},
+				"east": {"uv": [2, 7.25, 2.125, 9.125], "texture": "#0"},
+				"south": {"uv": [2.125, 7.25, 2.25, 9.125], "texture": "#0"},
+				"west": {"uv": [2.25, 7.25, 2.375, 9.125], "texture": "#0"},
+				"up": {"uv": [5.625, 7.625, 5.5, 7.5], "texture": "#0"},
+				"down": {"uv": [5.75, 7.5, 5.625, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-6, 0, -5],
+			"to": [-5, 15, -4],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-6, 0, -6]},
+			"faces": {
+				"north": {"uv": [2.375, 7.25, 2.5, 9.125], "texture": "#0"},
+				"east": {"uv": [2.5, 7.25, 2.625, 9.125], "texture": "#0"},
+				"south": {"uv": [2.625, 7.25, 2.75, 9.125], "texture": "#0"},
+				"west": {"uv": [2.75, 7.25, 2.875, 9.125], "texture": "#0"},
+				"up": {"uv": [5.875, 7.625, 5.75, 7.5], "texture": "#0"},
+				"down": {"uv": [6, 7.5, 5.875, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [6, 0, -5],
+			"to": [7, 15, -4],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [6, 0, -6]},
+			"faces": {
+				"north": {"uv": [2.875, 7.25, 3, 9.125], "texture": "#0"},
+				"east": {"uv": [3, 7.25, 3.125, 9.125], "texture": "#0"},
+				"south": {"uv": [3.125, 7.25, 3.25, 9.125], "texture": "#0"},
+				"west": {"uv": [3.25, 7.25, 3.375, 9.125], "texture": "#0"},
+				"up": {"uv": [6.125, 7.625, 6, 7.5], "texture": "#0"},
+				"down": {"uv": [6.25, 7.5, 6.125, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.3, 13, -5.3],
+			"to": [1.3, 24, -3.7],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-1, 13, -5]},
+			"faces": {
+				"north": {"uv": [7, 1.125, 7.25, 2.5], "texture": "#0"},
+				"east": {"uv": [0.875, 7.25, 1.125, 8.625], "texture": "#0"},
+				"south": {"uv": [1.125, 7.25, 1.375, 8.625], "texture": "#0"},
+				"west": {"uv": [7.25, 1.125, 7.5, 2.5], "texture": "#0"},
+				"up": {"uv": [4.625, 5.875, 4.375, 5.625], "texture": "#0"},
+				"down": {"uv": [4.875, 5.625, 4.625, 5.875], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-0.8, 12.3, -5.6],
+			"to": [1.6, 14.3, -3.4],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-1, 12.3, -5]},
+			"faces": {
+				"north": {"uv": [7.375, 3.375, 7.625, 3.625], "texture": "#0"},
+				"east": {"uv": [7.375, 3.625, 7.625, 3.875], "texture": "#0"},
+				"south": {"uv": [7.375, 3.875, 7.625, 4.125], "texture": "#0"},
+				"west": {"uv": [4.125, 7.375, 4.375, 7.625], "texture": "#0"},
+				"up": {"uv": [7.625, 4.375, 7.375, 4.125], "texture": "#0"},
+				"down": {"uv": [4.625, 7.375, 4.375, 7.625], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 24, -5],
+			"to": [1, 32, -4],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-1, 21, -5]},
+			"faces": {
+				"north": {"uv": [3.625, 7.25, 3.75, 8.25], "texture": "#0"},
+				"east": {"uv": [3.75, 7.25, 3.875, 8.25], "texture": "#0"},
+				"south": {"uv": [3.875, 7.25, 4, 8.25], "texture": "#0"},
+				"west": {"uv": [4, 7.25, 4.125, 8.25], "texture": "#0"},
+				"up": {"uv": [6.375, 7.625, 6.25, 7.5], "texture": "#0"},
+				"down": {"uv": [6.5, 7.5, 6.375, 7.625], "texture": "#0"}
+			}
+		}
+	],
+	"display": {},
+	"groups": [
+		{
+			"name": "group",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
+		}
+	]
 }
 ==========================================
 FILE: m2_ammo_1.json
@@ -29189,55 +31518,198 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\
 	"textures": {
 		"particle": "aas:block/red_rally",
 		"0": "aas:block/red_rally"
-	}
-}
+	},
 	"elements": [
 		{
-			"from": [0, 0, 0],
-			"to": [16, 6, 16],
+			"from": [-2, 1, 4],
+			"to": [-1, 8, 12],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-4, 0, 2]},
 			"faces": {
-				"north": {"uv": [4, 14.5, 8, 16], "texture": "#0"},
-				"east": {"uv": [0, 14.5, 4, 16], "texture": "#0"},
-				"south": {"uv": [12, 14.5, 16, 16], "texture": "#0"},
-				"west": {"uv": [8, 14.5, 12, 16], "texture": "#0"},
-				"up": {"uv": [8, 14.5, 4, 10.5], "texture": "#0"},
-				"down": {"uv": [12, 10.5, 8, 14.5], "texture": "#0"}
+				"north": {"uv": [10, 0.75, 10.25, 2.5], "texture": "#0"},
+				"east": {"uv": [6.25, 6.5, 8.25, 8.25], "texture": "#0"},
+				"south": {"uv": [10, 4.25, 10.25, 6], "texture": "#0"},
+				"west": {"uv": [0, 6.75, 2, 8.5], "texture": "#0"},
+				"up": {"uv": [5.25, 11.5, 5, 9.5], "texture": "#0"},
+				"down": {"uv": [5.5, 9.5, 5.25, 11.5], "texture": "#0"}
 			}
 		},
 		{
-			"from": [11, 6, 4],
-			"to": [15, 8, 6],
-			"rotation": {"angle": 0, "axis": "y", "origin": [16, 0, 4]},
+			"from": [14, 0, 13],
+			"to": [17, 5, 15],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [17, 0, 14]},
 			"faces": {
-				"north": {"uv": [13.5, 8, 14.5, 8.5], "texture": "#0"},
-				"east": {"uv": [13, 8, 13.5, 8.5], "texture": "#0"},
-				"south": {"uv": [15, 8, 16, 8.5], "texture": "#0"},
-				"west": {"uv": [14.5, 8, 15, 8.5], "texture": "#0"},
-				"up": {"uv": [14.5, 8, 13.5, 7.5], "texture": "#0"},
-				"down": {"uv": [15.5, 7.5, 14.5, 8], "texture": "#0"}
+				"north": {"uv": [7.5, 5, 8.25, 6.25], "texture": "#0"},
+				"east": {"uv": [5.75, 7, 6.25, 8.25], "texture": "#0"},
+				"south": {"uv": [2.75, 9.25, 3.5, 10.5], "texture": "#0"},
+				"west": {"uv": [9.25, 6.25, 9.75, 7.5], "texture": "#0"},
+				"up": {"uv": [10.5, 3.25, 9.75, 2.75], "texture": "#0"},
+				"down": {"uv": [10.75, 9.5, 10, 10], "texture": "#0"}
 			}
 		},
 		{
-			"from": [4, 6, 3],
-			"to": [11, 9, 8],
-			"rotation": {"angle": 0, "axis": "y", "origin": [4, 6, 4]},
+			"from": [14, 0, 1],
+			"to": [17, 5, 3],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [17, 0, 3]},
 			"faces": {
-				"north": {"uv": [11.25, 9.75, 13, 10.5], "texture": "#0"},
-				"east": {"uv": [10, 9.75, 11.25, 10.5], "texture": "#0"},
-				"south": {"uv": [14.25, 9.75, 16, 10.5], "texture": "#0"},
-				"west": {"uv": [13, 9.75, 14.25, 10.5], "texture": "#0"},
-				"up": {"uv": [13, 9.75, 11.25, 8.5], "texture": "#0"},
-				"down": {"uv": [14.75, 8.5, 13, 9.75], "texture": "#0"}
+				"north": {"uv": [3.5, 9.25, 4.25, 10.5], "texture": "#0"},
+				"east": {"uv": [9.25, 7.5, 9.75, 8.75], "texture": "#0"},
+				"south": {"uv": [9.25, 5, 10, 6.25], "texture": "#0"},
+				"west": {"uv": [9.25, 8.75, 9.75, 10], "texture": "#0"},
+				"up": {"uv": [10.75, 10.5, 10, 10], "texture": "#0"},
+				"down": {"uv": [11, 0.75, 10.25, 1.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [8.1, 12, 4],
+			"to": [12.1, 12.5, 12],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [13.1, 12, 14]},
+			"faces": {
+				"north": {"uv": [10, 2.5, 11, 2.75], "texture": "#0"},
+				"east": {"uv": [9.5, 3.25, 11.5, 3.5], "texture": "#0"},
+				"south": {"uv": [10.25, 5.5, 11.25, 5.75], "texture": "#0"},
+				"west": {"uv": [9.5, 3.5, 11.5, 3.75], "texture": "#0"},
+				"up": {"uv": [9.25, 7, 8.25, 5], "texture": "#0"},
+				"down": {"uv": [6.75, 8.25, 5.75, 10.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [13, 0, 3],
+			"to": [18, 13, 13],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [18, 0, 14]},
+			"faces": {
+				"north": {"uv": [6.25, 0, 7.5, 3.25], "texture": "#0"},
+				"east": {"uv": [0, 3.5, 2.5, 6.75], "texture": "#0"},
+				"south": {"uv": [6.25, 3.25, 7.5, 6.5], "texture": "#0"},
+				"west": {"uv": [2.5, 3.5, 5, 6.75], "texture": "#0"},
+				"up": {"uv": [3.25, 9.25, 2, 6.75], "texture": "#0"},
+				"down": {"uv": [4.5, 6.75, 3.25, 9.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [17.8, 1, 4],
+			"to": [18.8, 6, 12],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [20.8, 1, 14]},
+			"faces": {
+				"north": {"uv": [10.25, 1.25, 10.5, 2.5], "texture": "#0"},
+				"east": {"uv": [7.5, 2.5, 9.5, 3.75], "texture": "#0"},
+				"south": {"uv": [10.25, 4.25, 10.5, 5.5], "texture": "#0"},
+				"west": {"uv": [7.5, 3.75, 9.5, 5], "texture": "#0"},
+				"up": {"uv": [5.75, 11.5, 5.5, 9.5], "texture": "#0"},
+				"down": {"uv": [10, 0.75, 9.75, 2.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14.2, 9, 4],
+			"to": [15.2, 12, 12],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [17.2, 8, 14]},
+			"faces": {
+				"north": {"uv": [10.25, 8.5, 10.5, 9.25], "texture": "#0"},
+				"east": {"uv": [0, 8.5, 2, 9.25], "texture": "#0"},
+				"south": {"uv": [9.75, 10.25, 10, 11], "texture": "#0"},
+				"west": {"uv": [8.75, 0, 10.75, 0.75], "texture": "#0"},
+				"up": {"uv": [10, 8.25, 9.75, 6.25], "texture": "#0"},
+				"down": {"uv": [10, 8.25, 9.75, 10.25], "texture": "#0"}
+			}
+		},
+		{
+			"from": [-1, 0, 3],
+			"to": [4, 14, 13],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [-1, 0, 2]},
+			"faces": {
+				"north": {"uv": [5, 0, 6.25, 3.5], "texture": "#0"},
+				"east": {"uv": [0, 0, 2.5, 3.5], "texture": "#0"},
+				"south": {"uv": [5, 3.5, 6.25, 7], "texture": "#0"},
+				"west": {"uv": [2.5, 0, 5, 3.5], "texture": "#0"},
+				"up": {"uv": [5.75, 9.5, 4.5, 7], "texture": "#0"},
+				"down": {"uv": [8.75, 0, 7.5, 2.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [5.3, 12.9, 4],
+			"to": [9.3, 13.9, 12],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [4.3, 12.9, 2]},
+			"faces": {
+				"north": {"uv": [5.75, 10.25, 6.75, 10.5], "texture": "#0"},
+				"east": {"uv": [9.5, 3.75, 11.5, 4], "texture": "#0"},
+				"south": {"uv": [10.25, 5.75, 11.25, 6], "texture": "#0"},
+				"west": {"uv": [9.5, 4, 11.5, 4.25], "texture": "#0"},
+				"up": {"uv": [7.75, 10.25, 6.75, 8.25], "texture": "#0"},
+				"down": {"uv": [9.25, 7, 8.25, 9], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 2],
+			"to": [3, 7, 3],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [0, 0, 2]},
+			"faces": {
+				"north": {"uv": [8.75, 0.75, 9.5, 2.5], "texture": "#0"},
+				"east": {"uv": [10, 6, 10.25, 7.75], "texture": "#0"},
+				"south": {"uv": [0.5, 9.25, 1.25, 11], "texture": "#0"},
+				"west": {"uv": [10, 7.75, 10.25, 9.5], "texture": "#0"},
+				"up": {"uv": [8.25, 6.5, 7.5, 6.25], "texture": "#0"},
+				"down": {"uv": [11, 9.25, 10.25, 9.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 0, 13],
+			"to": [3, 7, 14],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [0, 0, 13]},
+			"faces": {
+				"north": {"uv": [1.25, 9.25, 2, 11], "texture": "#0"},
+				"east": {"uv": [9.25, 10, 9.5, 11.75], "texture": "#0"},
+				"south": {"uv": [2, 9.25, 2.75, 11], "texture": "#0"},
+				"west": {"uv": [9.5, 10, 9.75, 11.75], "texture": "#0"},
+				"up": {"uv": [11.25, 1.5, 10.5, 1.25], "texture": "#0"},
+				"down": {"uv": [11.25, 1.5, 10.5, 1.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [9.2, 10.3, 9.4],
+			"to": [11.6, 12.3, 11.6],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [9, 10.3, 10]},
+			"faces": {
+				"north": {"uv": [9.5, 4.25, 10, 4.75], "texture": "#0"},
+				"east": {"uv": [10.25, 6, 10.75, 6.5], "texture": "#0"},
+				"south": {"uv": [10.25, 6.5, 10.75, 7], "texture": "#0"},
+				"west": {"uv": [6.75, 10.25, 7.25, 10.75], "texture": "#0"},
+				"up": {"uv": [10.75, 7.5, 10.25, 7], "texture": "#0"},
+				"down": {"uv": [7.75, 10.25, 7.25, 10.75], "texture": "#0"}
+			}
+		},
+		{
+			"from": [6.7, 21, 10],
+			"to": [7.7, 31, 11],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [5.7, 18, 10]},
+			"faces": {
+				"north": {"uv": [4.25, 9.25, 4.5, 11.75], "texture": "#0"},
+				"east": {"uv": [9.5, 0.75, 9.75, 3.25], "texture": "#0"},
+				"south": {"uv": [4.5, 9.5, 4.75, 12], "texture": "#0"},
+				"west": {"uv": [4.75, 9.5, 5, 12], "texture": "#0"},
+				"up": {"uv": [4.75, 7, 4.5, 6.75], "texture": "#0"},
+				"down": {"uv": [5, 6.75, 4.75, 7], "texture": "#0"}
+			}
+		},
+		{
+			"from": [9.3, 11, 9.7],
+			"to": [10.9, 22, 11.3],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [8.6, 11, 10]},
+			"faces": {
+				"north": {"uv": [7.75, 8.25, 8.25, 11], "texture": "#0"},
+				"east": {"uv": [8.25, 9, 8.75, 11.75], "texture": "#0"},
+				"south": {"uv": [8.75, 9, 9.25, 11.75], "texture": "#0"},
+				"west": {"uv": [0, 9.25, 0.5, 12], "texture": "#0"},
+				"up": {"uv": [10.75, 8, 10.25, 7.5], "texture": "#0"},
+				"down": {"uv": [10.75, 8, 10.25, 8.5], "texture": "#0"}
 			}
 		}
 	],
 	"groups": [
 		{
-			"name": "Rally",
+			"name": "group",
 			"origin": [8, 8, 8],
 			"scope": 0,
 			"color": 0,
-			"children": [0, 1, 2]
+			"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 		}
 	]
 }
@@ -30299,62 +32771,28 @@ FILE: entrenching_tool.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\item\entrenching_tool.json
 ==========================================
 {
-	"format_version": "1.20.1",
-	"credit": "Made with Blockbench",
+	"parent": "builtin/entity",
+	"gui_light": "front",
 	"textures": {
-		"0": "aas:item/entrenching_tool",
 		"particle": "aas:item/entrenching_tool"
 	},
-	"elements": [
-		{
-			"from": [8, 0, 8],
-			"to": [9, 8, 9],
-			"rotation": {"angle": 0, "axis": "y", "origin": [7, 0, 7]},
-			"faces": {
-				"north": {"uv": [6, 2, 7, 10], "texture": "#0"},
-				"east": {"uv": [6, 2, 7, 10], "texture": "#0"},
-				"south": {"uv": [7, 2, 6, 10], "texture": "#0"},
-				"west": {"uv": [6, 2, 7, 10], "texture": "#0"},
-				"up": {"uv": [1, 1, 2, 2], "texture": "#0"},
-				"down": {"uv": [6, 2, 7, 3], "texture": "#0"}
-			}
-		},
-		{
-			"from": [6, 8, 8],
-			"to": [11, 13, 9],
-			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 7]},
-			"faces": {
-				"north": {"uv": [0, 0, 5, 5], "texture": "#0"},
-				"east": {"uv": [5, 0, 6, 5], "texture": "#0"},
-				"south": {"uv": [0, 5, 5, 10], "texture": "#0"},
-				"west": {"uv": [5, 5, 6, 10], "texture": "#0"},
-				"up": {"uv": [11, 1, 6, 0], "texture": "#0"},
-				"down": {"uv": [11, 1, 6, 2], "texture": "#0"}
-			}
-		}
-	],
 	"display": {
 		"thirdperson_righthand": {
-			"translation": [0, 4.75, 0]
+			"rotation": [0, 0, 0],
+			"translation": [0.75, -3.25, 1.25],
+			"scale": [1, 1, 1]
 		},
 		"firstperson_righthand": {
-			"translation": [0, 4, 0]
+			"rotation": [0, 0, 0],
+			"translation": [-10.75, -3.25, 0],
+			"scale": [1, 1, 1]
 		},
-		"firstperson_lefthand": {
-			"translation": [0, 3.75, 0]
-		},
-		"head": {
-			"translation": [0, 1, 0]
+		"gui": {
+			"rotation": [0, 0, 0],
+			"translation": [0, 0, 0],
+			"scale": [1, 1, 1]
 		}
-	},
-	"groups": [
-		{
-			"name": "Entrenching_tool",
-			"origin": [8, 8, 8],
-			"color": 0,
-			"children": [0, 1]
-		}
-	]
+	}
 }
 ==========================================
 FILE: m2_ammo_box.json
@@ -30534,76 +32972,28 @@ FILE: squad_leader_radio.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\item\squad_leader_radio.json
 ==========================================
 {
-	"format_version": "1.21.11",
-	"credit": "Made with Blockbench",
+	"parent": "builtin/entity",
+	"gui_light": "front",
 	"textures": {
-		"0": "aas:item/ralik_radio",
-		"particle": "aas:item/ralik_radio",
-		"1": "aas:item/ralik_radio"
+		"particle": "aas:item/squad_leader_radio_gui"
 	},
-	"elements": [
-		{
-			"from": [7, 0, 8],
-			"to": [11, 7, 10],
-			"rotation": {"angle": 0, "axis": "y", "origin": [7, 0, 8]},
-			"faces": {
-				"north": {"uv": [0, 0, 4, 7], "texture": "#1"},
-				"east": {"uv": [0, 7, 2, 14], "texture": "#1"},
-				"south": {"uv": [4, 0, 8, 7], "texture": "#1"},
-				"west": {"uv": [2, 7, 4, 14], "texture": "#1"},
-				"up": {"uv": [8, 9, 4, 7], "texture": "#1"},
-				"down": {"uv": [12, 0, 8, 2], "texture": "#1"}
-			}
-		},
-		{
-			"from": [10, 7, 8],
-			"to": [11, 11, 9],
-			"rotation": {"angle": 0, "axis": "y", "origin": [10, 7, 7]},
-			"faces": {
-				"north": {"uv": [14, 0, 16, 8], "texture": "#1"},
-				"east": {"uv": [14, 0, 16, 8], "texture": "#1"},
-				"south": {"uv": [14, 0, 16, 8], "texture": "#1"},
-				"west": {"uv": [14, 0, 16, 8], "texture": "#1"},
-				"up": {"uv": [16, 10, 14, 8], "texture": "#1"},
-				"down": {"uv": [10, 0, 8, 2], "texture": "#1"}
-			}
-		}
-	],
 	"display": {
 		"thirdperson_righthand": {
-			"translation": [-1.5, 7.5, -0.5]
+			"rotation": [0, 0, 0],
+			"translation": [-0.75, -0.5, 0.75],
+			"scale": [1, 1, 1]
 		},
 		"firstperson_righthand": {
-			"rotation": [0, -90, 25],
-			"translation": [1.13, 6.5, 1.13],
-			"scale": [0.68, 0.68, 0.68]
-		},
-		"firstperson_lefthand": {
-			"rotation": [0, 90, -25],
-			"translation": [1.13, 6.5, 1.13],
-			"scale": [0.68, 0.68, 0.68]
+			"rotation": [0, 0, 0],
+			"translation": [0, 0, 0],
+			"scale": [1, 1, 1]
 		},
 		"gui": {
-			"rotation": [30, 225, 0],
+			"rotation": [0, 0, 0],
 			"translation": [0, 0, 0],
-			"scale": [0.625, 0.625, 0.625]
-		},
-		"ground": {
-			"translation": [0, 3, 0],
-			"scale": [0.5, 0.5, 0.5]
-		},
-		"fixed": {
-			"scale": [0.5, 0.5, 0.5]
+			"scale": [1, 1, 1]
 		}
-	},
-	"groups": [
-		{
-			"name": "ralik_radio",
-			"origin": [8, 8, 8],
-			"color": 0,
-			"children": [0, 1]
-		}
-	]
+	}
 }
 ==========================================
 FILE: vehicle_spawner.json
@@ -30617,6 +33007,34 @@ FILE: sounds.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\sounds.json
 ==========================================
 {
+  "rally_idle": {
+    "category": "block",
+    "sounds": [
+      {
+        "name": "aas:rally_idle",
+        "stream": true
+      }
+    ]
+  },
+  "shovel_dig": {
+    "category": "player",
+    "subtitle": "subtitles.aas.shovel_dig",
+    "sounds": [
+      {
+        "name": "aas:shovel_dig",
+        "stream": false
+      }
+    ]
+  },
+  "radio_open": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "aas:radio_open",
+        "stream": false
+      }
+    ]
+  },
   "hub_idle": {
     "category": "block",
     "subtitle": "subtitles.aas.hub_idle",

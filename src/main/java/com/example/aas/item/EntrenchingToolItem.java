@@ -1,8 +1,16 @@
 package com.example.aas.item;
 
-import com.example.aas.block.*; // Импортирует все блоки и TileEntity
+import com.example.aas.block.*;
+import com.example.aas.client.renderer.EntrenchingToolRenderer;
+import com.example.aas.sound.ModSounds;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,227 +23,39 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.*;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.SingletonGeoAnimatable;
 
-public class EntrenchingToolItem extends Item {
+import java.util.function.Consumer;
+
+public class EntrenchingToolItem extends Item implements GeoItem {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public EntrenchingToolItem() {
         super(new Properties().stacksTo(1));
+        SingletonGeoAnimatable.registerSyncedAnimatable(this);
+    }
+
+    private long getOrAssignID(ItemStack stack, Level level) {
+        if (!stack.getOrCreateTag().contains("GeckoLibID")) {
+            stack.getOrCreateTag().putLong("GeckoLibID", level.getRandom().nextLong());
+        }
+        return stack.getOrCreateTag().getLong("GeckoLibID");
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        HitResult hit = player.pick(4.5D, 0.0F, false);
-
-        if (hit.getType() == HitResult.Type.BLOCK) {
-            BlockHitResult blockHit = (BlockHitResult) hit;
-            BlockPos pos = blockHit.getBlockPos();
-            BlockState state = level.getBlockState(pos);
-
-            // 1. Проверяем, что это один из наших блоков
-            if (state.is(ModBlocks.HUB_BLOCK.get()) ||
-                    state.is(ModBlocks.WALL_BLOCK.get()) ||
-                    state.is(ModBlocks.BARBED_WIRE_BLOCK.get()) ||
-                    state.is(ModBlocks.M2_CONSTRUCTION_BLOCK.get()) ||
-                    state.is(ModBlocks.AGS_CONSTRUCTION_BLOCK.get()) ||
-                    state.is(ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()) ||
-                    state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get())) {
-
-                // 2. ПРОВЕРКА: Если уже построено - копать нельзя
-                if (isConstructed(state)) {
-                    if (level.isClientSide) {
-                        player.displayClientMessage(Component.literal("Structure already built!"), true);
-                    }
-                    return InteractionResultHolder.fail(player.getItemInHand(hand));
-                }
-
-                // 3. Получаем Entity и начинаем действие
-                BlockEntity be = level.getBlockEntity(pos);
-
-                // --- HUB ---
-                if (be instanceof HubBlockEntity hub) {
-                    if (canDigHub(player, hub)) {
-                        player.startUsingItem(hand);
-                        return InteractionResultHolder.consume(player.getItemInHand(hand));
-                    } else {
-                        sendEnemyMessage(level, player);
-                    }
-                }
-                // --- WALL ---
-                else if (be instanceof WallBlockEntity wall) {
-                    if (canDigWall(player, wall)) {
-                        player.startUsingItem(hand);
-                        return InteractionResultHolder.consume(player.getItemInHand(hand));
-                    } else {
-                        sendEnemyMessage(level, player);
-                    }
-                }
-                // --- BARBED WIRE ---
-                else if (be instanceof BarbedWireBlockEntity wire) {
-                    if (canDigWire(player, wire)) {
-                        player.startUsingItem(hand);
-                        return InteractionResultHolder.consume(player.getItemInHand(hand));
-                    } else {
-                        sendEnemyMessage(level, player);
-                    }
-                }
-                // --- STATIC WEAPONS (M2, AGS, Mortar, TOW) ---
-                // Для техники тоже стоит добавить проверку, но пока разрешаем всем (или по логике ниже)
-                else if (be instanceof M2ConstructionBlockEntity ||
-                        be instanceof AGSConstructionBlockEntity ||
-                        be instanceof MortarConstructionBlockEntity ||
-                        be instanceof TOWConstructionBlockEntity) {
-
-                    player.startUsingItem(hand);
-                    return InteractionResultHolder.consume(player.getItemInHand(hand));
-                }
-            }
-        }
-        return InteractionResultHolder.pass(player.getItemInHand(hand));
+    public boolean onEntitySwing(ItemStack stack, LivingEntity entity) {
+        return true;
     }
 
     @Override
-    public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int count) {
-        if (entity instanceof Player player) {
-            HitResult hit = player.pick(4.5D, 0.0F, false);
-
-            if (hit.getType() == HitResult.Type.BLOCK) {
-                BlockHitResult blockHit = (BlockHitResult) hit;
-                BlockPos pos = blockHit.getBlockPos();
-                BlockState state = level.getBlockState(pos);
-
-                // 1. Если блок достроился в процессе копания - останавливаемся
-                if (isConstructed(state)) {
-                    player.stopUsingItem();
-                    return;
-                }
-
-                BlockEntity be = level.getBlockEntity(pos);
-                boolean isValidTarget = false;
-
-                // --- HUB LOGIC ---
-                if (be instanceof HubBlockEntity hub) {
-                    if (canDigHub(player, hub)) {
-                        isValidTarget = true;
-                        if (!level.isClientSide) {
-                            hub.addProgress();
-                            if (player.isCreative()) hub.addCreativeProgress(40);
-                        }
-                    }
-                }
-                // --- WALL LOGIC ---
-                else if (be instanceof WallBlockEntity wall) {
-                    if (canDigWall(player, wall)) {
-                        isValidTarget = true;
-                        if (!level.isClientSide) {
-                            wall.addProgress();
-                            if (player.isCreative()) wall.addCreativeProgress(40);
-                        }
-                    }
-                }
-                // --- WIRE LOGIC ---
-                else if (be instanceof BarbedWireBlockEntity wire) {
-                    if (canDigWire(player, wire)) {
-                        isValidTarget = true;
-                        if (!level.isClientSide) {
-                            wire.addProgress();
-                            if (player.isCreative()) wire.addCreativeProgress(40);
-                        }
-                    }
-                }
-                // --- M2 BROWNING LOGIC ---
-                else if (be instanceof M2ConstructionBlockEntity m2) {
-                    // Здесь тоже можно добавить проверку команды, если нужно
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        m2.addProgress();
-                        if (player.isCreative()) m2.addCreativeProgress(100);
-                    }
-                }
-                // --- AGS-30 LOGIC ---
-                else if (be instanceof AGSConstructionBlockEntity ags) {
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        ags.addProgress();
-                        if (player.isCreative()) ags.addCreativeProgress(100);
-                    }
-                }
-                // --- MORTAR LOGIC ---
-                else if (be instanceof MortarConstructionBlockEntity mortar) {
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        mortar.addProgress();
-                        if (player.isCreative()) mortar.addCreativeProgress(100);
-                    }
-                }
-                // --- TOW LOGIC ---
-                else if (be instanceof TOWConstructionBlockEntity tow) {
-                    isValidTarget = true;
-                    if (!level.isClientSide) {
-                        tow.addProgress();
-                        if (player.isCreative()) tow.addCreativeProgress(100);
-                    }
-                }
-
-                if (!isValidTarget) player.stopUsingItem();
-            } else {
-                // Если игрок отвел взгляд от блока
-                player.stopUsingItem();
-            }
-        }
-    }
-
-    // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
-
-    private boolean isConstructed(BlockState state) {
-        if (state.hasProperty(WallBlock.CONSTRUCTED)) {
-            return state.getValue(WallBlock.CONSTRUCTED);
-        }
-        if (state.hasProperty(HubBlock.CONSTRUCTED)) {
-            return state.getValue(HubBlock.CONSTRUCTED);
-        }
-        if (state.hasProperty(BarbedWireBlock.CONSTRUCTED)) {
-            return state.getValue(BarbedWireBlock.CONSTRUCTED);
-        }
-        return false;
-    }
-
-    // === ИСПРАВЛЕННЫЕ МЕТОДЫ ПРОВЕРКИ КОМАНДЫ ===
-
-    private boolean canDigHub(Player player, HubBlockEntity hub) {
-        if (player.isCreative()) return true; // Креатив может копать все
-        if (player.getTeam() == null) return false; // Без команды нельзя в выживании
-
-        String structureTeam = hub.getTeam();
-        // Если структура нейтральная, разрешаем копать (или запрещаем, по вашему желанию)
-        if (structureTeam.equals("NEUTRAL")) return true;
-
-        return player.getTeam().getName().equalsIgnoreCase(structureTeam);
-    }
-
-    private boolean canDigWall(Player player, WallBlockEntity wall) {
-        if (player.isCreative()) return true;
-        if (player.getTeam() == null) return false;
-
-        String structureTeam = wall.getTeam();
-        if (structureTeam.equals("NEUTRAL")) return true;
-
-        return player.getTeam().getName().equalsIgnoreCase(structureTeam);
-    }
-
-    private boolean canDigWire(Player player, BarbedWireBlockEntity wire) {
-        if (player.isCreative()) return true;
-        if (player.getTeam() == null) return false;
-
-        String structureTeam = wire.getTeam();
-        if (structureTeam.equals("NEUTRAL")) return true;
-
-        return player.getTeam().getName().equalsIgnoreCase(structureTeam);
-    }
-
-    private void sendEnemyMessage(Level level, Player player) {
-        if (level.isClientSide) {
-            player.displayClientMessage(Component.literal("Cannot build enemy structures!"), true);
-        }
+    public int getUseDuration(ItemStack stack) {
+        return 72000;
     }
 
     @Override
@@ -244,7 +64,145 @@ public class EntrenchingToolItem extends Item {
     }
 
     @Override
-    public int getUseDuration(ItemStack stack) {
-        return 72000;
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack itemstack = player.getItemInHand(hand);
+        HitResult hit = player.pick(4.5D, 0.0F, false);
+
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            BlockState state = level.getBlockState(((BlockHitResult) hit).getBlockPos());
+
+            if (isAASConstruction(state) && !isConstructed(state)) {
+                if (!level.isClientSide) {
+                    long id = getOrAssignID(itemstack, level);
+                    this.triggerAnim(player, id, "ShovelController", "dig");
+                }
+                player.startUsingItem(hand);
+                return InteractionResultHolder.consume(itemstack);
+            }
+        }
+        return InteractionResultHolder.pass(itemstack);
+    }
+
+    @Override
+    public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int count) {
+        if (entity instanceof Player player && !level.isClientSide) {
+            HitResult hit = player.pick(4.5D, 0.0F, false);
+            if (hit instanceof BlockHitResult blockHit) {
+                BlockPos pos = blockHit.getBlockPos();
+                BlockState state = level.getBlockState(pos);
+                BlockEntity be = level.getBlockEntity(pos);
+
+                if (isAASConstruction(state)) {
+                    // 1. НЕЛЬЗЯ КОПАТЬ УЖЕ ПОСТРОЕННОЕ
+                    if (isConstructed(state)) {
+                        player.displayClientMessage(Component.literal("Structure is already finished!").withStyle(ChatFormatting.YELLOW), true);
+                        stopDigging(player, stack);
+                        return;
+                    }
+
+                    // 2. НЕЛЬЗЯ КОПАТЬ ВРАЖЕСКОЕ
+                    String playerTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
+                    String structureTeam = getStructureTeam(be);
+
+                    if (!structureTeam.equals("NEUTRAL") && !structureTeam.equalsIgnoreCase(playerTeam) && !player.isCreative()) {
+                        player.displayClientMessage(Component.literal("Cannot build ENEMY structures!").withStyle(ChatFormatting.RED), true);
+                        stopDigging(player, stack);
+                        return;
+                    }
+
+                    // Эффекты
+                    int elapsed = getUseDuration(stack) - count;
+                    if (elapsed % 20 == 10) {
+                        level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.SHOVEL_DIG.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+                        ((ServerLevel)level).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.1);
+                    }
+
+                    // 4. В КРЕАТИВЕ Х10 СКОРОСТЬ
+                    if (player.isCreative()) {
+                        addCreativeProgressToBE(be, 10);
+                    } else {
+                        addProgressToBE(be, player);
+                    }
+
+                } else {
+                    stopDigging(player, stack);
+                }
+            } else {
+                stopDigging(player, stack);
+            }
+        }
+    }
+
+    @Override
+    public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
+        stopDigging(entity, stack);
+    }
+
+    private void stopDigging(LivingEntity entity, ItemStack stack) {
+        if (entity instanceof Player player && !player.level().isClientSide) {
+            long id = getOrAssignID(stack, player.level());
+            this.triggerAnim(player, id, "ShovelController", "stop");
+            player.stopUsingItem();
+        }
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "ShovelController", 5, event -> PlayState.CONTINUE)
+                .triggerableAnim("dig", RawAnimation.begin().thenLoop("animation.shovel.dig"))
+                .triggerableAnim("stop", RawAnimation.begin().thenPlay("animation.nothing"))
+        );
+    }
+
+    private boolean isAASConstruction(BlockState state) {
+        return state.is(ModBlocks.HUB_BLOCK.get()) || state.is(ModBlocks.WALL_BLOCK.get()) ||
+                state.is(ModBlocks.BARBED_WIRE_BLOCK.get()) || state.is(ModBlocks.M2_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.AGS_CONSTRUCTION_BLOCK.get()) || state.is(ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get());
+    }
+
+    private String getStructureTeam(BlockEntity be) {
+        if (be instanceof HubBlockEntity h) return h.getTeam();
+        if (be instanceof WallBlockEntity w) return w.getTeam();
+        if (be instanceof BarbedWireBlockEntity b) return b.getTeam();
+        if (be instanceof AGSConstructionBlockEntity a) return a.getTeam();
+        if (be instanceof M2ConstructionBlockEntity m) return m.getTeam();
+        if (be instanceof MortarConstructionBlockEntity mo) return mo.getTeam();
+        if (be instanceof TOWConstructionBlockEntity t) return t.getTeam();
+        return "NEUTRAL";
+    }
+
+    private void addCreativeProgressToBE(BlockEntity be, int multiplier) {
+        if (be instanceof HubBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof WallBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof BarbedWireBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof AGSConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof M2ConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof MortarConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof TOWConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+    }
+
+    private boolean isConstructed(BlockState state) {
+        if (state.hasProperty(WallBlock.CONSTRUCTED)) return state.getValue(WallBlock.CONSTRUCTED);
+        if (state.hasProperty(HubBlock.CONSTRUCTED)) return state.getValue(HubBlock.CONSTRUCTED);
+        if (state.hasProperty(BarbedWireBlock.CONSTRUCTED)) return state.getValue(BarbedWireBlock.CONSTRUCTED);
+        return false;
+    }
+
+    private void addProgressToBE(BlockEntity be, Player player) {
+        if (be instanceof HubBlockEntity b) b.addProgress();
+        else if (be instanceof WallBlockEntity b) b.addProgress();
+        else if (be instanceof BarbedWireBlockEntity b) b.addProgress();
+        else if (be instanceof AGSConstructionBlockEntity b) b.addProgress();
+        else if (be instanceof M2ConstructionBlockEntity b) b.addProgress();
+        else if (be instanceof MortarConstructionBlockEntity b) b.addProgress();
+        else if (be instanceof TOWConstructionBlockEntity b) b.addProgress();
+    }
+
+    @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
+
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(com.example.aas.client.ClientItemExtensions.ENTRENCHING_TOOL);
     }
 }

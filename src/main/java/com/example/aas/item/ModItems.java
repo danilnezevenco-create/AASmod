@@ -13,6 +13,11 @@ public class ModItems {
     // === СУЩЕСТВУЮЩАЯ БОЕВАЯ ТЕХНИКА ===
     public static final RegistryObject<Item> AMMO_BAG = ITEMS.register("ammo_bag",
             () -> new BlockItem(ModBlocks.AMMO_BAG_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<Item> WALL_ITEM = ITEMS.register("wall_block",
+            () -> new BlockItem(ModBlocks.WALL_BLOCK.get(), new Item.Properties()));
+
+    public static final RegistryObject<Item> BARBED_WIRE_ITEM = ITEMS.register("barbed_wire",
+            () -> new BlockItem(ModBlocks.BARBED_WIRE_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLUE_APC = ITEMS.register("blue_apc",
             () -> new VehicleMarkerItem("BLUE", "APC", 20));
     public static final RegistryObject<Item> BLUE_TANK = ITEMS.register("blue_tank",

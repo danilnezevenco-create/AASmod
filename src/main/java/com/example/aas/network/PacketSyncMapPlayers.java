@@ -1,21 +1,24 @@
 package com.example.aas.network;
 
-import com.example.aas.client.ClientData;
-import com.example.aas.client.MapPlayerInfo;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+
+// УДАЛИТЕ ВСЕ ИМПОРТЫ .client.* ОТСЮДА!
 
 public class PacketSyncMapPlayers {
     private final List<MapPlayerInfo> players;
 
     public PacketSyncMapPlayers(List<MapPlayerInfo> players) {
         this.players = players;
+    }
+
+    public List<MapPlayerInfo> getPlayers() {
+        return this.players;
     }
 
     public static void encode(PacketSyncMapPlayers msg, FriendlyByteBuf buf) {
@@ -29,7 +32,7 @@ public class PacketSyncMapPlayers {
             buf.writeBoolean(p.isLeader);
             buf.writeBoolean(p.isDowned);
             buf.writeLong(p.lastShoutTime);
-            buf.writeBoolean(p.inVehicle); // ДОБАВИТЬ ЭТУ СТРОКУ
+            buf.writeBoolean(p.inVehicle);
         }
     }
 
@@ -38,15 +41,9 @@ public class PacketSyncMapPlayers {
         List<MapPlayerInfo> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             list.add(new MapPlayerInfo(
-                    buf.readUtf(),      // name
-                    buf.readDouble(),   // x
-                    buf.readDouble(),   // z
-                    buf.readFloat(),    // rot
-                    buf.readInt(),      // squadId
-                    buf.readBoolean(),  // isLeader
-                    buf.readBoolean(),  // isDowned
-                    buf.readLong(),     // lastShoutTime
-                    buf.readBoolean()   // inVehicle (ДОБАВИТЬ ЭТО ЧТЕНИЕ)
+                    buf.readUtf(), buf.readDouble(), buf.readDouble(),
+                    buf.readFloat(), buf.readInt(), buf.readBoolean(),
+                    buf.readBoolean(), buf.readLong(), buf.readBoolean()
             ));
         }
         return new PacketSyncMapPlayers(list);
@@ -54,13 +51,9 @@ public class PacketSyncMapPlayers {
 
     public static void handle(PacketSyncMapPlayers msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                // Обновляем данные на клиенте
-                ClientData.mapPlayers.clear();
-                for (MapPlayerInfo info : msg.players) {
-                    ClientData.mapPlayers.put(info.name, info);
-                }
-            });
+            // Используем DistExecutor, но вызываем метод через интерфейс или ClientHooks
+            // чтобы не "пачкать" импорты пакета
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientPacketHandler.handleSyncMap(msg));
         });
         ctx.get().setPacketHandled(true);
     }

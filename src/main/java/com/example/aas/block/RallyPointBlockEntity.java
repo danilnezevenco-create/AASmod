@@ -9,10 +9,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.api.distmarker.Dist;
 
 public class RallyPointBlockEntity extends BlockEntity {
-    public boolean isDecay = false; // Флаг для предотвращения штрафа при исчезновении по времени
+    public boolean isDecay = false;
     private int squadId = -1;
+    private Object clientSoundRef = null; // Используем Object, это безопасно для сервера
 
     public RallyPointBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.RALLY_BE.get(), pos, state);
@@ -29,7 +32,7 @@ public class RallyPointBlockEntity extends BlockEntity {
             if (s.id == this.squadId) {
                 if (s.rallyPos != null && s.rallyPos.equals(this.worldPosition)) {
                     s.rallyPos = null;
-                    s.rallyExpiryTick = -1; // Сбрасываем таймер в данных
+                    s.rallyExpiryTick = -1;
                     changed = true;
                 }
                 break;
@@ -39,6 +42,23 @@ public class RallyPointBlockEntity extends BlockEntity {
             data.setDirty();
             PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
         }
+    }
+
+    // ВАЖНО: Весь клиентский код вынесен в ClientHooks
+    public void handleSoundClient() {
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            this.clientSoundRef = com.example.aas.client.ClientHooks.playRallySound(this, this.clientSoundRef);
+        });
+    }
+
+    @Override
+    public void setRemoved() {
+        if (this.level != null && this.level.isClientSide) {
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                com.example.aas.client.ClientHooks.stopRallySound(this.clientSoundRef);
+            });
+        }
+        super.setRemoved();
     }
 
     @Override

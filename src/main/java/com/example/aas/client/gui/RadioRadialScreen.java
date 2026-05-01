@@ -12,6 +12,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import com.example.aas.item.RallyItem;
+import software.bernie.geckolib.animatable.GeoItem;
 
 public class RadioRadialScreen extends Screen {
 
@@ -25,6 +27,37 @@ public class RadioRadialScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    // Внутри класса RadioRadialScreen
+
+    private boolean isSwitching = false; // Флаг: переходим ли мы в другое меню
+
+    @Override
+    protected void init() {
+        super.init();
+        triggerRadioAnim("deploy"); // Достать рацию
+    }
+
+    @Override
+    public void onClose() {
+        if (!isSwitching) {
+            triggerRadioAnim("close"); // Убрать рацию, только если закрываем совсем
+        }
+        super.onClose();
+    }
+
+    private void triggerRadioAnim(String animName) {
+        if (this.minecraft.player != null) {
+            ItemStack stack = this.minecraft.player.getMainHandItem();
+            if (stack.getItem() instanceof RallyItem radio) {
+                // Используем тот же способ получения ID, который мы фиксили ранее
+                long instanceId = stack.getOrCreateTag().getLong("GeckoLibID");
+                radio.triggerAnim(this.minecraft.player, instanceId, "RadioController", animName);
+            }
+        }
+    }
+
+
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -141,15 +174,14 @@ public class RadioRadialScreen extends Screen {
                     PacketHandler.INSTANCE.sendToServer(new PacketRadioAction(0));
                     this.onClose();
                 }
-                else if (action == 1) {
-                    // Defenses -> ОТКРЫВАЕМ НОВОЕ МЕНЮ (Пакет НЕ шлем)
+                // В mouseClicked при переходе в подменю:
+                if (action == 1) { // Defense
+                    this.isSwitching = true;
                     Minecraft.getInstance().setScreen(new DefenseRadialScreen(this));
-                    // Не делаем this.onClose(), setScreen сам заменит текущий экран
                 }
-                else if (action == 2) {
-                    // Gun -> ОТКРЫВАЕМ НОВОЕ МЕНЮ
+                else if (action == 2) { // Static Gun
+                    this.isSwitching = true;
                     Minecraft.getInstance().setScreen(new StaticGunRadialScreen(this));
-                    // this передаем, чтобы знать, куда вернуться при нажатии "Назад"
                 }
 
                 if (action != -1) return true;

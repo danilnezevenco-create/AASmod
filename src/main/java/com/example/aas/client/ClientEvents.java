@@ -41,26 +41,6 @@ public class ClientEvents {
         ClientData.addChatMessage(event.getMessage());
     }
 
-    @SubscribeEvent
-    public static void onRenderHand(RenderHandEvent event) {
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null) return;
-
-        if (player.isUsingItem() && !player.isScoping()) {
-            ItemStack stack = event.getItemStack();
-            if (stack.getItem() instanceof EntrenchingToolItem) {
-                if (event.getHand() == player.getUsedItemHand()) {
-                    PoseStack poseStack = event.getPoseStack();
-                    float useTime = player.getTicksUsingItem() + event.getPartialTick();
-                    float cycleSpeed = 10.0f;
-                    float cycle = (useTime % cycleSpeed) / cycleSpeed;
-                    float wave = Mth.sin(cycle * Mth.PI);
-                    float depth = 2.5f;
-                    poseStack.translate(0.0, wave * depth, 0.0);
-                }
-            }
-        }
-    }
 
     // ОБЪЕДИНЕННЫЙ МЕТОД ТИКА
     @SubscribeEvent

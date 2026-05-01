@@ -1,9 +1,11 @@
 package com.example.aas.client;
 
+import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import java.util.*;
+import com.example.aas.network.MapPlayerInfo;
 
 public class ClientData {
     // ... существующие поля ...

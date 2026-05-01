@@ -280,7 +280,7 @@ public class ModCommands {
         ChatFormatting color = teamName.equalsIgnoreCase("blue") ? ChatFormatting.BLUE : ChatFormatting.RED;
         PlayerTeam team = scoreboard.getPlayerTeam(internalTeamName);
         if (team == null) team = scoreboard.addPlayerTeam(internalTeamName);
-        team.setColor(color); team.setAllowFriendlyFire(false);
+        team.setColor(color);
         scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
         source.sendSuccess(() -> Component.literal("Player joined " + internalTeamName).withStyle(color), true);
         return 1;

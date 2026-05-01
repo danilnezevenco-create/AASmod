@@ -226,8 +226,8 @@ public class ClientPlacementHandler {
         if (structureId == 11) cost = 10;
         if (structureId == 12) cost = 15;
         if (structureId == 13) cost = 25;
-        if (structureId == 20) cost = 50;
-        if (structureId == 21) cost = 50;
+        if (structureId == 20) cost = 100;
+        if (structureId == 21) cost = 100;
         if (structureId == 22) cost = 200;
         if (structureId == 23) cost = 200;
 

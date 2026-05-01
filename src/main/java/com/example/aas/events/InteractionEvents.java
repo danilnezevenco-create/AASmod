@@ -22,6 +22,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraft.tags.BlockTags;
 import net.minecraftforge.common.Tags;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 @Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class InteractionEvents {
@@ -30,25 +32,26 @@ public class InteractionEvents {
     public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
         if (com.example.aas.config.AASConfig.PREVENT_BLOCK_BREAKING.get()) {
             Player player = event.getEntity();
-            if (!player.isCreative()) {
-                Level level = event.getLevel();
-                boolean isStarted = false;
+            if (player.isCreative()) return;
 
-                if (!level.isClientSide) {
-                    isStarted = com.example.aas.world.AASWorldData.get((net.minecraft.server.level.ServerLevel) level).isGameStarted;
-                } else {
-                    isStarted = com.example.aas.client.ClientData.isGameStarted;
-                }
+            Level level = event.getLevel();
+            boolean isStarted = false;
 
-                if (isStarted) {
-                    BlockState state = level.getBlockState(event.getPos());
+            // Проверка на сервере
+            if (level instanceof ServerLevel serverLevel) {
+                isStarted = com.example.aas.world.AASWorldData.get(serverLevel).isGameStarted;
+            }
+            // Проверка на клиенте (используем безопасный способ, чтобы сервер не крашнулся)
+            else if (level.isClientSide) {
+                isStarted = com.example.aas.client.ClientData.isGameStarted;
+            }
 
-                    // ПРОВЕРКА БЕЛОГО СПИСКА
-                    if (isBlockWhitelisted(state)) {
-                        return; // Разрешаем ломать
-                    }
+            if (isStarted) {
+                BlockState state = level.getBlockState(event.getPos());
 
-                    event.setCanceled(true); // Запрещаем ломать всё остальное
+                // Если блока НЕТ в белом списке — запрещаем по нему даже стучать
+                if (!isBlockWhitelisted(state)) {
+                    event.setCanceled(true);
                 }
             }
         }

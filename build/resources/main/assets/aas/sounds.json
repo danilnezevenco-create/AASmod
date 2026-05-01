@@ -1,4 +1,32 @@
 {
+  "rally_idle": {
+    "category": "block",
+    "sounds": [
+      {
+        "name": "aas:rally_idle",
+        "stream": true
+      }
+    ]
+  },
+  "shovel_dig": {
+    "category": "player",
+    "subtitle": "subtitles.aas.shovel_dig",
+    "sounds": [
+      {
+        "name": "aas:shovel_dig",
+        "stream": false
+      }
+    ]
+  },
+  "radio_open": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "aas:radio_open",
+        "stream": false
+      }
+    ]
+  },
   "hub_idle": {
     "category": "block",
     "subtitle": "subtitles.aas.hub_idle",

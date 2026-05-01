@@ -1,5 +1,5 @@
 // PATH: src/main/java/com/example/aas/client/MapPlayerInfo.java
-package com.example.aas.client;
+package com.example.aas.network;
 
 public class MapPlayerInfo {
     public String name;

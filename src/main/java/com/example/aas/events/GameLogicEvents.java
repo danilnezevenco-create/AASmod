@@ -1,16 +1,10 @@
 package com.example.aas.events;
 
+import com.example.aas.network.*;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.server.level.ServerLevel;
 import com.example.aas.block.RallyPointBlock;
 import com.example.aas.item.ModItems;
-import com.example.aas.network.PacketHandler;
-import com.example.aas.network.PacketSyncGameData;
-import com.example.aas.network.PacketSyncPoint;
-import com.example.aas.network.PacketSyncSquads;
-import com.example.aas.network.PacketSquadAction;
-import com.example.aas.network.PacketSyncMapPlayers;
-import com.example.aas.world.AASWorldData;
 import com.example.aas.block.RallyPointBlockEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -20,7 +14,6 @@ import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -53,8 +46,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraftforge.network.PacketDistributor;
-import com.example.aas.network.PacketSyncDownedState;
 
 @Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class GameLogicEvents {
@@ -219,7 +210,7 @@ public class GameLogicEvents {
                 }
 
                 if (!bluePlayers.isEmpty()) {
-                    List<com.example.aas.client.MapPlayerInfo> blueInfo = buildPlayerInfo(bluePlayers, data);
+                    List<MapPlayerInfo> blueInfo = buildPlayerInfo(bluePlayers, data);
                     PacketSyncMapPlayers packet = new PacketSyncMapPlayers(blueInfo);
                     for (ServerPlayer bp : bluePlayers) {
                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> bp), packet);
@@ -227,7 +218,7 @@ public class GameLogicEvents {
                 }
 
                 if (!redPlayers.isEmpty()) {
-                    List<com.example.aas.client.MapPlayerInfo> redInfo = buildPlayerInfo(redPlayers, data);
+                    List<MapPlayerInfo> redInfo = buildPlayerInfo(redPlayers, data);
                     PacketSyncMapPlayers packet = new PacketSyncMapPlayers(redInfo);
                     for (ServerPlayer rp : redPlayers) {
                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> rp), packet);
@@ -427,8 +418,8 @@ public class GameLogicEvents {
     }
 
     // === ВСПОМОГАТЕЛЬНЫЙ МЕТОД ДЛЯ СБОРА ДАННЫХ ОБ ИГРОКАХ ===
-    private static List<com.example.aas.client.MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, AASWorldData data) {
-        List<com.example.aas.client.MapPlayerInfo> infoList = new ArrayList<>();
+    private static List<MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, AASWorldData data) {
+        List<MapPlayerInfo> infoList = new ArrayList<>();
 
         for (ServerPlayer p : players) {
             String pName = p.getScoreboardName();
@@ -450,7 +441,7 @@ public class GameLogicEvents {
             long shout = p.getPersistentData().getLong("AAS_LastMedicShoutTimeMS");
 
             // 3. Добавляем в список ОДИН раз со всеми 9 аргументами
-            infoList.add(new com.example.aas.client.MapPlayerInfo(
+            infoList.add(new MapPlayerInfo(
                     pName,
                     p.getX(),
                     p.getZ(),

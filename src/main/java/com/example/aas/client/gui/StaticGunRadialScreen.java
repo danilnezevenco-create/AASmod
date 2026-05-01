@@ -1,6 +1,7 @@
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientPlacementHandler;
+import com.example.aas.item.RallyItem; // Добавлен импорт
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -9,13 +10,14 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack; // Добавлен импорт
+import software.bernie.geckolib.animatable.GeoItem;
 
 public class StaticGunRadialScreen extends Screen {
 
-    // === ИЗМЕНЕНИЕ 1: Новая текстура ===
     private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("aas", "textures/gui/radial_sector_4.png");
-
     private final Screen parentScreen;
+    private boolean isSwitching = false;
 
     public StaticGunRadialScreen(Screen parent) {
         super(Component.literal("Static Guns"));
@@ -24,6 +26,30 @@ public class StaticGunRadialScreen extends Screen {
 
     @Override
     public boolean isPauseScreen() { return false; }
+
+    @Override
+    protected void init() {
+        super.init();
+        triggerRadioAnim("deploy");
+    }
+
+    @Override
+    public void onClose() {
+        if (!isSwitching) {
+            triggerRadioAnim("close");
+        }
+        super.onClose();
+    }
+
+    private void triggerRadioAnim(String animName) {
+        if (this.minecraft.player != null) {
+            ItemStack stack = this.minecraft.player.getMainHandItem();
+            if (stack.getItem() instanceof RallyItem radio) {
+                long instanceId = stack.getOrCreateTag().getLong("GeckoLibID");
+                radio.triggerAnim(this.minecraft.player, instanceId, "RadioController", animName);
+            }
+        }
+    }
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {

@@ -18,6 +18,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
+import com.example.aas.block.RallyPointBlockEntity; // ДОБАВЛЕНО
+import com.example.aas.client.sound.RallyLoopingSound;
 import com.example.aas.client.gui.KitTeamSelectScreen;
 import com.example.aas.client.gui.PlayerKitSelectScreen;
 import com.example.aas.network.PacketOpenPlayerKitMenu;
@@ -28,6 +30,42 @@ public class ClientHooks {
         com.example.aas.client.RecoilHandler.addRecoil(pitch);
         if (yaw != 0 && net.minecraft.client.Minecraft.getInstance().player != null) {
             net.minecraft.client.Minecraft.getInstance().player.turn(yaw, 0);
+        }
+    }
+    public static Object playRallySound(RallyPointBlockEntity entity, Object currentSound) {
+        if (currentSound == null) {
+            RallyLoopingSound sound = new RallyLoopingSound(entity);
+            Minecraft.getInstance().getSoundManager().play(sound);
+            return sound;
+        }
+        return currentSound;
+    }
+
+    public static void stopRallySound(Object sound) {
+        if (sound instanceof RallyLoopingSound s) {
+            s.stopSound();
+        }
+    }
+
+    // === БЕЗОПАСНЫЙ ЗАПУСК ЗВУКА ХАБА ===
+    public static Object playHubSound(HubBlockEntity entity, Object currentSound) {
+        if (currentSound != null) {
+            HubLoopingSound sound = (HubLoopingSound) currentSound;
+            if (sound.isStopped()) return playHubSoundInternal(entity);
+            return currentSound;
+        }
+        return playHubSoundInternal(entity);
+    }
+
+    private static Object playHubSoundInternal(HubBlockEntity entity) {
+        HubLoopingSound sound = new HubLoopingSound(entity);
+        Minecraft.getInstance().getSoundManager().play(sound);
+        return sound;
+    }
+
+    public static void stopHubSound(Object sound) {
+        if (sound instanceof HubLoopingSound s) {
+            s.stopSound();
         }
     }
     // Добавь этот метод внутрь класса ClientHooks
@@ -49,17 +87,46 @@ public class ClientHooks {
     public static void openCrateMenu(int entityId) {
         net.minecraft.client.Minecraft.getInstance().setScreen(new com.example.aas.client.gui.CrateRadialScreen(entityId));
     }
+    // В файле src/main/java/com/example/aas/client/ClientHooks.java
 
-    public static Object playHubSound(HubBlockEntity hub) {
-        HubLoopingSound newSound = new HubLoopingSound(hub);
-        Minecraft.getInstance().getSoundManager().play(newSound);
-        return newSound;
-    }
-
-    public static void stopHubSound(Object soundObject) {
-        if (soundObject instanceof HubLoopingSound sound) {
-            sound.stopSound();
+    public static void tryOpenRadioMenu(net.minecraft.world.entity.player.Player player) {
+        if (player.isCreative()) {
+            openRadioMenu();
+            return;
         }
+
+        if (player.getTeam() == null) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You must join a TEAM (Blue/Red) first!").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return;
+        }
+
+        String playerName = player.getScoreboardName();
+        boolean isInSquad = false;
+        boolean isLeader = false;
+
+        // Здесь безопасно используем ClientData, так как мы в клиентском классе
+        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
+            if (s.members.contains(playerName)) {
+                isInSquad = true;
+                if (s.leader.equals(playerName)) {
+                    isLeader = true;
+                }
+                break;
+            }
+        }
+
+        if (!isInSquad) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You must join a SQUAD first! Press 'K'.").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return;
+        }
+
+        if (!isLeader) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You must be a Squad Leader to use this!").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return;
+        }
+
+        // Если всё ок - открываем меню
+        openRadioMenu();
     }
 
     public static void handleSpawnGhost(PacketSpawnGhost msg) {

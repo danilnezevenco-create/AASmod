@@ -8,12 +8,12 @@ reviveCooldownSeconds = 120
 
 ["Gameplay Settings"]
 	#Grenade destruction
-	agsProjectileDestruction = true
+	agsProjectileDestruction = false
 	#Ammo explosion destruction
 	ammoStackDestruction = true
 	#Digging speed multiplier
 	#Range: 0.1 ~ 10.0
-	diggingSpeedMultiplier = 1.0
+	diggingSpeedMultiplier = 4.0
 	#Prevent players from breaking blocks
 	preventBlockBreaking = true
 	#Prevent item dropping in survival when game is started
@@ -44,7 +44,7 @@ reviveCooldownSeconds = 120
 	#Range: 0 ~ 10000
 	minHubDistance = 150
 	#Range: 0 ~ 10000
-	minRallyPointDistance = 150
+	minRallyPointDistance = 0
 	#Range: 1 ~ 100
 	maxHubsPerTeam = 8
 	#Range: 5 ~ 200

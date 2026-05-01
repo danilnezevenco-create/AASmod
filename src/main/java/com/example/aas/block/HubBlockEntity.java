@@ -119,27 +119,20 @@ public class HubBlockEntity extends BlockEntity {
     }
 
     // ... (Остальные методы: saveAdditional, load, getUpdateTag и т.д. без изменений) ...
+
+
     private void handleSoundClient() {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            if (this.clientSoundRef != null) {
-                com.example.aas.client.sound.HubLoopingSound sound = (com.example.aas.client.sound.HubLoopingSound) this.clientSoundRef;
-                if (sound.isStopped()) {
-                    this.clientSoundRef = null;
-                } else {
-                    return;
-                }
-            }
-            this.clientSoundRef = ClientHooks.playHubSound(this);
+        net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
+            this.clientSoundRef = com.example.aas.client.ClientHooks.playHubSound(this, this.clientSoundRef);
         });
     }
 
     @Override
     public void setRemoved() {
-        if (level.isClientSide && clientSoundRef != null) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                ClientHooks.stopHubSound(clientSoundRef);
+        if (this.level != null && this.level.isClientSide) {
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
+                com.example.aas.client.ClientHooks.stopHubSound(this.clientSoundRef);
             });
-            clientSoundRef = null;
         }
         super.setRemoved();
     }

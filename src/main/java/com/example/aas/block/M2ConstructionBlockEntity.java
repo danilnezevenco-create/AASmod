@@ -55,6 +55,8 @@ public class M2ConstructionBlockEntity extends BlockEntity {
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
+                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
 

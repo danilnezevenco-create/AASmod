@@ -36,7 +36,7 @@ public class AASOverlay {
     private static final ResourceLocation FLAG_BLUEFOR = new ResourceLocation("aas", "textures/gui/flags/bluefor.png");
     private static final ResourceLocation FLAG_REDFOR = new ResourceLocation("aas", "textures/gui/flags/redfor.png");
     private static final ResourceLocation VIGNETTE_TEXTURE = new ResourceLocation("aas", "textures/misc/vignette.png");
-    private static final AASMapRenderer HUD_SIDE_MAP = new AASMapRenderer();
+    private static AASMapRenderer HUD_SIDE_MAP;
 
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
@@ -482,7 +482,8 @@ public class AASOverlay {
         }
     }
     private static void renderSideMap(GuiGraphics gui, Minecraft mc, int screenWidth, int screenHeight, float partialTick) {
-        // Скорость анимации
+        if (HUD_SIDE_MAP == null) HUD_SIDE_MAP = new AASMapRenderer();
+
         float speed = 0.08f;
         float target = ClientData.isMapOpen ? 1.0f : 0.0f;
 

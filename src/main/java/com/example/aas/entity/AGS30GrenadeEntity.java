@@ -1,12 +1,13 @@
 // PATH: src\main\java\com\example\aas\entity\AGS30GrenadeEntity.java
 package com.example.aas.entity;
 
-import com.example.aas.config.AASConfig; // Импорт конфига
+import com.example.aas.config.AASConfig;
 import com.example.aas.item.ModItems;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.server.level.ServerLevel; // ДОБАВЛЕНО
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,6 +16,7 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB; // ДОБАВЛЕНО
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -91,18 +93,68 @@ public class AGS30GrenadeEntity extends Projectile implements ItemSupplier {
 
     private void explode() {
         if (!this.level().isClientSide) {
+            ServerLevel serverLevel = (ServerLevel) this.level();
             double distanceSq = this.distanceToSqr(originX, originY, originZ);
-            if (distanceSq < 160) { // Не взрывается слишком близко к стрелку (безопасная зона)
+
+            // Безопасная зона для стрелка (чтобы не подорваться на вылете)
+            if (distanceSq < 160) {
                 this.discard();
                 return;
             }
 
-            // ПРОВЕРКА КОНФИГА
+            // 1. ПУСКАЕМ 12 ОСКОЛОЧНЫХ ЛУЧЕЙ
+            spawnShrapnel(serverLevel);
+
+            // 2. СТАНДАРТНЫЙ ВЗРЫВ (для визуальных эффектов и разрушения блоков)
             boolean canDestroy = AASConfig.AGS_PROJECTILE_DESTRUCTION.get();
             Level.ExplosionInteraction interaction = canDestroy ? Level.ExplosionInteraction.BLOCK : Level.ExplosionInteraction.NONE;
 
-            this.level().explode(this, this.getX(), this.getY(), this.getZ(), 3F, interaction);
+            // Мощность взрыва можно чуть уменьшить (например, до 1.5), так как основной урон теперь от лучей
+            this.level().explode(this, this.getX(), this.getY(), this.getZ(), 2.0F, interaction);
+
             this.discard();
+        }
+    }
+
+    private void spawnShrapnel(ServerLevel level) {
+        Vec3 center = this.position().add(0, 0.2, 0); // Центр взрыва
+        int count = 24; // Количество лучей
+
+        for (int i = 0; i < count; i++) {
+            // Алгоритм распределения точек на сфере (Fibonacci Sphere)
+            // Это создаст равномерный разлет во всех направлениях (вверх, вниз, в бока)
+            double y = 1.0 - (i / (double) (count - 1)) * 2.0; // от 1 до -1
+            double radiusAtY = Math.sqrt(1.0 - y * y); // радиус круга на этой высоте
+
+            double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0)); // "Золотой угол"
+            double theta = goldenAngle * i;
+
+            double x = Math.cos(theta) * radiusAtY;
+            double z = Math.sin(theta) * radiusAtY;
+
+            // Направление луча в 3D
+            Vec3 direction = new Vec3(x, y, z).normalize();
+            Vec3 endPos = center.add(direction.scale(3.5)); // Длина 2 блока
+
+            // 1. Проверка блоков (препятствий)
+            BlockHitResult blockHit = level.clip(new net.minecraft.world.level.ClipContext(
+                    center, endPos, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                    net.minecraft.world.level.ClipContext.Fluid.NONE, this));
+
+            Vec3 finalTargetPos = (blockHit.getType() == HitResult.Type.MISS) ? endPos : blockHit.getLocation();
+
+
+            // 2. Проверка попадания в хитбокс персонажа
+            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+                    level, this, center, finalTargetPos,
+                    new AABB(center, finalTargetPos).inflate(0.2), // Толщина луча
+                    e -> e instanceof LivingEntity && !e.isSpectator());
+
+            if (entityHit != null && entityHit.getEntity() instanceof LivingEntity victim) {
+                // Наносим 20 урона
+                victim.hurt(level.damageSources().explosion(this, this.getOwner()), 20.0F);
+                level.sendParticles(ParticleTypes.FLASH, entityHit.getLocation().x, entityHit.getLocation().y, entityHit.getLocation().z, 1, 0, 0, 0, 0);
+            }
         }
     }
 

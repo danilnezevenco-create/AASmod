@@ -1,6 +1,7 @@
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientPlacementHandler;
+import com.example.aas.item.RallyItem; // Добавлен импорт
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketRadioAction;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -11,6 +12,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack; // Добавлен импорт
+import software.bernie.geckolib.animatable.GeoItem;
 
 public class DefenseRadialScreen extends Screen {
 
@@ -26,6 +29,36 @@ public class DefenseRadialScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    private boolean isSwitching = false;
+
+    @Override
+    protected void init() {
+        super.init();
+        // Мы не вызываем deploy снова, она и так в руках,
+        // но это нужно, чтобы GeckoLib знал, что это меню тоже "владеет" рацией
+        triggerRadioAnim("deploy");
+    }
+
+    @Override
+    public void onClose() {
+        // Если мы нажимаем ESC или выбрали постройку — сработает это:
+        if (!isSwitching) {
+            triggerRadioAnim("close");
+        }
+        super.onClose();
+    }
+
+    private void triggerRadioAnim(String animName) {
+        if (this.minecraft.player != null) {
+            ItemStack stack = this.minecraft.player.getMainHandItem();
+            if (stack.getItem() instanceof RallyItem radio) {
+                long instanceId = stack.getOrCreateTag().getLong("GeckoLibID");
+                radio.triggerAnim(this.minecraft.player, instanceId, "RadioController", animName);
+            }
+        }
+    }
+
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {

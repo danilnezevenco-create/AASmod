@@ -178,7 +178,7 @@ public class PacketBuildRequest {
             // ==========================================
             // === СТРУКТУРА ID 20: M2 BROWNING ===
             // ==========================================
-            else if (msg.structureId == 100) {
+            else if (msg.structureId == 20) {
                 int cost = 40;
                 if (!canPlaceAt(level, msg.pos)) {
                     sendBlockedMessage(player);

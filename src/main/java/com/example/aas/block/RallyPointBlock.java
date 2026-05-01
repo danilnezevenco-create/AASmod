@@ -23,6 +23,14 @@ import com.example.aas.events.GameLogicEvents;
 
 public class RallyPointBlock extends BaseEntityBlock {
 
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return createTickerHelper(type, ModBlocks.RALLY_BE.get(), (lvl, pos, st, be) -> {
+            if (lvl.isClientSide) be.handleSoundClient();
+        });
+    }
+
     public static final VoxelShape SHAPE = Shapes.block();
 
     public RallyPointBlock() {

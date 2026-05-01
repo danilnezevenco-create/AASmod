@@ -65,7 +65,6 @@ public class PacketTeamSelect {
                 if (team == null) {
                     team = scoreboard.addPlayerTeam(internalTeamName);
                     team.setColor(color);
-                    team.setAllowFriendlyFire(false);
                     team.setSeeFriendlyInvisibles(true);
                 }
 

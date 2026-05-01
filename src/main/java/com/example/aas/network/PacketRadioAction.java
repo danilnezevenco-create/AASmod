@@ -16,6 +16,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
+import com.example.aas.sound.ModSounds;
 
 import java.util.function.Supplier;
 
@@ -216,34 +217,37 @@ public class PacketRadioAction {
         // ВЫПОЛНЕНИЕ: Если союзник рядом ИЛИ игрок в креативе
         if (allies >= 1 || player.isCreative()) {
 
-            // Удаляем старый блок раллика этого отряда, если он существует
+            // 1. УДАЛЕНИЕ СТАРОГО РАЛИКА БЕЗ ШТРАФА
             if (squad.rallyPos != null && level.isLoaded(squad.rallyPos)) {
-                if (level.getBlockState(squad.rallyPos).getBlock() instanceof RallyPointBlock) {
-                    level.removeBlock(squad.rallyPos, false);
+                // Пытаемся найти BlockEntity старого ралика
+                BlockEntity oldBe = level.getBlockEntity(squad.rallyPos);
+                if (oldBe instanceof RallyPointBlockEntity rbe) {
+                    // ГЛАВНОЕ: ставим флаг Decay, чтобы при удалении блока НЕ снялись тикеты
+                    rbe.isDecay = true;
                 }
+                // Теперь удаляем блок - штрафа не будет
+                level.removeBlock(squad.rallyPos, false);
             }
 
-            // Устанавливаем новый блок раллика
+            // 2. УСТАНОВКА НОВОГО БЛОКА
             BlockState rallyState = team.equals("BLUE") ? ModBlocks.BLUE_RALLY_BLOCK.get().defaultBlockState() : ModBlocks.RED_RALLY_BLOCK.get().defaultBlockState();
             level.setBlock(pos, rallyState, 3);
 
-            // Привязываем ID отряда к блоку (для штрафов при уничтожении)
+            // Привязываем ID отряда к новому блоку
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof RallyPointBlockEntity rbe) {
                 rbe.setSquadId(squad.id);
             }
 
-            // СОХРАНЕНИЕ ДАННЫХ В СКВАД
+
+            // Сохраняем данные
             squad.rallyPos = pos;
             squad.rallyDimension = level.dimension().location().toString();
+            squad.rallyExpiryTick = level.getGameTime() + 12000; // 10 минут
 
-            // УСТАНОВКА ТАЙМЕРА (10 минут = 12000 тиков)
-            squad.rallyExpiryTick = level.getGameTime() + 12000;
-
-            // Сообщение об успешной установке (Теперь скобки закрыты правильно)
             player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
 
-            // Обновляем списки для глобальной карты
+            // Обновление данных мира
             if (team.equals("BLUE")) {
                 data.blueRallies.add(pos);
             } else {
@@ -251,8 +255,6 @@ public class PacketRadioAction {
             }
 
             data.setDirty();
-
-            // СИНХРОНИЗАЦИЯ: Чтобы иконка появилась на карте и в меню
             PacketHandler.sendToAllClients(level, data);
             PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
 
