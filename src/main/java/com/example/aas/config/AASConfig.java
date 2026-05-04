@@ -24,6 +24,7 @@ public class AASConfig {
     public static final ForgeConfigSpec.BooleanValue ALLOW_BREAKING_DEFENSES;
     public static final ForgeConfigSpec.BooleanValue AUTO_GIVE_SL_RADIO;
     public static final ForgeConfigSpec.BooleanValue HUB_PLACEMENT_REQUIRES_CRATE;
+    public static final ForgeConfigSpec.IntValue MAX_DOWNED_TIME_SECONDS;
 
     // Радиусы и баланс
     public static final ForgeConfigSpec.IntValue MIN_HUB_DISTANCE;
@@ -63,6 +64,8 @@ public class AASConfig {
         ENABLE_KNOCKOUT = BUILDER.comment("Enable knockout mechanic").define("enableKnockout", true);
         REVIVE_ITEM = BUILDER.comment("Registry name of the item used to revive (e.g. 'minecraft:paper')").define("reviveItem", "minecraft:paper");
         REVIVE_COOLDOWN_SECONDS = BUILDER.comment("Time in seconds where dying again results in instant death").defineInRange("reviveCooldownSeconds", 120, 0, 600);
+        MAX_DOWNED_TIME_SECONDS = BUILDER.comment("Max time in downed state before bleeding out (seconds)")
+                .defineInRange("maxDownedTimeSeconds", 180, 5, 3600);
 
         BUILDER.push("Balance Settings");
         MIN_HUB_DISTANCE = BUILDER.defineInRange("minHubDistance", 150, 0, 10000);

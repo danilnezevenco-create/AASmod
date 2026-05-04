@@ -1213,27 +1213,20 @@ public class HubBlockEntity extends BlockEntity {
     }
 
     // ... (РћСЃС‚Р°Р»СЊРЅС‹Рµ РјРµС‚РѕРґС‹: saveAdditional, load, getUpdateTag Рё С‚.Рґ. Р±РµР· РёР·РјРµРЅРµРЅРёР№) ...
+
+
     private void handleSoundClient() {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            if (this.clientSoundRef != null) {
-                com.example.aas.client.sound.HubLoopingSound sound = (com.example.aas.client.sound.HubLoopingSound) this.clientSoundRef;
-                if (sound.isStopped()) {
-                    this.clientSoundRef = null;
-                } else {
-                    return;
-                }
-            }
-            this.clientSoundRef = ClientHooks.playHubSound(this);
+        net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
+            this.clientSoundRef = com.example.aas.client.ClientHooks.playHubSound(this, this.clientSoundRef);
         });
     }
 
     @Override
     public void setRemoved() {
-        if (level.isClientSide && clientSoundRef != null) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                ClientHooks.stopHubSound(clientSoundRef);
+        if (this.level != null && this.level.isClientSide) {
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
+                com.example.aas.client.ClientHooks.stopHubSound(this.clientSoundRef);
             });
-            clientSoundRef = null;
         }
         super.setRemoved();
     }
@@ -2450,10 +2443,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.api.distmarker.Dist;
 
 public class RallyPointBlockEntity extends BlockEntity {
-    public boolean isDecay = false; // Р¤Р»Р°Рі РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ С€С‚СЂР°С„Р° РїСЂРё РёСЃС‡РµР·РЅРѕРІРµРЅРёРё РїРѕ РІСЂРµРјРµРЅРё
+    public boolean isDecay = false;
     private int squadId = -1;
+    private Object clientSoundRef = null; // РСЃРїРѕР»СЊР·СѓРµРј Object, СЌС‚Рѕ Р±РµР·РѕРїР°СЃРЅРѕ РґР»СЏ СЃРµСЂРІРµСЂР°
 
     public RallyPointBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.RALLY_BE.get(), pos, state);
@@ -2470,7 +2466,7 @@ public class RallyPointBlockEntity extends BlockEntity {
             if (s.id == this.squadId) {
                 if (s.rallyPos != null && s.rallyPos.equals(this.worldPosition)) {
                     s.rallyPos = null;
-                    s.rallyExpiryTick = -1; // РЎР±СЂР°СЃС‹РІР°РµРј С‚Р°Р№РјРµСЂ РІ РґР°РЅРЅС‹С…
+                    s.rallyExpiryTick = -1;
                     changed = true;
                 }
                 break;
@@ -2482,26 +2478,19 @@ public class RallyPointBlockEntity extends BlockEntity {
         }
     }
 
-    private Object clientSoundRef = null;
-
+    // Р’РђР–РќРћ: Р’РµСЃСЊ РєР»РёРµРЅС‚СЃРєРёР№ РєРѕРґ РІС‹РЅРµСЃРµРЅ РІ ClientHooks
     public void handleSoundClient() {
-        net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
-            if (this.clientSoundRef == null) {
-                com.example.aas.client.sound.RallyLoopingSound sound = new com.example.aas.client.sound.RallyLoopingSound(this);
-                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(sound);
-                this.clientSoundRef = sound;
-            }
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            this.clientSoundRef = com.example.aas.client.ClientHooks.playRallySound(this, this.clientSoundRef);
         });
     }
 
     @Override
     public void setRemoved() {
-        if (this.level != null && this.level.isClientSide && clientSoundRef != null) {
-            // РџСЂРёРІРѕРґРёРј С‚РёРї Рє РЅР°С€РµРјСѓ РєР»Р°СЃСЃСѓ Рё РІС‹Р·С‹РІР°РµРј РїСѓР±Р»РёС‡РЅС‹Р№ РјРµС‚РѕРґ РѕСЃС‚Р°РЅРѕРІРєРё
-            if (clientSoundRef instanceof com.example.aas.client.sound.RallyLoopingSound sound) {
-                sound.stopSound();
-            }
-            clientSoundRef = null;
+        if (this.level != null && this.level.isClientSide) {
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                com.example.aas.client.ClientHooks.stopRallySound(this.clientSoundRef);
+            });
         }
         super.setRemoved();
     }
@@ -7372,74 +7361,6 @@ public class EntrenchingToolModel extends GeoModel<EntrenchingToolItem> {
     @Override public ResourceLocation getTextureResource(EntrenchingToolItem animatable) { return new ResourceLocation("aas", "textures/item/entrenching_tool.png"); }
     @Override public ResourceLocation getAnimationResource(EntrenchingToolItem animatable) { return new ResourceLocation("aas", "animations/entrenching_tool.animation.json"); }
 
-    @Override
-    public void setCustomAnimations(EntrenchingToolItem animatable, long instanceId, AnimationState<EntrenchingToolItem> animationState) {
-        super.setCustomAnimations(animatable, instanceId, animationState);
-        CoreGeoBone body = getAnimationProcessor().getBone("body");
-        if (body == null) return;
-
-        if (animationState.getData(DataTickets.ENTITY) instanceof LivingEntity living) {
-            // РџСЂРѕРІРµСЂСЏРµРј РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РїСЂРµРґРјРµС‚Р°
-            if (living.isUsingItem() && living.getUseItem().getItem() instanceof EntrenchingToolItem) {
-
-                // Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ 1 СЃРµРє = 20 С‚РёРєРѕРІ. РџРѕР»СѓС‡Р°РµРј С‚РµРєСѓС‰РёР№ РїСЂРѕРіСЂРµСЃСЃ 0.0 - 1.0
-                float ticks = (living.getTicksUsingItem() + animationState.getPartialTick());
-                float t = (ticks % 20f) / 20f;
-
-                float rx = 0, rz = 0;
-                float px = 0, py = 0, pz = 0;
-
-                // Р¤РђР—Рђ 1: 0.0 -> 0.25 (Р—Р°РјР°С… РЅР°Р·Р°Рґ Рё РІРЅРёР·)
-                if (t < 0.25f) {
-                    float p = t / 0.25f;
-                    rz = p * -50f;
-                    py = p * -10f;
-                }
-                // Р¤РђР—Рђ 2: 0.25 -> 0.5 (РЈР”РђР  Р РџР•Р Р•Р’РћР РћРў)
-                else if (t < 0.50f) {
-                    float p = (t - 0.25f) / 0.25f;
-                    rx = p * 70f; // РџРµСЂРµРІРѕСЂРѕС‚ РїРѕ X
-                    rz = -50f;
-                    px = p * -1.5f;
-                    py = -10f + (p * 3.75f); // РџРѕРґСЉРµРј РѕС‚ -10 РґРѕ -6.25
-                    pz = p * 6f; // Р’С‹РїР°Рґ РІРїРµСЂРµРґ
-                }
-                // Р¤РђР—Рђ 3: 0.5 -> 0.75 (Р’РћР—Р’Р РђРў РЎ РЈРЎРљРћР Р•РќРР•Рњ - easeIn)
-                else if (t < 0.75f) {
-                    float p = (t - 0.50f) / 0.25f;
-                    float easedCubic = p * p * p; // РўРІРѕР№ easeInCubic
-                    float easedQuart = easedCubic * p; // РўРІРѕР№ easeInQuart
-
-                    rx = Mth.lerp(easedCubic, 70f, 0f);
-                    rz = Mth.lerp(easedCubic, -50f, 25f);
-
-                    px = Mth.lerp(easedQuart, -1.5f, 2.25f);
-                    py = Mth.lerp(easedQuart, -6.25f, 0.75f);
-                    pz = Mth.lerp(easedQuart, 6f, 0f);
-                }
-                // Р¤РђР—Рђ 4: 0.75 -> 1.0 (РЈСЃРїРѕРєРѕРµРЅРёРµ)
-                else {
-                    float p = (t - 0.75f) / 0.25f;
-                    rz = Mth.lerp(p, 25f, 0f);
-                    px = Mth.lerp(p, 2.25f, 0f);
-                    py = Mth.lerp(p, 0.75f, 0f);
-                }
-
-                // РџР РРњР•РќР•РќРР• (Р’Р°Р¶РЅРѕ: РІСЂР°С‰РµРЅРёРµ РІ СЂР°РґРёР°РЅР°С…, РїРѕР·РёС†РёРё РІ РµРґРёРЅРёС†Р°С… Blockbench)
-                body.setRotX((float) Math.toRadians(rx));
-                body.setRotZ((float) Math.toRadians(rz));
-
-                body.setPosX(px);
-                body.setPosY(py);
-                body.setPosZ(pz);
-
-            } else {
-                // Р•СЃР»Рё РЅРµ РєРѕРїР°РµРј - РїР»Р°РІРЅРѕ СЃР±СЂР°СЃС‹РІР°РµРј РІ 0
-                body.setRotX(0); body.setRotZ(0);
-                body.setPosX(0); body.setPosY(0); body.setPosZ(0);
-            }
-        }
-    }
 }
 ==========================================
 FILE: M2BrowningModel.java
@@ -8509,7 +8430,7 @@ public class AASOverlay {
     private static final ResourceLocation FLAG_BLUEFOR = new ResourceLocation("aas", "textures/gui/flags/bluefor.png");
     private static final ResourceLocation FLAG_REDFOR = new ResourceLocation("aas", "textures/gui/flags/redfor.png");
     private static final ResourceLocation VIGNETTE_TEXTURE = new ResourceLocation("aas", "textures/misc/vignette.png");
-    private static final AASMapRenderer HUD_SIDE_MAP = new AASMapRenderer();
+    private static AASMapRenderer HUD_SIDE_MAP;
 
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
@@ -8955,7 +8876,8 @@ public class AASOverlay {
         }
     }
     private static void renderSideMap(GuiGraphics gui, Minecraft mc, int screenWidth, int screenHeight, float partialTick) {
-        // РЎРєРѕСЂРѕСЃС‚СЊ Р°РЅРёРјР°С†РёРё
+        if (HUD_SIDE_MAP == null) HUD_SIDE_MAP = new AASMapRenderer();
+
         float speed = 0.08f;
         float target = ClientData.isMapOpen ? 1.0f : 0.0f;
 
@@ -9036,7 +8958,7 @@ import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = "aas", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "aas", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AGSScopeOverlay {
 
     // РџСѓС‚СЊ Рє РІР°С€РµР№ С‚РµРєСЃС‚СѓСЂРµ
@@ -9412,6 +9334,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
+import com.example.aas.block.RallyPointBlockEntity; // Р”РћР‘РђР’Р›Р•РќРћ
+import com.example.aas.client.sound.RallyLoopingSound;
 import com.example.aas.client.gui.KitTeamSelectScreen;
 import com.example.aas.client.gui.PlayerKitSelectScreen;
 import com.example.aas.network.PacketOpenPlayerKitMenu;
@@ -9422,6 +9346,42 @@ public class ClientHooks {
         com.example.aas.client.RecoilHandler.addRecoil(pitch);
         if (yaw != 0 && net.minecraft.client.Minecraft.getInstance().player != null) {
             net.minecraft.client.Minecraft.getInstance().player.turn(yaw, 0);
+        }
+    }
+    public static Object playRallySound(RallyPointBlockEntity entity, Object currentSound) {
+        if (currentSound == null) {
+            RallyLoopingSound sound = new RallyLoopingSound(entity);
+            Minecraft.getInstance().getSoundManager().play(sound);
+            return sound;
+        }
+        return currentSound;
+    }
+
+    public static void stopRallySound(Object sound) {
+        if (sound instanceof RallyLoopingSound s) {
+            s.stopSound();
+        }
+    }
+
+    // === Р‘Р•Р—РћРџРђРЎРќР«Р™ Р—РђРџРЈРЎРљ Р—Р’РЈРљРђ РҐРђР‘Рђ ===
+    public static Object playHubSound(HubBlockEntity entity, Object currentSound) {
+        if (currentSound != null) {
+            HubLoopingSound sound = (HubLoopingSound) currentSound;
+            if (sound.isStopped()) return playHubSoundInternal(entity);
+            return currentSound;
+        }
+        return playHubSoundInternal(entity);
+    }
+
+    private static Object playHubSoundInternal(HubBlockEntity entity) {
+        HubLoopingSound sound = new HubLoopingSound(entity);
+        Minecraft.getInstance().getSoundManager().play(sound);
+        return sound;
+    }
+
+    public static void stopHubSound(Object sound) {
+        if (sound instanceof HubLoopingSound s) {
+            s.stopSound();
         }
     }
     // Р”РѕР±Р°РІСЊ СЌС‚РѕС‚ РјРµС‚РѕРґ РІРЅСѓС‚СЂСЊ РєР»Р°СЃСЃР° ClientHooks
@@ -9483,17 +9443,6 @@ public class ClientHooks {
 
         // Р•СЃР»Рё РІСЃС‘ РѕРє - РѕС‚РєСЂС‹РІР°РµРј РјРµРЅСЋ
         openRadioMenu();
-    }
-    public static Object playHubSound(HubBlockEntity hub) {
-        HubLoopingSound newSound = new HubLoopingSound(hub);
-        Minecraft.getInstance().getSoundManager().play(newSound);
-        return newSound;
-    }
-
-    public static void stopHubSound(Object soundObject) {
-        if (soundObject instanceof HubLoopingSound sound) {
-            sound.stopSound();
-        }
     }
 
     public static void handleSpawnGhost(PacketSpawnGhost msg) {
@@ -9573,6 +9522,37 @@ public class ClientHooks {
         ClientData.isContested = msg.isContested;
         ClientData.pointCapturingTeam = msg.capturingTeam;
     }
+}
+==========================================
+FILE: ClientItemExtensions.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\ClientItemExtensions.java
+==========================================
+package com.example.aas.client;
+
+import com.example.aas.client.renderer.EntrenchingToolRenderer;
+import com.example.aas.client.renderer.SquadRadioRenderer;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+
+public class ClientItemExtensions {
+
+    public static final IClientItemExtensions ENTRENCHING_TOOL = new IClientItemExtensions() {
+        private EntrenchingToolRenderer renderer;
+        @Override
+        public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+            if (renderer == null) renderer = new EntrenchingToolRenderer();
+            return renderer;
+        }
+    };
+
+    public static final IClientItemExtensions RALLY_RADIO = new IClientItemExtensions() {
+        private SquadRadioRenderer renderer;
+        @Override
+        public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+            if (renderer == null) renderer = new SquadRadioRenderer();
+            return renderer;
+        }
+    };
 }
 ==========================================
 FILE: ClientModEvents.java
@@ -13572,9 +13552,12 @@ package com.example.aas.item;
 import com.example.aas.block.*;
 import com.example.aas.client.renderer.EntrenchingToolRenderer;
 import com.example.aas.sound.ModSounds;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -13595,6 +13578,7 @@ import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.*;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.SingletonGeoAnimatable;
 
 import java.util.function.Consumer;
 
@@ -13603,9 +13587,9 @@ public class EntrenchingToolItem extends Item implements GeoItem {
 
     public EntrenchingToolItem() {
         super(new Properties().stacksTo(1));
+        SingletonGeoAnimatable.registerSyncedAnimatable(this);
     }
 
-    // 1. Р СѓС‡РЅРѕР№ ID РґР»СЏ NBT (С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ РѕС€РёР±РѕРє "cannot find symbol")
     private long getOrAssignID(ItemStack stack, Level level) {
         if (!stack.getOrCreateTag().contains("GeckoLibID")) {
             stack.getOrCreateTag().putLong("GeckoLibID", level.getRandom().nextLong());
@@ -13615,7 +13599,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
 
     @Override
     public boolean onEntitySwing(ItemStack stack, LivingEntity entity) {
-        return true; // Р¤РёРєСЃ РґРµСЂРіР°РЅСЊСЏ СЂСѓРєРё
+        return true;
     }
 
     @Override
@@ -13637,12 +13621,10 @@ public class EntrenchingToolItem extends Item implements GeoItem {
             BlockState state = level.getBlockState(((BlockHitResult) hit).getBlockPos());
 
             if (isAASConstruction(state) && !isConstructed(state)) {
-                // Р’РљР›Р®Р§РђР•Рњ РђРќРРњРђР¦РР® РўР РР“Р“Р•Р РћРњ (РєР°Рє РІ СЂР°С†РёРё)
                 if (!level.isClientSide) {
                     long id = getOrAssignID(itemstack, level);
                     this.triggerAnim(player, id, "ShovelController", "dig");
                 }
-
                 player.startUsingItem(hand);
                 return InteractionResultHolder.consume(itemstack);
             }
@@ -13655,16 +13637,42 @@ public class EntrenchingToolItem extends Item implements GeoItem {
         if (entity instanceof Player player && !level.isClientSide) {
             HitResult hit = player.pick(4.5D, 0.0F, false);
             if (hit instanceof BlockHitResult blockHit) {
-                BlockState state = level.getBlockState(blockHit.getBlockPos());
-                BlockEntity be = level.getBlockEntity(blockHit.getBlockPos());
+                BlockPos pos = blockHit.getBlockPos();
+                BlockState state = level.getBlockState(pos);
+                BlockEntity be = level.getBlockEntity(pos);
 
-                if (isAASConstruction(state) && !isConstructed(state)) {
+                if (isAASConstruction(state)) {
+                    // 1. РќР•Р›Р¬Р—РЇ РљРћРџРђРўР¬ РЈР–Р• РџРћРЎРўР РћР•РќРќРћР•
+                    if (isConstructed(state)) {
+                        player.displayClientMessage(Component.literal("Structure is already finished!").withStyle(ChatFormatting.YELLOW), true);
+                        stopDigging(player, stack);
+                        return;
+                    }
+
+                    // 2. РќР•Р›Р¬Р—РЇ РљРћРџРђРўР¬ Р’Р РђР–Р•РЎРљРћР•
+                    String playerTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
+                    String structureTeam = getStructureTeam(be);
+
+                    if (!structureTeam.equals("NEUTRAL") && !structureTeam.equalsIgnoreCase(playerTeam) && !player.isCreative()) {
+                        player.displayClientMessage(Component.literal("Cannot build ENEMY structures!").withStyle(ChatFormatting.RED), true);
+                        stopDigging(player, stack);
+                        return;
+                    }
+
+                    // Р­С„С„РµРєС‚С‹
                     int elapsed = getUseDuration(stack) - count;
                     if (elapsed % 20 == 10) {
                         level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.SHOVEL_DIG.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
-                        ((ServerLevel)level).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), blockHit.getBlockPos().getX() + 0.5, blockHit.getBlockPos().getY() + 1.1, blockHit.getBlockPos().getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.1);
+                        ((ServerLevel)level).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.1);
                     }
-                    addProgressToBE(be, player);
+
+                    // 4. Р’ РљР Р•РђРўРР’Р• РҐ10 РЎРљРћР РћРЎРўР¬
+                    if (player.isCreative()) {
+                        addCreativeProgressToBE(be, 10);
+                    } else {
+                        addProgressToBE(be, player);
+                    }
+
                 } else {
                     stopDigging(player, stack);
                 }
@@ -13682,13 +13690,11 @@ public class EntrenchingToolItem extends Item implements GeoItem {
     private void stopDigging(LivingEntity entity, ItemStack stack) {
         if (entity instanceof Player player && !player.level().isClientSide) {
             long id = getOrAssignID(stack, player.level());
-            // Р’Р«РљР›Р®Р§РђР•Рњ РђРќРРњРђР¦РР® РўР РР“Р“Р•Р РћРњ
             this.triggerAnim(player, id, "ShovelController", "stop");
             player.stopUsingItem();
         }
     }
 
-    // РљРћРќРўР РћР›Р›Р•Р  (РљРѕРїРёСЏ Р»РѕРіРёРєРё Р Р°РґРёРѕ)
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "ShovelController", 5, event -> PlayState.CONTINUE)
@@ -13704,6 +13710,27 @@ public class EntrenchingToolItem extends Item implements GeoItem {
                 state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get());
     }
 
+    private String getStructureTeam(BlockEntity be) {
+        if (be instanceof HubBlockEntity h) return h.getTeam();
+        if (be instanceof WallBlockEntity w) return w.getTeam();
+        if (be instanceof BarbedWireBlockEntity b) return b.getTeam();
+        if (be instanceof AGSConstructionBlockEntity a) return a.getTeam();
+        if (be instanceof M2ConstructionBlockEntity m) return m.getTeam();
+        if (be instanceof MortarConstructionBlockEntity mo) return mo.getTeam();
+        if (be instanceof TOWConstructionBlockEntity t) return t.getTeam();
+        return "NEUTRAL";
+    }
+
+    private void addCreativeProgressToBE(BlockEntity be, int multiplier) {
+        if (be instanceof HubBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof WallBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof BarbedWireBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof AGSConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof M2ConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof MortarConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof TOWConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+    }
+
     private boolean isConstructed(BlockState state) {
         if (state.hasProperty(WallBlock.CONSTRUCTED)) return state.getValue(WallBlock.CONSTRUCTED);
         if (state.hasProperty(HubBlock.CONSTRUCTED)) return state.getValue(HubBlock.CONSTRUCTED);
@@ -13715,8 +13742,8 @@ public class EntrenchingToolItem extends Item implements GeoItem {
         if (be instanceof HubBlockEntity b) b.addProgress();
         else if (be instanceof WallBlockEntity b) b.addProgress();
         else if (be instanceof BarbedWireBlockEntity b) b.addProgress();
-        else if (be instanceof M2ConstructionBlockEntity b) b.addProgress();
         else if (be instanceof AGSConstructionBlockEntity b) b.addProgress();
+        else if (be instanceof M2ConstructionBlockEntity b) b.addProgress();
         else if (be instanceof MortarConstructionBlockEntity b) b.addProgress();
         else if (be instanceof TOWConstructionBlockEntity b) b.addProgress();
     }
@@ -13725,14 +13752,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
 
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
-        consumer.accept(new IClientItemExtensions() {
-            private EntrenchingToolRenderer renderer;
-            @Override
-            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) renderer = new EntrenchingToolRenderer();
-                return renderer;
-            }
-        });
+        consumer.accept(com.example.aas.client.ClientItemExtensions.ENTRENCHING_TOOL);
     }
 }
 ==========================================
@@ -13997,22 +14017,19 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\item\RallyIte
 ==========================================
 package com.example.aas.item;
 
-import com.example.aas.client.ClientData;
 import com.example.aas.sound.ModSounds;
 import com.example.aas.client.ClientHooks;
-import com.example.aas.client.renderer.SquadRadioRenderer;
-import com.example.aas.world.AASWorldData;
-import net.minecraft.ChatFormatting;
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.animatable.SingletonGeoAnimatable;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.*;
 import software.bernie.geckolib.core.object.PlayState;
@@ -14025,63 +14042,53 @@ public class RallyItem extends Item implements GeoItem {
 
     public RallyItem() {
         super(new Properties().stacksTo(1));
+        // Р РµРіРёСЃС‚СЂР°С†РёСЏ РґР»СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё Р°РЅРёРјР°С†РёР№ РјРµР¶РґСѓ СЃРµСЂРІРµСЂРѕРј Рё РєР»РёРµРЅС‚РѕРј
+        SingletonGeoAnimatable.registerSyncedAnimatable(this);
     }
 
-    // === Р›РћР“РРљРђ РџР РћР’Р•Р РћРљ Р РћРўРљР Р«РўРРЇ РњР•РќР® ===
-    // Р’ С„Р°Р№Р»Рµ src/main/java/com/example/aas/item/RallyItem.java
+    // РњРµС‚РѕРґ РґР»СЏ РїСЂРёСЃРІРѕРµРЅРёСЏ СѓРЅРёРєР°Р»СЊРЅРѕРіРѕ ID РїСЂРµРґРјРµС‚Сѓ (РЅСѓР¶РЅРѕ РґР»СЏ GeckoLib)
+    private long getOrAssignID(ItemStack stack, Level level) {
+        if (!stack.getOrCreateTag().contains("GeckoLibID")) {
+            stack.getOrCreateTag().putLong("GeckoLibID", level.getRandom().nextLong());
+        }
+        return stack.getOrCreateTag().getLong("GeckoLibID");
+    }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+
+        // РћР±СЏР·Р°С‚РµР»СЊРЅРѕ РІС‹Р·С‹РІР°РµРј РїРѕР»СѓС‡РµРЅРёРµ ID РїСЂРё РєР»РёРєРµ
+        getOrAssignID(stack, level);
+
         if (!level.isClientSide) {
-            // Р—РІСѓРє РЅР° СЃРµСЂРІРµСЂРµ (СЃР»С‹С€Р°С‚ РІСЃРµ)
+            // Р—РІСѓРє РЅР° СЃРµСЂРІРµСЂРµ
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    ModSounds.RADIO_OPEN.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+                    ModSounds.RADIO_OPEN.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         } else {
-            // Р’С‹Р·РѕРІ Р»РѕРіРёРєРё С‡РµСЂРµР· DistExecutor (Р±РµР·РѕРїР°СЃРЅРѕ РґР»СЏ СЃРµСЂРІРµСЂР°)
-            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () ->
-                    com.example.aas.client.ClientHooks.tryOpenRadioMenu(player)
-            );
+            // Р›РѕРіРёРєР° РѕС‚РєСЂС‹С‚РёСЏ РјРµРЅСЋ (Р·Р°С‰РёС‰РµРЅР° С‡РµСЂРµР· ClientHooks)
+            com.example.aas.client.ClientHooks.tryOpenRadioMenu(player);
         }
-        return InteractionResultHolder.consume(player.getItemInHand(hand));
+        return InteractionResultHolder.consume(stack);
     }
 
-    // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ, С‡С‚РѕР±С‹ РЅРµ РґСѓР±Р»РёСЂРѕРІР°С‚СЊ РєРѕРґ
-    private boolean canOpenMenu(Player player) {
-        if (player.isCreative()) return true;
-        // РўСѓС‚ РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ Р»РѕРіРёРєСѓ РїСЂРѕРІРµСЂРєРё РѕС‚СЂСЏРґР° (С‡РµСЂРµР· ClientData),
-        // РЅРѕ СѓР±РµРґРёС‚РµСЃСЊ, С‡С‚Рѕ ClientData С‚РѕР¶Рµ РІС‹Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІРЅСѓС‚СЂРё DistExecutor
-        return true;
-    }
-
-    // === GECKOLIB Р Р•Р“РРЎРўР РђР¦РРЇ Р Р•РќР”Р•Р Р•Р Рђ ===
-    // Р’РЅСѓС‚СЂРё РєР»Р°СЃСЃР° RallyItem
     @Override
-    public boolean onEntitySwing(ItemStack stack, net.minecraft.world.entity.LivingEntity entity) {
-        // Р’РѕР·РІСЂР°С‰Р°СЏ true, РјС‹ РіРѕРІРѕСЂРёРј РёРіСЂРµ: "РЇ СЃР°Рј СѓРїСЂР°РІР»СЏСЋ Р°РЅРёРјР°С†РёРµР№, СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РІР·РјР°С… РЅРµ РЅСѓР¶РµРЅ".
+    public boolean onEntitySwing(ItemStack stack, LivingEntity entity) {
+        // РћС‚РєР»СЋС‡Р°РµРј СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РІР·РјР°С… СЂСѓРєРѕР№ Minecraft
         return true;
     }
 
     @Override
-    public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
-        consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
-            private com.example.aas.client.renderer.SquadRadioRenderer renderer;
-
-            @Override
-            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (this.renderer == null) {
-                    this.renderer = new com.example.aas.client.renderer.SquadRadioRenderer();
-                }
-                return this.renderer;
-            }
-        });
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        // РСЃРїРѕР»СЊР·СѓРµРј РїСЂРѕСЃР»РѕР№РєСѓ ClientItemExtensions, С‡С‚РѕР±С‹ СЃРµСЂРІРµСЂ РЅРµ РєСЂР°С€РёР»СЃСЏ РїСЂРё Р·Р°РіСЂСѓР·РєРµ СЂРµРЅРґРµСЂРµСЂР°
+        consumer.accept(com.example.aas.client.ClientItemExtensions.RALLY_RADIO);
     }
 
-    // === GECKOLIB РљРћРќРўР РћР›Р›Р•Р  РђРќРРњРђР¦РР™ ===
     @Override
-    public void registerControllers(software.bernie.geckolib.core.animation.AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new software.bernie.geckolib.core.animation.AnimationController<>(this, "RadioController", 5, event -> software.bernie.geckolib.core.object.PlayState.CONTINUE)
-                .triggerableAnim("deploy", software.bernie.geckolib.core.animation.RawAnimation.begin().thenPlayAndHold("animation.radio.deploy"))
-                .triggerableAnim("close", software.bernie.geckolib.core.animation.RawAnimation.begin().thenPlay("animation.radio.close"))
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "RadioController", 5, event -> PlayState.CONTINUE)
+                .triggerableAnim("deploy", RawAnimation.begin().thenPlayAndHold("animation.radio.deploy"))
+                .triggerableAnim("close", RawAnimation.begin().thenPlay("animation.radio.close"))
         );
     }
 
@@ -15823,19 +15830,18 @@ public class PacketRadioAction {
 FILE: PacketRecoil.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketRecoil.java
 ==========================================
+// Р’ С„Р°Р№Р»Рµ PacketRecoil.java
 package com.example.aas.network;
 
-import com.example.aas.client.RecoilHandler; // <--- РРјРїРѕСЂС‚ С…РµРЅРґР»РµСЂР°
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import com.example.aas.client.ClientHooks;
 import java.util.function.Supplier;
 
 public class PacketRecoil {
-    private final float pitch; // РЎРёР»Р° РІРІРµСЂС…
-    private final float yaw;   // РЎРёР»Р° РІР±РѕРє
+    private final float pitch;
+    private final float yaw;
 
     public PacketRecoil(float pitch, float yaw) {
         this.pitch = pitch;
@@ -15853,17 +15859,8 @@ public class PacketRecoil {
 
     public static void handle(PacketRecoil msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // Р’С‹РїРѕР»РЅСЏРµРј С‚РѕР»СЊРєРѕ РЅР° РєР»РёРµРЅС‚Рµ
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                // РџРµСЂРµРґР°РµРј СѓРїСЂР°РІР»РµРЅРёРµ РІ RecoilHandler
-                // (yaw РїРѕРєР° РёРіРЅРѕСЂРёСЂСѓРµРј РґР»СЏ РІРѕР·РІСЂР°С‚Р°, С‚Р°Рє РєР°Рє Р±РѕРєРѕРІСѓСЋ РѕС‚РґР°С‡Сѓ РІРѕР·РІСЂР°С‰Р°С‚СЊ РѕР±С‹С‡РЅРѕ РЅРµ РїСЂРёРЅСЏС‚Рѕ)
-                RecoilHandler.addRecoil(msg.pitch);
-
-                // Р•СЃР»Рё РЅСѓР¶РЅРѕ, РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ Р±РѕРєРѕРІСѓСЋ С‚СЂСЏСЃРєСѓ Р±РµР· РІРѕР·РІСЂР°С‚Р°:
-                if (msg.yaw != 0 && net.minecraft.client.Minecraft.getInstance().player != null) {
-                    net.minecraft.client.Minecraft.getInstance().player.turn(msg.yaw, 0);
-                }
-            });
+            // РРЎРџРћР›Р¬Р—РЈР•Рњ РљР›РђРЎРЎ-РџР РћРЎР›РћР™РљРЈ (ClientHooks), Р° РЅРµ РїСЂСЏРјРѕР№ РІС‹Р·РѕРІ
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> com.example.aas.client.ClientHooks.handleRecoil(msg.pitch, msg.yaw));
         });
         ctx.get().setPacketHandled(true);
     }

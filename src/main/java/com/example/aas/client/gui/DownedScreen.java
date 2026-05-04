@@ -72,11 +72,12 @@ public class DownedScreen extends Screen {
         gui.drawCenteredString(this.font, "YOU ARE CRITICALLY INJURED", this.width / 2, this.height / 2 - 20, 0xFFFFFF);
 
         // РАСЧЕТ ОСТАВШЕГОСЯ ВРЕМЕНИ ДЛЯ BLEED OUT (3 минуты = 180 секунд)
+        int maxSeconds = com.example.aas.config.AASConfig.MAX_DOWNED_TIME_SECONDS.get();
         long elapsedMillis = System.currentTimeMillis() - this.screenOpenTime;
-        long remainingBleedoutSeconds = 180 - (elapsedMillis / 1000);
+        long remainingBleedoutSeconds = maxSeconds - (elapsedMillis / 1000);
+
         if (remainingBleedoutSeconds < 0) remainingBleedoutSeconds = 0;
 
-        // Отрисовка таймера в самом низу экрана, под кнопками
         String timerText = "BLEEDING OUT IN: " + remainingBleedoutSeconds + "s";
         gui.drawCenteredString(this.font, timerText, this.width / 2, this.height - 15, 0xFF5555);
 

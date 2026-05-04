@@ -513,19 +513,23 @@ public class AASWorldData extends SavedData {
             return k;
         }
     }
+    // Внутри AASWorldData.java
     public static class VehicleRecord {
         public UUID uuid;
         public String team;
         public String type;
-        public double x, y, z; // НОВЫЕ ПОЛЯ
-        public float yaw;      // НОВОЕ ПОЛЕ
+        public double x, y, z;
+        public float yaw;
+        public BlockPos spawnerPos; // <--- 1. Поле должно быть тут
 
-        public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw) {
+        // 2. Конструктор ДОЛЖЕН принимать 8 аргументов
+        public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw, BlockPos spawnerPos) {
             this.uuid = uuid;
             this.team = team;
             this.type = type;
             this.x = x; this.y = y; this.z = z;
             this.yaw = yaw;
+            this.spawnerPos = spawnerPos; // <--- 3. Присваиваем
         }
 
         public CompoundTag save() {
@@ -535,13 +539,15 @@ public class AASWorldData extends SavedData {
             tag.putString("Type", type);
             tag.putDouble("X", x); tag.putDouble("Y", y); tag.putDouble("Z", z);
             tag.putFloat("Yaw", yaw);
+            if (spawnerPos != null) tag.putLong("SpawnerPos", spawnerPos.asLong()); // Сохранение
             return tag;
         }
 
         public static VehicleRecord load(CompoundTag tag) {
+            BlockPos sPos = tag.contains("SpawnerPos") ? BlockPos.of(tag.getLong("SpawnerPos")) : null;
+            // 4. В методе load тоже передаем 8 аргументов
             return new VehicleRecord(tag.getUUID("UUID"), tag.getString("Team"), tag.getString("Type"),
-                    tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"), tag.getFloat("Yaw"));
+                    tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"), tag.getFloat("Yaw"), sPos);
         }
     }
-
 }

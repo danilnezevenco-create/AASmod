@@ -12,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
+import net.minecraft.core.BlockPos;
 
 public class PacketApplyMarker {
     private final int targetEntityId;
@@ -75,6 +76,11 @@ public class PacketApplyMarker {
                     // Удаляем старую запись по UUID, если она была (переклейм)
                     data.markedVehicles.removeIf(v -> v.uuid.equals(target.getUUID()));
 
+                    BlockPos spawnerPos = null;
+                    if (target.getPersistentData().contains("AAS_SpawnerPos")) {
+                        spawnerPos = BlockPos.of(target.getPersistentData().getLong("AAS_SpawnerPos"));
+                    }
+
                     // Добавляем новую
                     data.markedVehicles.add(new AASWorldData.VehicleRecord(
                             target.getUUID(),
@@ -83,7 +89,8 @@ public class PacketApplyMarker {
                             target.getX(),
                             target.getY(),
                             target.getZ(),
-                            target.getYRot()
+                            target.getYRot(),
+                            spawnerPos
                     ));
 
                     // 3. Синхронизация

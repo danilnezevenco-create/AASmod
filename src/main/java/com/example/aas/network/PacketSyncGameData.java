@@ -150,7 +150,7 @@ public class PacketSyncGameData {
         // 3. Читаем список техники (Record)
         List<AASWorldData.VehicleRecord> vL = buf.readList(b -> new AASWorldData.VehicleRecord(
                 b.readUUID(), b.readUtf(), b.readUtf(),
-                b.readDouble(), b.readDouble(), b.readDouble(), b.readFloat()
+                b.readDouble(), b.readDouble(), b.readDouble(), b.readFloat(), null
         ));
 
         // 4. Читаем список Хабов (HubInfo)

@@ -33,6 +33,7 @@ public class PacketSyncMapPlayers {
             buf.writeBoolean(p.isDowned);
             buf.writeLong(p.lastShoutTime);
             buf.writeBoolean(p.inVehicle);
+            buf.writeUtf(p.team);
         }
     }
 
@@ -43,7 +44,8 @@ public class PacketSyncMapPlayers {
             list.add(new MapPlayerInfo(
                     buf.readUtf(), buf.readDouble(), buf.readDouble(),
                     buf.readFloat(), buf.readInt(), buf.readBoolean(),
-                    buf.readBoolean(), buf.readLong(), buf.readBoolean()
+                    buf.readBoolean(), buf.readLong(), buf.readBoolean(),
+                    buf.readUtf()
             ));
         }
         return new PacketSyncMapPlayers(list);

@@ -5,6 +5,9 @@ reviveItem = "minecraft:paper"
 #Time in seconds where dying again results in instant death
 #Range: 0 ~ 600
 reviveCooldownSeconds = 120
+#Max time in downed state before bleeding out (seconds)
+#Range: 5 ~ 3600
+maxDownedTimeSeconds = 180
 
 ["Gameplay Settings"]
 	#Grenade destruction

@@ -198,32 +198,25 @@ public class GameLogicEvents {
 
             // === 1. РАССЫЛКА ПОЗИЦИЙ ИГРОКОВ (Оптимизация: каждые 2 тика) ===
             if (globalTick % 2 == 0) {
-                List<ServerPlayer> bluePlayers = new ArrayList<>();
-                List<ServerPlayer> redPlayers = new ArrayList<>();
+                // Собираем данные ОБО ВСЕХ игроках один раз
+                List<MapPlayerInfo> allPlayersInfo = buildPlayerInfo(level.players(), data);
+                PacketSyncMapPlayers allPlayersPacket = new PacketSyncMapPlayers(allPlayersInfo);
 
                 for (ServerPlayer p : level.players()) {
-                    if (p.isSpectator()) continue;
-                    if (p.getTeam() != null) {
-                        if (p.getTeam().getName().equalsIgnoreCase("Blue")) bluePlayers.add(p);
-                        else if (p.getTeam().getName().equalsIgnoreCase("Red")) redPlayers.add(p);
+                    if (p.isSpectator() || p.isCreative()) {
+                        // Зрители и креатив видят ВСЕХ
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), allPlayersPacket);
+                    }
+                    else if (p.getTeam() != null) {
+                        // Обычные игроки видят только своих
+                        String myTeamName = p.getTeam().getName();
+                        List<MapPlayerInfo> teamOnly = allPlayersInfo.stream()
+                                .filter(info -> info.team.equalsIgnoreCase(myTeamName))
+                                .toList();
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), new PacketSyncMapPlayers(teamOnly));
                     }
                 }
 
-                if (!bluePlayers.isEmpty()) {
-                    List<MapPlayerInfo> blueInfo = buildPlayerInfo(bluePlayers, data);
-                    PacketSyncMapPlayers packet = new PacketSyncMapPlayers(blueInfo);
-                    for (ServerPlayer bp : bluePlayers) {
-                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> bp), packet);
-                    }
-                }
-
-                if (!redPlayers.isEmpty()) {
-                    List<MapPlayerInfo> redInfo = buildPlayerInfo(redPlayers, data);
-                    PacketSyncMapPlayers packet = new PacketSyncMapPlayers(redInfo);
-                    for (ServerPlayer rp : redPlayers) {
-                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> rp), packet);
-                    }
-                }
                 // PATH: src/main/java/com/example/aas/events/GameLogicEvents.java
 
                 if (globalTick % 5 == 0) { // Обновляем чаще (каждые 0.25 сек) для плавности поворота
@@ -423,6 +416,7 @@ public class GameLogicEvents {
 
         for (ServerPlayer p : players) {
             String pName = p.getScoreboardName();
+            String pTeam = (p.getTeam() != null) ? p.getTeam().getName().toUpperCase() : "NEUTRAL";
             int squadId = -1;
             boolean isLeader = false;
 
@@ -450,7 +444,8 @@ public class GameLogicEvents {
                     isLeader,
                     downed,
                     shout,
-                    inVehicle
+                    inVehicle,
+                    pTeam
             ));
         }
         return infoList;

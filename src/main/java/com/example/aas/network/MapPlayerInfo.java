@@ -10,8 +10,9 @@ public class MapPlayerInfo {
     public boolean isDowned;
     public long lastShoutTime;
     public boolean inVehicle; // Это поле должно быть здесь!
+    public String team;
 
-    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle) {
+    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle, String team) {
         this.name = name;
         this.x = x;
         this.z = z;
@@ -21,5 +22,6 @@ public class MapPlayerInfo {
         this.isDowned = isDowned;
         this.lastShoutTime = lastShoutTime;
         this.inVehicle = inVehicle;
+        this.team = team;
     }
 }

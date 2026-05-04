@@ -54,6 +54,16 @@ public class MainSupplyBlockEntity extends BlockEntity {
         AABB searchArea = new AABB(pos).inflate(15);
         List<Entity> nearbyEntities = level.getEntitiesOfClass(Entity.class, searchArea);
 
+        // === НОВОЕ: СОРТИРОВКА ПО ПРИОРИТЕТУ ===
+        // Сначала те, у кого есть пассажиры-игроки, затем остальные
+        nearbyEntities.sort((e1, e2) -> {
+            boolean p1HasPlayer = e1.getPassengers().stream().anyMatch(p -> p instanceof Player);
+            boolean p2HasPlayer = e2.getPassengers().stream().anyMatch(p -> p instanceof Player);
+            if (p1HasPlayer && !p2HasPlayer) return -1;
+            if (!p1HasPlayer && p2HasPlayer) return 1;
+            return 0;
+        });
+
         long currentTime = level.getGameTime();
 
         for (Entity vehicle : nearbyEntities) {

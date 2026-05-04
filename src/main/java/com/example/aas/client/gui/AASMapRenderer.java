@@ -230,9 +230,18 @@ public class AASMapRenderer implements AutoCloseable {
 
             // 3. Отрисовка КРУЖКА (для всех кроме самого себя)
             if (!info.name.equals(myName)) {
-                float r = 0.2f, g = 0.6f, b = 1.0f; // Команда (голубой)
-                if (info.squadId != -1 && info.squadId == mySquadId) {
-                    r = 0.2f; g = 1.0f; b = 0.2f; // Отряд (зеленый)
+                float r = 0.2f, g = 0.6f, b = 1.0f; // Дефолт (Синий)
+
+                // Если я спектр - раскрашиваю иконки в реальные цвета команд
+                if (mc.player.isSpectator() || mc.player.isCreative()) {
+                    if (info.team.equalsIgnoreCase("RED")) {
+                        r = 1.0f; g = 0.2f; b = 0.2f; // Красный
+                    }
+                } else {
+                    // Старая логика: если я в отряде - зеленый
+                    if (info.squadId != -1 && info.squadId == mySquadId) {
+                        r = 0.2f; g = 1.0f; b = 0.2f;
+                    }
                 }
 
                 pose.pushPose();
@@ -317,11 +326,11 @@ public class AASMapRenderer implements AutoCloseable {
             if (name.contains("BLUE")) myTeam = "BLUE";
             else if (name.contains("RED")) myTeam = "RED";
         }
-        boolean isAdmin = mc.player.isCreative();
+        boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
 
         for (AASWorldData.VehicleRecord record : ClientData.clientVehicles) {
             // Фильтр: видим только свою команду (или админ)
-            if (!record.team.equalsIgnoreCase(myTeam) && !isAdmin) continue;
+            if (!record.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
             // ВАЖНО: Используем координаты x и z прямо из record (серверные данные)
             // Это позволяет видеть технику, даже если она не прогружена у тебя лично
@@ -361,13 +370,13 @@ public class AASMapRenderer implements AutoCloseable {
             if (name.contains("BLUE")) myTeam = "BLUE";
             else if (name.contains("RED")) myTeam = "RED";
         }
-        boolean isAdmin = mc.player.isCreative();
+        boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
 
         // 2. ОТРИСОВКА ХАБОВ (FOB)
         for (AASWorldData.HubInfo hub : ClientData.clientHubs) {
             // Условие: Хаб построен И (принадлежит твоей команде ИЛИ ты админ)
             if (!hub.constructed) continue;
-            if (!hub.team.equalsIgnoreCase(myTeam) && !isAdmin) continue;
+            if (!hub.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
             // Позиция хаба (он всегда стоит на целых координатах блока)
             double dx = (hub.pos.getX() + 0.5 - cx) / bpp;
@@ -391,7 +400,7 @@ public class AASMapRenderer implements AutoCloseable {
         for (AASWorldData.Squad squad : ClientData.clientSquads) {
             // Условие: У отряда есть раллик И (это твой отряд/команда ИЛИ ты админ)
             if (squad.rallyPos == null) continue;
-            if (!squad.team.equalsIgnoreCase(myTeam) && !isAdmin) continue;
+            if (!squad.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
             double dx = (squad.rallyPos.getX() + 0.5 - cx) / bpp;
             double dy = (squad.rallyPos.getZ() + 0.5 - cz) / bpp;

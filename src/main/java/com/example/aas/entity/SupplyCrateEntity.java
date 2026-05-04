@@ -163,11 +163,19 @@ public class SupplyCrateEntity extends Entity {
         }
 
         AABB searchArea = this.getBoundingBox().inflate(10.0);
-        List<Entity> vehicles = level.getEntities(this, searchArea, e -> e.isAlive());
+        List<Entity> vehicles = level.getEntities(this, searchArea, e -> e.isAlive() && e.getPersistentData().contains("AAS_VehicleTeam"));
+
+        // === ПРИОРИТЕТ Машины с игроком ===
+        vehicles.sort((e1, e2) -> {
+            boolean p1 = !e1.getPassengers().isEmpty();
+            boolean p2 = !e2.getPassengers().isEmpty();
+            if (p1 && !p2) return -1;
+            if (!p1 && p2) return 1;
+            return 0;
+        });
 
         for (Entity vehicle : vehicles) {
-            if (!vehicle.getPersistentData().contains("AAS_VehicleTeam")) continue;
-
+            // Проверка команды
             String vTeam = vehicle.getPersistentData().getString("AAS_VehicleTeam");
             if (!this.getTeamOwner().equals("NEUTRAL") && !vTeam.isEmpty() && !vTeam.equalsIgnoreCase(this.getTeamOwner())) {
                 continue;

@@ -46,12 +46,10 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public int initialTimeSettings = 60;
     public String vehicleIdString = "";
 
-    // ТЕПЕРЬ ЭТО СИСТЕМНОЕ ВРЕМЯ (миллисекунды), когда должен произойти спавн
     public long spawnTimestamp = 0;
-
     public boolean hasSpawnedOnce = false;
     private UUID lastVehicleUUID = null;
-    private int loadTimer = 60; // Задержка после загрузки чанка (чтобы найти существующую технику)
+    private int loadTimer = 60;
 
     public VehicleSpawnerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
@@ -60,15 +58,12 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     @Override
     public void onLoad() {
         super.onLoad();
-        // Даем 3 секунды (60 тиков) на то, чтобы мир прогрузил сущности вокруг,
-        // прежде чем решать, жива техника или нет.
         this.loadTimer = 60;
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
         if (level.isClientSide) return;
 
-        // Ждем прогрузки сущностей после загрузки чанка
         if (be.loadTimer > 0) {
             be.loadTimer--;
             return;
@@ -76,7 +71,6 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
 
         AASWorldData data = AASWorldData.get((ServerLevel) level);
 
-        // === СБРОС ПРИ ОСТАНОВКЕ ИГРЫ ===
         if (!data.isGameStarted) {
             if (be.hasSpawnedOnce || be.spawnTimestamp != 0 || be.lastVehicleUUID != null) {
                 be.hasSpawnedOnce = false;
@@ -88,60 +82,49 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             return;
         }
 
-        // ИСПОЛЬЗУЕМ РЕАЛЬНОЕ ВРЕМЯ (System.currentTimeMillis)
         long currentTime = System.currentTimeMillis();
 
-        // 1. ПРОВЕРКА СУЩЕСТВОВАНИЯ ТЕХНИКИ
-        if (be.lastVehicleUUID != null) {
-            Entity existing = ((ServerLevel) level).getEntity(be.lastVehicleUUID);
+        // === ГЛОБАЛЬНАЯ ПРОВЕРКА (Защита от дубликатов при выгрузке чанков) ===
+        // Ищем в "бухгалтерии" мира запись о технике, которая привязана именно к этому спавнеру
+        boolean vehicleExistsGlobally = data.markedVehicles.stream()
+                .anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
 
-            // Если техники нет в мире или она мертва
-            // (Важно: если чанк выгружен, getEntity может вернуть null, но мы защищены loadTimer'ом при загрузке)
-            if (existing == null || !existing.isAlive()) {
-                be.lastVehicleUUID = null;
-
-                // Устанавливаем время респавна: Сейчас + Настройка * 1000 (перевод сек в мс)
-                be.spawnTimestamp = currentTime + (be.respawnTimeSettings * 1000L);
-
-                be.setChanged();
-                be.syncToClient();
-            } else {
-                // Если техника жива, сбрасываем таймер (на всякий случай)
-                if (be.spawnTimestamp != 0) {
-                    be.spawnTimestamp = 0;
-                    be.setChanged();
-                    be.syncToClient();
-                }
-            }
-        }
-
-        // 2. ЛОГИКА ЗАПУСКА ТАЙМЕРА И СПАВНА
-        if (be.lastVehicleUUID == null) {
-
-            // Если таймер еще не запущен (равен 0), запускаем его
-            if (be.spawnTimestamp == 0) {
-                // Выбираем задержку: Если уже спавнился -> RespawnTime, если нет -> InitialTime
-                int delaySeconds = be.hasSpawnedOnce ? be.respawnTimeSettings : be.initialTimeSettings;
-
-                // Устанавливаем целевое время (в миллисекундах)
-                be.spawnTimestamp = currentTime + (delaySeconds * 1000L);
-                be.setChanged();
-                be.syncToClient();
-
-            }
-
-            // Если текущее реальное время >= целевого времени -> СПАВН
-            // Это условие сработает сразу после загрузки чанка, если время истекло, пока чанк был выгружен.
-            if (currentTime >= be.spawnTimestamp) {
-                be.spawnVehicle();
-
-                // Сброс таймера после спавна
+        if (vehicleExistsGlobally) {
+            // Техника где-то жива (даже если чанк с ней выгружен).
+            // Останавливаем таймер и ничего не спавним.
+            if (be.spawnTimestamp != 0) {
                 be.spawnTimestamp = 0;
                 be.setChanged();
                 be.syncToClient();
             }
+            return;
         }
 
+        // Если мы здесь, значит в глобальном списке техники этого спавнера НЕТ (она уничтожена)
+        if (be.lastVehicleUUID != null) {
+            // Техника была, но исчезла из списка -> запускаем таймер респавна
+            be.lastVehicleUUID = null;
+            be.spawnTimestamp = currentTime + (be.respawnTimeSettings * 1000L);
+            be.setChanged();
+            be.syncToClient();
+        }
+
+        // Логика работы таймера
+        if (be.spawnTimestamp == 0) {
+            // Инициализируем таймер в первый раз (или после уничтожения)
+            int delaySeconds = be.hasSpawnedOnce ? be.respawnTimeSettings : be.initialTimeSettings;
+            be.spawnTimestamp = currentTime + (delaySeconds * 1000L);
+            be.setChanged();
+            be.syncToClient();
+        }
+
+        // Проверка завершения отсчета
+        if (currentTime >= be.spawnTimestamp) {
+            be.spawnVehicle();
+            be.spawnTimestamp = 0;
+            be.setChanged();
+            be.syncToClient();
+        }
     }
 
     private void spawnVehicle() {
@@ -161,12 +144,10 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             entity.setYRot(this.vehicleYaw);
             entity.setYHeadRot(this.vehicleYaw);
 
-            // Переменные для регистрации на карте
             String vTeam = "NEUTRAL";
             String vType = "DEFAULT";
             int penalty = 0;
 
-            // Применяем настройки из слота модификатора
             ItemStack modifierStack = inventory.getStackInSlot(0);
             if (!modifierStack.isEmpty()) {
                 if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
@@ -189,8 +170,12 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                 }
             }
 
-            // === РЕГИСТРАЦИЯ ТЕХНИКИ ДЛЯ КАРТЫ ===
+            // === РЕГИСТРАЦИЯ ТЕХНИКИ С ПРИВЯЗКОЙ К ПОЗИЦИИ БЛОКА ===
             AASWorldData worldData = AASWorldData.get((ServerLevel) level);
+
+            // На всякий случай чистим старые записи этого спавнера
+            worldData.markedVehicles.removeIf(v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
+
             worldData.markedVehicles.add(new AASWorldData.VehicleRecord(
                     entity.getUUID(),
                     vTeam,
@@ -198,13 +183,13 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                     entity.getX(),
                     entity.getY(),
                     entity.getZ(),
-                    entity.getYRot()
+                    entity.getYRot(),
+                    this.worldPosition // Передаем BlockPos спавнера
             ));
             worldData.setDirty();
             PacketHandler.sendToAllClients((ServerLevel)level, worldData);
-            // =====================================
 
-            // Заполнение инвентаря техники (ваш существующий код)
+            // Заполнение инвентаря
             entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
                 for (int i = 0; i < 32; i++) {
                     ItemStack contentStack = inventory.getStackInSlot(i + 1);
@@ -223,6 +208,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             level.addFreshEntity(entity);
             this.lastVehicleUUID = entity.getUUID();
             this.hasSpawnedOnce = true;
+            this.setChanged();
         }
     }
 

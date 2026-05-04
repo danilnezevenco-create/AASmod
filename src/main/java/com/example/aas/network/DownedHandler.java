@@ -89,6 +89,8 @@ public class DownedHandler {
 
             // НОВОЕ: Автоматический Give Up через 3 минуты (3 * 60 * 20 = 3600 тиков)
             long downedTick = player.getPersistentData().getLong("AAS_DownedTick");
+            long maxDownedTicks = AASConfig.MAX_DOWNED_TIME_SECONDS.get() * 20L;
+
             if (player.level().getGameTime() - downedTick >= 3600) {
                 forceGiveUp(player);
             }
