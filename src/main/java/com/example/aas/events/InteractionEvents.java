@@ -10,6 +10,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import com.example.aas.world.AASWorldData;
+import com.example.aas.block.ModBlocks;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -58,24 +60,37 @@ public class InteractionEvents {
     }
 
     @SubscribeEvent
+    public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (event.getPlacedBlock().is(ModBlocks.GAME_START_TRIGGER.get())) {
+            if (event.getLevel() instanceof ServerLevel level) {
+                AASWorldData.get(level).triggerBlocks.add(event.getPos());
+                AASWorldData.get(level).setDirty();
+            }
+        }
+    }
+
+    @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
+        // 1. Логика удаления триггеров (обязательная)
+        if (event.getState().is(ModBlocks.GAME_START_TRIGGER.get())) {
+            if (event.getLevel() instanceof ServerLevel level) {
+                AASWorldData.get(level).triggerBlocks.remove(event.getPos());
+                AASWorldData.get(level).setDirty();
+            }
+        }
+
+        // 2. Логика защиты от ломания блоков (по конфигу)
         if (com.example.aas.config.AASConfig.PREVENT_BLOCK_BREAKING.get()) {
             Player player = event.getPlayer();
             if (!player.isCreative()) {
-                net.minecraft.world.level.LevelAccessor levelAccessor = event.getLevel();
-
-                if (levelAccessor instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                if (event.getLevel() instanceof ServerLevel serverLevel) {
                     boolean isStarted = com.example.aas.world.AASWorldData.get(serverLevel).isGameStarted;
 
                     if (isStarted) {
-                        BlockState state = event.getState();
-
                         // ПРОВЕРКА БЕЛОГО СПИСКА
-                        if (isBlockWhitelisted(state)) {
-                            return; // Разрешаем ломать
+                        if (!isBlockWhitelisted(event.getState())) {
+                            event.setCanceled(true);
                         }
-
-                        event.setCanceled(true);
                     }
                 }
             }

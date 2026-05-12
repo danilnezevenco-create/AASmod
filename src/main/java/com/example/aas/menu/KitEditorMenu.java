@@ -1,4 +1,3 @@
-// PATH: src\main\java\com\example\aas\menu\KitEditorMenu.java
 package com.example.aas.menu;
 
 import com.mojang.datafixers.util.Pair;
@@ -14,6 +13,9 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class KitEditorMenu extends AbstractContainerMenu {
+    // 1. Увеличиваем константу до 49 (41 стандартный + 8 дополнительных)
+    public static final int MAX_KIT_SLOTS = 49;
+
     public final Container kitInventory;
     public final String team;
     public final String kitName;
@@ -22,7 +24,7 @@ public class KitEditorMenu extends AbstractContainerMenu {
     public int maxPerSquad;
     public int minSquadPlayers;
     public final boolean[] resupplyFlags;
-    public final boolean[] saveNbtFlags; // Флаги для сохранения NBT после смерти
+    public final boolean[] saveNbtFlags;
 
     private static final ResourceLocation[] ARMOR_SLOT_TEXTURES = new ResourceLocation[]{
             InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS,
@@ -31,29 +33,27 @@ public class KitEditorMenu extends AbstractContainerMenu {
             InventoryMenu.EMPTY_ARMOR_SLOT_HELMET
     };
 
-    // Чтение пакета клиентом (вызывается через PacketOpenKitEditor)
+    // Чтение пакета клиентом
     public KitEditorMenu(int id, Inventory playerInv, FriendlyByteBuf data) {
-        this(id, playerInv, new SimpleContainer(41),
-                data.readUtf(),         // team
-                data.readUtf(),         // kitName
-                data.readBoolean(),     // isLeaderOnly
-                data.readInt(),         // maxPerTeam
-                data.readInt(),         // maxPerSquad
-                data.readInt(),         // minSquadPlayers
-                new boolean[41],        // временный массив для resupply
-                new boolean[41]);       // временный массив для saveNbt
+        // Здесь везде меняем 41 на 49
+        this(id, playerInv, new SimpleContainer(MAX_KIT_SLOTS),
+                data.readUtf(),
+                data.readUtf(),
+                data.readBoolean(),
+                data.readInt(),
+                data.readInt(),
+                data.readInt(),
+                new boolean[MAX_KIT_SLOTS],
+                new boolean[MAX_KIT_SLOTS]);
 
-        // Читаем флаги ресаплая
-        for (int i = 0; i < 41; i++) {
+        for (int i = 0; i < MAX_KIT_SLOTS; i++) {
             this.resupplyFlags[i] = data.readBoolean();
         }
-        // Читаем флаги сохранения NBT
-        for (int i = 0; i < 41; i++) {
+        for (int i = 0; i < MAX_KIT_SLOTS; i++) {
             this.saveNbtFlags[i] = data.readBoolean();
         }
     }
 
-    // Основной конструктор (Серверный + используется клиентским)
     public KitEditorMenu(int id, Inventory playerInv, Container kitInv, String t, String k,
                          boolean l, int mt, int ms, int minPlayers,
                          boolean[] flags, boolean[] nbtFlags) {
@@ -68,22 +68,21 @@ public class KitEditorMenu extends AbstractContainerMenu {
         this.resupplyFlags = flags;
         this.saveNbtFlags = nbtFlags;
 
-        // --- СЛОТЫ КИТА (Слоты 0 - 40) ---
+        // --- СТАНДАРТНЫЕ СЛОТЫ КИТА (0 - 40) ---
 
-        // 1. Основная сетка инвентаря кита (слоты 9 - 35)
+        // 1. Основная сетка (9 - 35)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
                 this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, 66 + row * 18));
             }
         }
 
-        // 2. Хотбар кита (слоты 0 - 8)
+        // 2. Хотбар (0 - 8)
         for (int col = 0; col < 9; ++col) {
             this.addSlot(new Slot(kitInv, col, 8 + col * 18, 124));
         }
 
-        // 3. Броня кита (слоты 36 - 39)
-        // 36: Boots, 37: Legs, 38: Chest, 39: Helmet
+        // 3. Броня (36 - 39)
         for (int i = 0; i < 4; ++i) {
             final int armorIndex = i;
             int slotIndex = 36 + i;
@@ -95,7 +94,7 @@ public class KitEditorMenu extends AbstractContainerMenu {
             });
         }
 
-        // 4. Вторая рука кита (слот 40)
+        // 4. Вторая рука (40)
         this.addSlot(new Slot(kitInv, 40, 84, 150) {
             @Override
             public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
@@ -103,16 +102,23 @@ public class KitEditorMenu extends AbstractContainerMenu {
             }
         });
 
-        // --- СЛОТЫ ИГРОКА (Стандартные) ---
+        // --- 5. НОВЫЕ "CURSE" СЛОТЫ (41 - 48) ---
+        // Размещаем их в два столбика слева от основного инвентаря
+        // Координата X: -36 и -18 (относительно левого края основного окна)
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 2; col++) {
+                int slotIndex = 41 + (row * 2 + col);
+                // X = -36 для первого столбца, -18 для второго. Y начинается с 66.
+                this.addSlot(new Slot(kitInv, slotIndex, -36 + col * 18, 66 + row * 18));
+            }
+        }
 
-        // Основной инвентарь игрока
+        // --- СЛОТЫ ИНВЕНТАРЯ ИГРОКА ---
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
                 this.addSlot(new Slot(playerInv, j + i * 9 + 9, 8 + j * 18, 180 + i * 18));
             }
         }
-
-        // Хотбар игрока
         for (int i = 0; i < 9; ++i) {
             this.addSlot(new Slot(playerInv, i, 8 + i * 18, 238));
         }
@@ -125,7 +131,6 @@ public class KitEditorMenu extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player p, int index) {
-        // Отключено в редакторе, чтобы игроки не путались при настройке флагов
         return ItemStack.EMPTY;
     }
 }

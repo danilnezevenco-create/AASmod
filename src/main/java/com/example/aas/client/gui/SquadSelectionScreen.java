@@ -280,39 +280,48 @@ public class SquadSelectionScreen extends Screen {
             int arrowX = (actionX > 0 ? actionX : SIDEBAR_WIDTH - 10) - 12;
             int lockX = arrowX - 12;
 
-            if (amILeader) {
-                if (mouseX >= lockX && mouseX <= lockX + 8 && mouseY >= currentY && mouseY <= currentY + 9) {
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
-                    playClickSound(); return;
-                }
+            // Клики по кнопкам отряда (Lock, Expand, Join/Leave)
+            if (amILeader && mouseX >= lockX && mouseX <= lockX + 8 && mouseY >= currentY && mouseY <= currentY + 9) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
+                playClickSound(); return;
             }
             if (mouseX >= arrowX && mouseX <= arrowX + 8 && mouseY >= currentY && mouseY <= currentY + 9) {
                 if (isExpanded) expandedSquads.remove(squad.id); else expandedSquads.add(squad.id);
                 playClickSound(); return;
             }
-            if (!actionText.isEmpty() && clickable) {
-                if (mouseX >= actionX && mouseX <= actionX + actionWidth && mouseY >= currentY && mouseY <= currentY + 9) {
-                    int act = isMySquad ? 2 : 1;
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(act, squad.id, ""));
-                    playClickSound(); return;
-                }
+            if (!actionText.isEmpty() && clickable && mouseX >= actionX && mouseX <= actionX + actionWidth && mouseY >= currentY && mouseY <= currentY + 9) {
+                int act = isMySquad ? 2 : 1;
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(act, squad.id, ""));
+                playClickSound(); return;
             }
+
             currentY += 12;
 
             if (isExpanded) {
                 List<String> sortedMembers = getSortedMembers(squad);
                 for (String member : sortedMembers) {
+                    boolean isOnline = this.minecraft.getConnection().getPlayerInfo(member) != null;
+                    boolean isLeaderMember = member.equals(squad.leader);
 
-                    // ЕСЛИ КЛИКНУЛИ НА КНОПКУ [K] ВЫБОРА КИТА
-                    if (isMySquad && member.equals(myName)) {
-                        int btnX = 30; // Стартовый X для кнопки K
-                        if (mouseX >= btnX && mouseX <= btnX + 10 && mouseY >= currentY && mouseY <= currentY + 10) {
-                            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
-                            playClickSound();
-                            return;
+                    // Кнопка K для кика оффлайн лидера рядовыми бойцами
+                    if (isMySquad && !isOnline && isLeaderMember && !amILeader) {
+                        int kX = SIDEBAR_WIDTH - 25;
+                        if (mouseX >= kX && mouseX <= kX + 10 && mouseY >= currentY && mouseY <= currentY + 9) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(3, squad.id, member));
+                            playClickSound(); return;
                         }
                     }
 
+                    // Кнопка [K] выбора кита для себя
+                    if (isMySquad && member.equals(myName)) {
+                        int btnX = 30;
+                        if (mouseX >= btnX && mouseX <= btnX + 10 && mouseY >= currentY && mouseY <= currentY + 10) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+                            playClickSound(); return;
+                        }
+                    }
+
+                    // Кнопки лидера (Kick, Promote)
                     if (amILeader && !member.equals(myName)) {
                         int kX = SIDEBAR_WIDTH - 25;
                         if (mouseX >= kX && mouseX <= kX + 10 && mouseY >= currentY && mouseY <= currentY + 9) {
@@ -427,6 +436,7 @@ public class SquadSelectionScreen extends Screen {
                 List<String> sortedMembers = getSortedMembers(squad);
                 for (String member : sortedMembers) {
                     boolean isLeaderMember = member.equals(squad.leader);
+                    boolean isOnline = this.minecraft.getConnection().getPlayerInfo(member) != null;
 
                     // ПРЕФИКС ПОЛНОСТЬЮ УБРАН
                     String prefix = "";
@@ -454,7 +464,12 @@ public class SquadSelectionScreen extends Screen {
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
                         xOffset += 12; // Отступ после иконки до ника
                     }
-
+                    // --- ЛОГИКА КНОПКИ КИКА ДЛЯ ОФФЛАЙН ЛИДЕРА ---
+                    if (isLeaderMember && !isOnline && isMySquad && !amILeader) {
+                        int kickX = SIDEBAR_WIDTH - 25;
+                        boolean hKick = mouseX >= kickX && mouseX <= kickX + 10 && mouseY >= currentY && mouseY <= currentY + 9;
+                        gui.drawString(this.font, "K", kickX, currentY + 1, hKick ? 0xFFFFFFFF : 0xFFFF5555, false);
+                    }
                     // Рисуем ник (префикс теперь пустой "")
                     gui.drawString(this.font, prefix + member, xOffset, currentY + 1, col, false);
 
@@ -530,6 +545,8 @@ public class SquadSelectionScreen extends Screen {
             case "russia": return FLAG_RUSSIA;
             case "usa": return FLAG_USA;
             case "nato": return FLAG_NATO;
+            case "bluefor": return FLAG_BLUEFOR;
+            case "redfor": return FLAG_REDFOR;
             default: return null;
         }
     }

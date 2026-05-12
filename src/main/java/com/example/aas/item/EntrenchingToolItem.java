@@ -36,6 +36,23 @@ import java.util.function.Consumer;
 public class EntrenchingToolItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
+    @Override
+    public float getDestroySpeed(ItemStack stack, BlockState state) {
+        // Если это одна из наших построек и она ЕЩЕ НЕ ДОСТРОЕНА
+        if (isAASConstruction(state) && !isConstructed(state)) {
+            return 50.0F; // Максимальная скорость (мгновенно)
+        }
+        return super.getDestroySpeed(stack, state);
+    }
+
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        if (!slotChanged && oldStack.getItem() == newStack.getItem()) {
+            return false;
+        }
+        return super.shouldCauseReequipAnimation(oldStack, newStack, slotChanged);
+    }
+
     public EntrenchingToolItem() {
         super(new Properties().stacksTo(1));
         SingletonGeoAnimatable.registerSyncedAnimatable(this);

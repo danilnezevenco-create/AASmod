@@ -194,6 +194,10 @@ public class ClientHooks {
         ClientData.redSpawns = new HashMap<>(msg.redSpawns);
         ClientData.neutralSpawns = new HashMap<>(msg.neutralSpawns);
         ClientData.playerKits = new HashMap<>(msg.playerKits);
+
+        ClientData.voteActive = msg.voteActive;
+        ClientData.voteTimer = msg.voteTimer;
+        ClientData.votes = new HashMap<>(msg.votes);
     }
 
     public static void handleSyncPoint(PacketSyncPoint msg) {
@@ -205,5 +209,6 @@ public class ClientHooks {
         ClientData.nextObjectiveName = msg.nextObjective;
         ClientData.isContested = msg.isContested;
         ClientData.pointCapturingTeam = msg.capturingTeam;
+        ClientData.pointCaptureRate = msg.captureRate;
     }
 }

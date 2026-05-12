@@ -16,10 +16,10 @@ public class PacketSyncPoint {
     public final boolean isLocked;
     public final String nextObjective;
     public final boolean isContested;
-    // НОВОЕ ПОЛЕ
     public final String capturingTeam;
+    public final int captureRate;
 
-    public PacketSyncPoint(boolean isInside, String name, String owner, float progress, boolean locked, String nextObj, boolean contested, String capturingTeam) {
+    public PacketSyncPoint(boolean isInside, String name, String owner, float progress, boolean locked, String nextObj, boolean contested, String capturingTeam, int captureRate) {
         this.isInside = isInside;
         this.name = name;
         this.owner = owner;
@@ -28,6 +28,7 @@ public class PacketSyncPoint {
         this.nextObjective = nextObj;
         this.isContested = contested;
         this.capturingTeam = capturingTeam;
+        this.captureRate = captureRate;
     }
 
     public static void encode(PacketSyncPoint msg, FriendlyByteBuf buf) {
@@ -39,6 +40,7 @@ public class PacketSyncPoint {
         buf.writeUtf(msg.nextObjective);
         buf.writeBoolean(msg.isContested);
         buf.writeUtf(msg.capturingTeam); // Пишем
+        buf.writeInt(msg.captureRate);
     }
 
     public static PacketSyncPoint decode(FriendlyByteBuf buf) {
@@ -50,7 +52,8 @@ public class PacketSyncPoint {
                 buf.readBoolean(),
                 buf.readUtf(),
                 buf.readBoolean(),
-                buf.readUtf() // Читаем
+                buf.readUtf(), // Читаем
+                buf.readInt()
         );
     }
 

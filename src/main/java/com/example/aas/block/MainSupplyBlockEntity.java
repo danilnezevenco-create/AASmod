@@ -86,8 +86,9 @@ public class MainSupplyBlockEntity extends BlockEntity {
             // ЭТА ЛОГИКА ТЕПЕРЬ НЕ ЗАВИСИТ ОТ КУЛДАУНА
             if (vehicle.getPersistentData().getBoolean("AAS_IsSupplyTruck")) {
                 int currentAmmo = vehicle.getPersistentData().getInt("AAS_SupplyAmmo");
+                int maxCrates = com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get();
 
-                if (currentAmmo < 2) {
+                if (currentAmmo < maxCrates) {
                     int supplyTimer = vehicle.getPersistentData().getInt("AAS_TruckReloadTimer");
                     supplyTimer++;
 
@@ -96,7 +97,7 @@ public class MainSupplyBlockEntity extends BlockEntity {
                         vehicle.getPersistentData().putInt("AAS_TruckReloadTimer", 0);
 
                         // Уведомление в ЧАТ (чтобы было выше и не перекрывалось)
-                        sendChatMessageToPassengers(vehicle, "[Supply] +1 Crate Loaded (" + (currentAmmo + 1) + "/2)", ChatFormatting.GOLD);
+                        sendChatMessageToPassengers(vehicle, "[Supply] +1 Crate Loaded (" + (currentAmmo + 1) + "/" + maxCrates + ")", ChatFormatting.GOLD);
                         spawnEffects(level, vehicle);
                     } else {
                         vehicle.getPersistentData().putInt("AAS_TruckReloadTimer", supplyTimer);

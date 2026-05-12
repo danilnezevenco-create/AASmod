@@ -31,10 +31,11 @@ public class SupplyTruckMarkerItem extends Item {
         ChatFormatting color = team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
         tooltip.add(Component.literal("Team: " + team).withStyle(color));
         tooltip.add(Component.literal("Type: " + vehicleType).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Max 2 Crates. Press X to drop.").withStyle(ChatFormatting.YELLOW));
-        // Динамический вывод штрафа
-        tooltip.add(Component.literal("Loss Penalty: -" + penalty + " Tickets").withStyle(ChatFormatting.RED));
 
+        // Заменили на динамическое значение:
+        tooltip.add(Component.literal("Max " + com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get() + " Crates. Press X to drop.").withStyle(ChatFormatting.YELLOW));
+
+        tooltip.add(Component.literal("Loss Penalty: -" + penalty + " Tickets").withStyle(ChatFormatting.RED));
         tooltip.add(Component.literal("thank exactly").withStyle(ChatFormatting.DARK_PURPLE).withStyle(ChatFormatting.ITALIC));
     }
 }

@@ -57,7 +57,8 @@ public class SupplyCrateEntity extends Entity {
         this(ModEntities.SUPPLY_CRATE.get(), level);
         this.setPos(x, y, z);
         this.setTeamOwner(team);
-        this.setMaterials(50); // <--- В ЯЩИКЕ РОВНО 50 МАТЕРИАЛОВ
+        // Заменяем 50 на конфиг:
+        this.setMaterials(com.example.aas.config.AASConfig.SUPPLY_CRATE_MATERIALS.get());
         this.ownerId = ownerId;
     }
 

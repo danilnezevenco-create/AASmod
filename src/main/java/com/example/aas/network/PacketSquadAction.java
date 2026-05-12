@@ -111,16 +111,46 @@ public class PacketSquadAction {
             }
             // === 3. KICK ===
             else if (msg.action == 3) {
-                AASWorldData.Squad mySquad = getPlayerSquad(pName, data);
-                if (mySquad != null && mySquad.leader.equals(pName)) {
+                AASWorldData.Squad targetSquad = null;
+                // Ищем отряд по ID
+                for(AASWorldData.Squad s : data.squads) { if(s.id == msg.squadId) { targetSquad = s; break; } }
+
+                if (targetSquad != null) {
                     String targetName = msg.stringData;
-                    if (!targetName.equals(pName) && mySquad.members.remove(targetName)) {
-                        ServerPlayer target = player.server.getPlayerList().getPlayerByName(targetName);
-                        if (target != null) {
-                            removePlayerTags(target);
-                            target.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
+                    ServerPlayer targetEntity = player.server.getPlayerList().getPlayerByName(targetName);
+
+                    // УСЛОВИЕ 1: Лидер кикает игрока (как раньше)
+                    boolean isLeaderKicking = targetSquad.leader.equals(pName) && !targetName.equals(pName);
+
+                    // УСЛОВИЕ 2: Игрок кикает оффлайн-лидера
+                    boolean isKickingOfflineLeader = targetName.equals(targetSquad.leader) && targetEntity == null && targetSquad.members.contains(pName);
+
+                    if (isLeaderKicking || isKickingOfflineLeader) {
+                        if (targetSquad.members.remove(targetName)) {
+                            // Если кикнули лидера — назначаем нового (первого в списке)
+                            if (targetName.equals(targetSquad.leader) && !targetSquad.members.isEmpty()) {
+                                targetSquad.leader = targetSquad.members.get(0);
+
+                                // Выдаем новому лидеру теги и радио
+                                ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(targetSquad.leader);
+                                if (newLeader != null) {
+                                    updatePlayerTags(newLeader, targetSquad.id, true);
+                                    if (AASConfig.AUTO_GIVE_SL_RADIO.get()) giveRadio(newLeader);
+                                    newLeader.sendSystemMessage(Component.literal("The previous leader was offline and removed. You are the new Leader!").withStyle(ChatFormatting.GOLD));
+                                }
+                            }
+
+                            // Если кикнутый игрок был онлайн — чистим ему теги
+                            if (targetEntity != null) {
+                                removePlayerTags(targetEntity);
+                                removeRadio(targetEntity);
+                                targetEntity.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
+                            }
+
+                            player.server.getPlayerList().broadcastSystemMessage(
+                                    Component.literal("Offline leader " + targetName + " was removed from squad " + targetSquad.name).withStyle(ChatFormatting.YELLOW), false
+                            );
                         }
-                        player.sendSystemMessage(Component.literal("Kicked " + targetName).withStyle(ChatFormatting.RED));
                     }
                 }
             }

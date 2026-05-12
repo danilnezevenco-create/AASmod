@@ -36,6 +36,7 @@ public class AASOverlay {
     private static final ResourceLocation FLAG_BLUEFOR = new ResourceLocation("aas", "textures/gui/flags/bluefor.png");
     private static final ResourceLocation FLAG_REDFOR = new ResourceLocation("aas", "textures/gui/flags/redfor.png");
     private static final ResourceLocation VIGNETTE_TEXTURE = new ResourceLocation("aas", "textures/misc/vignette.png");
+    private static final ResourceLocation ARROW_TEX = new ResourceLocation("aas", "textures/gui/capture_arrow.png");
     private static AASMapRenderer HUD_SIDE_MAP;
 
     @SubscribeEvent
@@ -52,6 +53,7 @@ public class AASOverlay {
 
         // 1. Тикеты
         renderTickets(gui, mc, width);
+        renderVotePanel(gui, mc, height);
 
         // 2. Логика захвата точек
         if (ClientData.allCapturePoints != null) {
@@ -356,10 +358,6 @@ public class AASOverlay {
         String name = ClientData.pointName;
         drawOutlinedString(gui, mc, name, centerX - (mc.font.width(name) / 2), flagY - 10, 0xFFFFFFFF);
 
-        // Статус "ENEMY!" или время блокировки
-        if (ClientData.isContested) {
-            drawOutlinedString(gui, mc, "ENEMY!", centerX - (mc.font.width("ENEMY!") / 2), flagY - 22, 0xFFFFAA00);
-        }
 
         if (ClientData.isLocked) {
             String status = ClientData.nextObjectiveName;
@@ -369,8 +367,95 @@ public class AASOverlay {
             }
         }
 
-        // Вызов метода отрисовки полосок (который ниже)
+
         renderProgressBars(gui, mc, centerX, flagY + flagHeight + 3, color);
+
+        // Вызов метода отрисовки полосок (который ниже
+        renderCaptureArrows(gui, mc, centerX, flagY + flagHeight + 3);
+    }
+
+    private static void renderVotePanel(GuiGraphics gui, Minecraft mc, int height) {
+        // 1. Логика анимации (плавный выезд слева)
+        float speed = 0.05f;
+        ClientData.voteTransition = Mth.lerp(speed, ClientData.voteTransition, ClientData.voteActive ? 1.0f : 0.0f);
+
+        // Если анимация в нуле, ничего не рендерим
+        if (ClientData.voteTransition <= 0.001f) return;
+
+        // Расчет позиции X (от -160 до 10 пикселей)
+        int xPos = (int) Mth.lerp(ClientData.voteTransition, -160, 10);
+        int yPos = 60; // Отступ сверху
+
+        // 2. Получаем список игроков своей команды из синхронизированных данных карты
+        String myTeam = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "NEUTRAL";
+
+        var teamPlayers = ClientData.mapPlayers.values().stream()
+                .filter(info -> info.team.equalsIgnoreCase(myTeam))
+                .toList();
+
+        // 3. Параметры размеров панели
+        int panelWidth = 150;
+        int rowHeight = 12;
+        int headerHeight = 35;
+        int footerHeight = 15;
+        // Высота динамически зависит от кол-ва игроков
+        int panelHeight = headerHeight + (teamPlayers.size() * rowHeight) + footerHeight;
+
+        // 4. Отрисовка фона и рамки (стиль как у меню отрядов)
+        gui.pose().pushPose();
+        gui.pose().translate(0, 0, 100); // Чтобы было поверх обычного HUD
+
+        // Основной фон (черный полупрозрачный)
+        gui.fill(xPos, yPos, xPos + panelWidth, yPos + panelHeight, 0xAA000000);
+        // Белая обводка
+        gui.renderOutline(xPos, yPos, panelWidth, panelHeight, 0xFFFFFFFF);
+
+        // 5. Заголовок и Таймер
+        gui.drawCenteredString(mc.font, "VOTE TO START", xPos + panelWidth / 2, yPos + 5, 0xFFFFD700); // Золотой цвет
+
+        // Форматируем время из секунд в 00:00
+        int seconds = Math.max(0, ClientData.voteTimer);
+        String timeStr = String.format("%02d:%02d", seconds / 60, seconds % 60);
+        gui.drawCenteredString(mc.font, timeStr, xPos + panelWidth / 2, yPos + 18, 0xFFFFFFFF);
+
+        // Разделительная линия под таймером
+        gui.fill(xPos + 5, yPos + 30, xPos + panelWidth - 5, yPos + 31, 0x55FFFFFF);
+
+        // 6. Список игроков
+        int currentY = yPos + headerHeight;
+        for (var info : teamPlayers) {
+            // Пытаемся найти голос игрока по его UUID
+            // Примечание: Убедись, что в твоем MapPlayerInfo есть поле uuid (тип UUID)
+            Boolean vote = ClientData.votes.get(info.uuid);
+
+            String icon = "○"; // По умолчанию: еще не голосовал
+            int iconColor = 0xFFAAAAAA; // Серый
+
+            if (vote != null) {
+                if (vote) {
+                    icon = "✔"; // Согласен
+                    iconColor = 0xFF55FF55; // Зеленый
+                } else {
+                    icon = "✘"; // Против
+                    iconColor = 0xFFFF5555; // Красный
+                }
+            }
+
+            // Рисуем иконку статуса
+            gui.drawString(mc.font, icon, xPos + 8, currentY, iconColor, true);
+
+            // Рисуем ник игрока (чуть правее иконки)
+            // Если это сам игрок — можно подсветить ник желтым
+            int nameColor = info.name.equals(mc.player.getScoreboardName()) ? 0xFFFFFF55 : 0xFFFFFFFF;
+            gui.drawString(mc.font, info.name, xPos + 22, currentY, nameColor, true);
+
+            currentY += rowHeight;
+        }
+
+        // 7. Подсказка по кнопкам в самом низу панели
+        gui.drawCenteredString(mc.font, "F9: YES | F10: NO", xPos + panelWidth / 2, yPos + panelHeight - 12, 0xFFBBBBBB);
+
+        gui.pose().popPose();
     }
 
     // ВОТ ЭТОТ МЕТОД НУЖНО ДОБАВИТЬ В AASOverlay.java, чтобы не было ошибки!
@@ -400,6 +485,46 @@ public class AASOverlay {
             }
         }
     }
+    private static void renderCaptureArrows(GuiGraphics gui, Minecraft mc, int centerX, int y) {
+        int rate = ClientData.pointCaptureRate;
+        if (rate == 0) return;
+
+        int absRate = Math.min(Math.abs(rate), 4);
+        boolean isForward = rate > 0;
+
+        // Берем цвет команды, которая физически воздействует на точку сейчас
+        String capTeam = ClientData.pointCapturingTeam;
+        int color = 0xFFFFFFFF;
+        if (capTeam.equalsIgnoreCase("BLUE")) color = 0xFF3366CC;
+        else if (capTeam.equalsIgnoreCase("RED")) color = 0xFFCC3333;
+
+        RenderSystem.enableBlend();
+        float r = ((color >> 16) & 0xFF) / 255f;
+        float g = ((color >> 8) & 0xFF) / 255f;
+        float b = (color & 0xFF) / 255f;
+        RenderSystem.setShaderColor(r, g, b, 1.0f);
+
+        int arrowSize = 12;
+        int barsStartX = centerX - 40;
+        int segmentWidth = 20;
+
+        for (int i = 0; i < absRate; i++) {
+            int segmentIndex = isForward ? i : (3 - i);
+            int xPos = barsStartX + (segmentIndex * segmentWidth) + 2;
+            int yPos = y - 4;
+
+            if (isForward) {
+                gui.blit(ARROW_TEX, xPos, yPos, 0, 0, arrowSize, arrowSize, arrowSize, arrowSize);
+            } else {
+                gui.pose().pushPose();
+                gui.pose().translate(xPos + (arrowSize / 2.0), yPos + (arrowSize / 2.0), 0);
+                gui.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180));
+                gui.blit(ARROW_TEX, -arrowSize / 2, -arrowSize / 2, 0, 0, arrowSize, arrowSize, arrowSize, arrowSize);
+                gui.pose().popPose();
+            }
+        }
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+    }
 
     private static void renderSupplyTruckInfo(GuiGraphics gui, Minecraft mc, int width, int height) {
         Entity ridingEntity = mc.player.getVehicle();
@@ -407,8 +532,10 @@ public class AASOverlay {
         Entity supplyTruck = getSupplyTruckEntity(ridingEntity);
         if (supplyTruck != null) {
             int crates = supplyTruck.getPersistentData().getInt("AAS_SupplyAmmo");
+            int maxCrates = com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get();
             boolean isCharging = false;
-            if (crates < 2) {
+
+            if (crates < maxCrates) {
                 BlockPos vPos = supplyTruck.blockPosition();
                 for (BlockPos pos : BlockPos.betweenClosed(vPos.offset(-5, -2, -5), vPos.offset(5, 2, 5))) {
                     if (mc.level.getBlockState(pos).getBlock() instanceof MainSupplyBlock) {
@@ -424,7 +551,7 @@ public class AASOverlay {
             } else if (crates == 0) {
                 color = 0xFFFF5555;
             }
-            String text = "Supplies: " + crates + " / 2";
+            String text = "Supplies: " + crates + " / " + maxCrates;
             int textWidth = mc.font.width(text);
             int x = width - textWidth - 10;
             int y = height - 25;

@@ -59,7 +59,7 @@ public class CrateRadialScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
 
-        String matText = "Mats: " + materials + " / 50";
+        String matText = "Mats: " + materials + " / " + AASConfig.SUPPLY_CRATE_MATERIALS.get();
         gui.drawCenteredString(this.font, matText, centerX, centerY + 5, 0xFFFFAA00);
 
         double dx = mouseX - centerX;

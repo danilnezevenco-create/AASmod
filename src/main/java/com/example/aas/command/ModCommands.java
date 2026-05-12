@@ -28,6 +28,7 @@ import net.minecraft.world.scores.Scoreboard;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import com.example.aas.config.AASConfig;
 
 public class ModCommands {
 
@@ -126,6 +127,17 @@ public class ModCommands {
                         )
                 )
 
+                // === ПРИНУДИТЕЛЬНЫЙ ЗАХВАТ ТОЧКИ ===
+                .then(Commands.literal("pointcapture")
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .suggests((ctx, builder) -> suggestLocalPoints(ctx, builder))
+                                        .executes(ctx -> forceCapturePoint(ctx.getSource(), StringArgumentType.getString(ctx, "team"), StringArgumentType.getString(ctx, "name")))
+                                )
+                        )
+                )
+
                 // --- СПАВНЫ ---
                 .then(Commands.literal("teamspawn")
                         .then(Commands.argument("team", StringArgumentType.word())
@@ -190,6 +202,33 @@ public class ModCommands {
                                 )
                         )
                 )
+                .then(Commands.literal("votestart")
+                        .then(Commands.argument("active", BoolArgumentType.bool())
+                                .executes(ctx -> {
+                                    ServerLevel level = ctx.getSource().getLevel();
+                                    AASWorldData data = AASWorldData.get(level);
+                                    boolean active = BoolArgumentType.getBool(ctx, "active");
+
+                                    data.voteActive = active;
+
+                                    if (active) {
+                                        // Инициализация при старте голосования
+                                        data.voteTimer = AASConfig.VOTE_AUTO_START_TIME.get() * 60;
+                                        data.votes.clear();
+
+                                        // Сбрасываем флаги, чтобы сообщения о готовности команд могли сработать снова
+                                        data.blueReady = false;
+                                        data.redReady = false;
+                                    }
+
+                                    data.setDirty();
+                                    PacketHandler.sendToAllClients(level, data);
+
+                                    String status = active ? "started" : "stopped";
+                                    ctx.getSource().sendSuccess(() -> Component.literal("Voting process " + status), true);
+
+                                    return 1;
+                                })))
         );
     }
 
@@ -349,6 +388,44 @@ public class ModCommands {
                 syncDataToAll(level, data);
 
                 source.sendSuccess(() -> Component.literal("Point '" + name + "' reset to NEUTRAL in this world!").withStyle(ChatFormatting.YELLOW), true);
+                return 1;
+            }
+        }
+
+        source.sendFailure(Component.literal("Point '" + name + "' not found in THIS world!"));
+        return 0;
+    }
+
+    // === ПРИНУДИТЕЛЬНЫЙ ЗАХВАТ КОНКРЕТНОЙ ТОЧКИ ===
+    private static int forceCapturePoint(CommandSourceStack source, String teamInput, String name) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+        String targetTeam = teamInput.toUpperCase();
+
+        if (!targetTeam.equals("BLUE") && !targetTeam.equals("RED")) {
+            source.sendFailure(Component.literal("Invalid team! Please use 'blue' or 'red'."));
+            return 0;
+        }
+
+        for (AASWorldData.CapturePoint point : data.capturePoints) {
+            if (point.name.equals(name)) {
+                point.owner = targetTeam;
+                point.progress = 1.0f; // 100% прогресса
+                point.capturingTeam = "NONE";
+
+                data.setDirty();
+                syncDataToAll(level, data); // Обновляем у всех игроков
+
+                ChatFormatting color = targetTeam.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
+
+                // Сообщение админу
+                source.sendSuccess(() -> Component.literal("Point '" + name + "' forcefully captured by " + targetTeam + "!").withStyle(color), true);
+
+                // Уведомление в глобальный чат о захвате
+                level.getServer().getPlayerList().broadcastSystemMessage(
+                        Component.literal("[ADMIN] Point " + name + " forcefully captured by " + targetTeam).withStyle(color), false
+                );
+
                 return 1;
             }
         }

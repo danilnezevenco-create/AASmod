@@ -30,8 +30,8 @@ public class PacketOpenKitEditor {
                     NetworkHooks.openScreen(player, new net.minecraft.world.MenuProvider() {
                         @Override public Component getDisplayName() { return Component.literal("Edit Kit: " + kit.name); }
                         @Override public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inv, net.minecraft.world.entity.player.Player p) {
-                            SimpleContainer container = new SimpleContainer(41);
-                            for(int i=0; i<41; i++) container.setItem(i, kit.inventory.get(i).copy());
+                            SimpleContainer container = new SimpleContainer(49);
+                            for(int i=0; i<49; i++) container.setItem(i, kit.inventory.get(i).copy());
 
                             // === ИСПРАВЛЕННАЯ СТРОКА: Передаем 11 аргументов (включая kit.saveNbtFlags в конце) ===
                             return new KitEditorMenu(id, inv, container, msg.team, kit.name,

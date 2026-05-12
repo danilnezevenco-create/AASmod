@@ -163,7 +163,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                     vType = supply.getVehicleType();
                     penalty = supply.getPenalty();
                     entity.getPersistentData().putBoolean("AAS_IsSupplyTruck", true);
-                    entity.getPersistentData().putInt("AAS_SupplyAmmo", 2);
+                    entity.getPersistentData().putInt("AAS_SupplyAmmo", com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get());
                     entity.getPersistentData().putString("AAS_VehicleTeam", vTeam);
                     entity.getPersistentData().putString("AAS_VehicleType", vType);
                     entity.getPersistentData().putInt("AAS_TicketPenalty", penalty);

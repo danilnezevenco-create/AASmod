@@ -1752,6 +1752,16 @@ public class MainSupplyBlockEntity extends BlockEntity {
         AABB searchArea = new AABB(pos).inflate(15);
         List<Entity> nearbyEntities = level.getEntitiesOfClass(Entity.class, searchArea);
 
+        // === РќРћР’РћР•: РЎРћР РўРР РћР’РљРђ РџРћ РџР РРћР РРўР•РўРЈ ===
+        // РЎРЅР°С‡Р°Р»Р° С‚Рµ, Сѓ РєРѕРіРѕ РµСЃС‚СЊ РїР°СЃСЃР°Р¶РёСЂС‹-РёРіСЂРѕРєРё, Р·Р°С‚РµРј РѕСЃС‚Р°Р»СЊРЅС‹Рµ
+        nearbyEntities.sort((e1, e2) -> {
+            boolean p1HasPlayer = e1.getPassengers().stream().anyMatch(p -> p instanceof Player);
+            boolean p2HasPlayer = e2.getPassengers().stream().anyMatch(p -> p instanceof Player);
+            if (p1HasPlayer && !p2HasPlayer) return -1;
+            if (!p1HasPlayer && p2HasPlayer) return 1;
+            return 0;
+        });
+
         long currentTime = level.getGameTime();
 
         for (Entity vehicle : nearbyEntities) {
@@ -1774,8 +1784,9 @@ public class MainSupplyBlockEntity extends BlockEntity {
             // Р­РўРђ Р›РћР“РРљРђ РўР•РџР•Р Р¬ РќР• Р—РђР’РРЎРРў РћРў РљРЈР›Р”РђРЈРќРђ
             if (vehicle.getPersistentData().getBoolean("AAS_IsSupplyTruck")) {
                 int currentAmmo = vehicle.getPersistentData().getInt("AAS_SupplyAmmo");
+                int maxCrates = com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get();
 
-                if (currentAmmo < 2) {
+                if (currentAmmo < maxCrates) {
                     int supplyTimer = vehicle.getPersistentData().getInt("AAS_TruckReloadTimer");
                     supplyTimer++;
 
@@ -1784,7 +1795,7 @@ public class MainSupplyBlockEntity extends BlockEntity {
                         vehicle.getPersistentData().putInt("AAS_TruckReloadTimer", 0);
 
                         // РЈРІРµРґРѕРјР»РµРЅРёРµ РІ Р§РђРў (С‡С‚РѕР±С‹ Р±С‹Р»Рѕ РІС‹С€Рµ Рё РЅРµ РїРµСЂРµРєСЂС‹РІР°Р»РѕСЃСЊ)
-                        sendChatMessageToPassengers(vehicle, "[Supply] +1 Crate Loaded (" + (currentAmmo + 1) + "/2)", ChatFormatting.GOLD);
+                        sendChatMessageToPassengers(vehicle, "[Supply] +1 Crate Loaded (" + (currentAmmo + 1) + "/" + maxCrates + ")", ChatFormatting.GOLD);
                         spawnEffects(level, vehicle);
                     } else {
                         vehicle.getPersistentData().putInt("AAS_TruckReloadTimer", supplyTimer);
@@ -2939,12 +2950,10 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public int initialTimeSettings = 60;
     public String vehicleIdString = "";
 
-    // РўР•РџР•Р Р¬ Р­РўРћ РЎРРЎРўР•РњРќРћР• Р’Р Р•РњРЇ (РјРёР»Р»РёСЃРµРєСѓРЅРґС‹), РєРѕРіРґР° РґРѕР»Р¶РµРЅ РїСЂРѕРёР·РѕР№С‚Рё СЃРїР°РІРЅ
     public long spawnTimestamp = 0;
-
     public boolean hasSpawnedOnce = false;
     private UUID lastVehicleUUID = null;
-    private int loadTimer = 60; // Р—Р°РґРµСЂР¶РєР° РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё С‡Р°РЅРєР° (С‡С‚РѕР±С‹ РЅР°Р№С‚Рё СЃСѓС‰РµСЃС‚РІСѓСЋС‰СѓСЋ С‚РµС…РЅРёРєСѓ)
+    private int loadTimer = 60;
 
     public VehicleSpawnerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
@@ -2953,15 +2962,12 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     @Override
     public void onLoad() {
         super.onLoad();
-        // Р”Р°РµРј 3 СЃРµРєСѓРЅРґС‹ (60 С‚РёРєРѕРІ) РЅР° С‚Рѕ, С‡С‚РѕР±С‹ РјРёСЂ РїСЂРѕРіСЂСѓР·РёР» СЃСѓС‰РЅРѕСЃС‚Рё РІРѕРєСЂСѓРі,
-        // РїСЂРµР¶РґРµ С‡РµРј СЂРµС€Р°С‚СЊ, Р¶РёРІР° С‚РµС…РЅРёРєР° РёР»Рё РЅРµС‚.
         this.loadTimer = 60;
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
         if (level.isClientSide) return;
 
-        // Р–РґРµРј РїСЂРѕРіСЂСѓР·РєРё СЃСѓС‰РЅРѕСЃС‚РµР№ РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё С‡Р°РЅРєР°
         if (be.loadTimer > 0) {
             be.loadTimer--;
             return;
@@ -2969,7 +2975,6 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
 
         AASWorldData data = AASWorldData.get((ServerLevel) level);
 
-        // === РЎР‘Р РћРЎ РџР Р РћРЎРўРђРќРћР’РљР• РР“Р Р« ===
         if (!data.isGameStarted) {
             if (be.hasSpawnedOnce || be.spawnTimestamp != 0 || be.lastVehicleUUID != null) {
                 be.hasSpawnedOnce = false;
@@ -2981,60 +2986,49 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             return;
         }
 
-        // РРЎРџРћР›Р¬Р—РЈР•Рњ Р Р•РђР›Р¬РќРћР• Р’Р Р•РњРЇ (System.currentTimeMillis)
         long currentTime = System.currentTimeMillis();
 
-        // 1. РџР РћР’Р•Р РљРђ РЎРЈР©Р•РЎРўР’РћР’РђРќРРЇ РўР•РҐРќРРљР
-        if (be.lastVehicleUUID != null) {
-            Entity existing = ((ServerLevel) level).getEntity(be.lastVehicleUUID);
+        // === Р“Р›РћР‘РђР›Р¬РќРђРЇ РџР РћР’Р•Р РљРђ (Р—Р°С‰РёС‚Р° РѕС‚ РґСѓР±Р»РёРєР°С‚РѕРІ РїСЂРё РІС‹РіСЂСѓР·РєРµ С‡Р°РЅРєРѕРІ) ===
+        // РС‰РµРј РІ "Р±СѓС…РіР°Р»С‚РµСЂРёРё" РјРёСЂР° Р·Р°РїРёСЃСЊ Рѕ С‚РµС…РЅРёРєРµ, РєРѕС‚РѕСЂР°СЏ РїСЂРёРІСЏР·Р°РЅР° РёРјРµРЅРЅРѕ Рє СЌС‚РѕРјСѓ СЃРїР°РІРЅРµСЂСѓ
+        boolean vehicleExistsGlobally = data.markedVehicles.stream()
+                .anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
 
-            // Р•СЃР»Рё С‚РµС…РЅРёРєРё РЅРµС‚ РІ РјРёСЂРµ РёР»Рё РѕРЅР° РјРµСЂС‚РІР°
-            // (Р’Р°Р¶РЅРѕ: РµСЃР»Рё С‡Р°РЅРє РІС‹РіСЂСѓР¶РµРЅ, getEntity РјРѕР¶РµС‚ РІРµСЂРЅСѓС‚СЊ null, РЅРѕ РјС‹ Р·Р°С‰РёС‰РµРЅС‹ loadTimer'РѕРј РїСЂРё Р·Р°РіСЂСѓР·РєРµ)
-            if (existing == null || !existing.isAlive()) {
-                be.lastVehicleUUID = null;
-
-                // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІСЂРµРјСЏ СЂРµСЃРїР°РІРЅР°: РЎРµР№С‡Р°СЃ + РќР°СЃС‚СЂРѕР№РєР° * 1000 (РїРµСЂРµРІРѕРґ СЃРµРє РІ РјСЃ)
-                be.spawnTimestamp = currentTime + (be.respawnTimeSettings * 1000L);
-
-                be.setChanged();
-                be.syncToClient();
-            } else {
-                // Р•СЃР»Рё С‚РµС…РЅРёРєР° Р¶РёРІР°, СЃР±СЂР°СЃС‹РІР°РµРј С‚Р°Р№РјРµСЂ (РЅР° РІСЃСЏРєРёР№ СЃР»СѓС‡Р°Р№)
-                if (be.spawnTimestamp != 0) {
-                    be.spawnTimestamp = 0;
-                    be.setChanged();
-                    be.syncToClient();
-                }
-            }
-        }
-
-        // 2. Р›РћР“РРљРђ Р—РђРџРЈРЎРљРђ РўРђР™РњР•Р Рђ Р РЎРџРђР’РќРђ
-        if (be.lastVehicleUUID == null) {
-
-            // Р•СЃР»Рё С‚Р°Р№РјРµСЂ РµС‰Рµ РЅРµ Р·Р°РїСѓС‰РµРЅ (СЂР°РІРµРЅ 0), Р·Р°РїСѓСЃРєР°РµРј РµРіРѕ
-            if (be.spawnTimestamp == 0) {
-                // Р’С‹Р±РёСЂР°РµРј Р·Р°РґРµСЂР¶РєСѓ: Р•СЃР»Рё СѓР¶Рµ СЃРїР°РІРЅРёР»СЃСЏ -> RespawnTime, РµСЃР»Рё РЅРµС‚ -> InitialTime
-                int delaySeconds = be.hasSpawnedOnce ? be.respawnTimeSettings : be.initialTimeSettings;
-
-                // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С†РµР»РµРІРѕРµ РІСЂРµРјСЏ (РІ РјРёР»Р»РёСЃРµРєСѓРЅРґР°С…)
-                be.spawnTimestamp = currentTime + (delaySeconds * 1000L);
-                be.setChanged();
-                be.syncToClient();
-
-            }
-
-            // Р•СЃР»Рё С‚РµРєСѓС‰РµРµ СЂРµР°Р»СЊРЅРѕРµ РІСЂРµРјСЏ >= С†РµР»РµРІРѕРіРѕ РІСЂРµРјРµРЅРё -> РЎРџРђР’Рќ
-            // Р­С‚Рѕ СѓСЃР»РѕРІРёРµ СЃСЂР°Р±РѕС‚Р°РµС‚ СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё С‡Р°РЅРєР°, РµСЃР»Рё РІСЂРµРјСЏ РёСЃС‚РµРєР»Рѕ, РїРѕРєР° С‡Р°РЅРє Р±С‹Р» РІС‹РіСЂСѓР¶РµРЅ.
-            if (currentTime >= be.spawnTimestamp) {
-                be.spawnVehicle();
-
-                // РЎР±СЂРѕСЃ С‚Р°Р№РјРµСЂР° РїРѕСЃР»Рµ СЃРїР°РІРЅР°
+        if (vehicleExistsGlobally) {
+            // РўРµС…РЅРёРєР° РіРґРµ-С‚Рѕ Р¶РёРІР° (РґР°Р¶Рµ РµСЃР»Рё С‡Р°РЅРє СЃ РЅРµР№ РІС‹РіСЂСѓР¶РµРЅ).
+            // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј С‚Р°Р№РјРµСЂ Рё РЅРёС‡РµРіРѕ РЅРµ СЃРїР°РІРЅРёРј.
+            if (be.spawnTimestamp != 0) {
                 be.spawnTimestamp = 0;
                 be.setChanged();
                 be.syncToClient();
             }
+            return;
         }
 
+        // Р•СЃР»Рё РјС‹ Р·РґРµСЃСЊ, Р·РЅР°С‡РёС‚ РІ РіР»РѕР±Р°Р»СЊРЅРѕРј СЃРїРёСЃРєРµ С‚РµС…РЅРёРєРё СЌС‚РѕРіРѕ СЃРїР°РІРЅРµСЂР° РќР•Рў (РѕРЅР° СѓРЅРёС‡С‚РѕР¶РµРЅР°)
+        if (be.lastVehicleUUID != null) {
+            // РўРµС…РЅРёРєР° Р±С‹Р»Р°, РЅРѕ РёСЃС‡РµР·Р»Р° РёР· СЃРїРёСЃРєР° -> Р·Р°РїСѓСЃРєР°РµРј С‚Р°Р№РјРµСЂ СЂРµСЃРїР°РІРЅР°
+            be.lastVehicleUUID = null;
+            be.spawnTimestamp = currentTime + (be.respawnTimeSettings * 1000L);
+            be.setChanged();
+            be.syncToClient();
+        }
+
+        // Р›РѕРіРёРєР° СЂР°Р±РѕС‚С‹ С‚Р°Р№РјРµСЂР°
+        if (be.spawnTimestamp == 0) {
+            // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј С‚Р°Р№РјРµСЂ РІ РїРµСЂРІС‹Р№ СЂР°Р· (РёР»Рё РїРѕСЃР»Рµ СѓРЅРёС‡С‚РѕР¶РµРЅРёСЏ)
+            int delaySeconds = be.hasSpawnedOnce ? be.respawnTimeSettings : be.initialTimeSettings;
+            be.spawnTimestamp = currentTime + (delaySeconds * 1000L);
+            be.setChanged();
+            be.syncToClient();
+        }
+
+        // РџСЂРѕРІРµСЂРєР° Р·Р°РІРµСЂС€РµРЅРёСЏ РѕС‚СЃС‡РµС‚Р°
+        if (currentTime >= be.spawnTimestamp) {
+            be.spawnVehicle();
+            be.spawnTimestamp = 0;
+            be.setChanged();
+            be.syncToClient();
+        }
     }
 
     private void spawnVehicle() {
@@ -3054,12 +3048,10 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             entity.setYRot(this.vehicleYaw);
             entity.setYHeadRot(this.vehicleYaw);
 
-            // РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ СЂРµРіРёСЃС‚СЂР°С†РёРё РЅР° РєР°СЂС‚Рµ
             String vTeam = "NEUTRAL";
             String vType = "DEFAULT";
             int penalty = 0;
 
-            // РџСЂРёРјРµРЅСЏРµРј РЅР°СЃС‚СЂРѕР№РєРё РёР· СЃР»РѕС‚Р° РјРѕРґРёС„РёРєР°С‚РѕСЂР°
             ItemStack modifierStack = inventory.getStackInSlot(0);
             if (!modifierStack.isEmpty()) {
                 if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
@@ -3075,15 +3067,19 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                     vType = supply.getVehicleType();
                     penalty = supply.getPenalty();
                     entity.getPersistentData().putBoolean("AAS_IsSupplyTruck", true);
-                    entity.getPersistentData().putInt("AAS_SupplyAmmo", 2);
+                    entity.getPersistentData().putInt("AAS_SupplyAmmo", com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get());
                     entity.getPersistentData().putString("AAS_VehicleTeam", vTeam);
                     entity.getPersistentData().putString("AAS_VehicleType", vType);
                     entity.getPersistentData().putInt("AAS_TicketPenalty", penalty);
                 }
             }
 
-            // === Р Р•Р“РРЎРўР РђР¦РРЇ РўР•РҐРќРРљР Р”Р›РЇ РљРђР РўР« ===
+            // === Р Р•Р“РРЎРўР РђР¦РРЇ РўР•РҐРќРРљР РЎ РџР РР’РЇР—РљРћР™ Рљ РџРћР—РР¦РР Р‘Р›РћРљРђ ===
             AASWorldData worldData = AASWorldData.get((ServerLevel) level);
+
+            // РќР° РІСЃСЏРєРёР№ СЃР»СѓС‡Р°Р№ С‡РёСЃС‚РёРј СЃС‚Р°СЂС‹Рµ Р·Р°РїРёСЃРё СЌС‚РѕРіРѕ СЃРїР°РІРЅРµСЂР°
+            worldData.markedVehicles.removeIf(v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
+
             worldData.markedVehicles.add(new AASWorldData.VehicleRecord(
                     entity.getUUID(),
                     vTeam,
@@ -3091,13 +3087,13 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                     entity.getX(),
                     entity.getY(),
                     entity.getZ(),
-                    entity.getYRot()
+                    entity.getYRot(),
+                    this.worldPosition // РџРµСЂРµРґР°РµРј BlockPos СЃРїР°РІРЅРµСЂР°
             ));
             worldData.setDirty();
             PacketHandler.sendToAllClients((ServerLevel)level, worldData);
-            // =====================================
 
-            // Р—Р°РїРѕР»РЅРµРЅРёРµ РёРЅРІРµРЅС‚Р°СЂСЏ С‚РµС…РЅРёРєРё (РІР°С€ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РєРѕРґ)
+            // Р—Р°РїРѕР»РЅРµРЅРёРµ РёРЅРІРµРЅС‚Р°СЂСЏ
             entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
                 for (int i = 0; i < 32; i++) {
                     ItemStack contentStack = inventory.getStackInSlot(i + 1);
@@ -3116,6 +3112,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             level.addFreshEntity(entity);
             this.lastVehicleUUID = entity.getUUID();
             this.hasSpawnedOnce = true;
+            this.setChanged();
         }
     }
 
@@ -3676,7 +3673,7 @@ public class AASMapRenderer implements AutoCloseable {
 
     private int mapX, mapY, mapSize;
     // РўРµРєСѓС‰РёР№ Р·СѓРј (СЃРєРѕР»СЊРєРѕ Р±Р»РѕРєРѕРІ РІ РѕРґРЅРѕРј РїРёРєСЃРµР»Рµ РёРЅС‚РµСЂС„РµР№СЃР°)
-    private double mapScale = 4.0;
+    private double getMapScale() { return ClientData.mapScale; }
 
     private double mapPanX = 0;
     private double mapPanZ = 0;
@@ -3744,6 +3741,7 @@ public class AASMapRenderer implements AutoCloseable {
         if (localPlayer == null) return;
 
         // 1. РљРѕРѕСЂРґРёРЅР°С‚С‹ РєР°РјРµСЂС‹ (РёРіСЂРѕРє + РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РєР°СЂС‚С‹)
+        double currentScale = ClientData.mapScale;
         double cx = localPlayer.getX() + mapPanX;
         double cz = localPlayer.getZ() + mapPanZ;
 
@@ -3758,7 +3756,7 @@ public class AASMapRenderer implements AutoCloseable {
 
         // 3. РњР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ Рё С†РµРЅС‚СЂРёСЂРѕРІР°РЅРёРµ
         pose.translate(mapX + mapSize / 2.0, mapY + mapSize / 2.0, 0);
-        float scale = 1.0f / (float) mapScale;
+        float scale = 1.0f / (float) currentScale;
         pose.scale(scale, scale, 1.0f);
 
         int s = ClientData.mapSizeBlocks;
@@ -3785,12 +3783,12 @@ public class AASMapRenderer implements AutoCloseable {
         pose.popPose();
 
         // 4. РћС‚СЂРёСЃРѕРІРєР° РѕР±СЉРµРєС‚РѕРІ (С„Р»Р°РіРё, РёРіСЂРѕРєРё, С‚РµС…РЅРёРєР°)
-        renderOverlays(gui, mc, cx, cz, mapScale);
-        renderStructures(gui, mc, cx, cz, mapScale);
-        renderVehicles(gui, mc, cx, cz, mapScale);
-        renderAllPlayers(gui, mc, localPlayer, cx, cz, mapScale);
-        renderSquadMarkerLogic(gui, mc, cx, cz, mapScale);
-        renderTacticalMarkers(gui, mc, cx, cz, mapScale);
+        renderOverlays(gui, mc, cx, cz, currentScale);
+        renderStructures(gui, mc, cx, cz, currentScale);
+        renderVehicles(gui, mc, cx, cz, currentScale);
+        renderAllPlayers(gui, mc, localPlayer, cx, cz, currentScale);
+        renderSquadMarkerLogic(gui, mc, cx, cz, currentScale);
+        renderTacticalMarkers(gui, mc, cx, cz, currentScale);
 
         gui.disableScissor();
     }
@@ -3882,9 +3880,18 @@ public class AASMapRenderer implements AutoCloseable {
 
             // 3. РћС‚СЂРёСЃРѕРІРєР° РљР РЈР–РљРђ (РґР»СЏ РІСЃРµС… РєСЂРѕРјРµ СЃР°РјРѕРіРѕ СЃРµР±СЏ)
             if (!info.name.equals(myName)) {
-                float r = 0.2f, g = 0.6f, b = 1.0f; // РљРѕРјР°РЅРґР° (РіРѕР»СѓР±РѕР№)
-                if (info.squadId != -1 && info.squadId == mySquadId) {
-                    r = 0.2f; g = 1.0f; b = 0.2f; // РћС‚СЂСЏРґ (Р·РµР»РµРЅС‹Р№)
+                float r = 0.2f, g = 0.6f, b = 1.0f; // Р”РµС„РѕР»С‚ (РЎРёРЅРёР№)
+
+                // Р•СЃР»Рё СЏ СЃРїРµРєС‚СЂ - СЂР°СЃРєСЂР°С€РёРІР°СЋ РёРєРѕРЅРєРё РІ СЂРµР°Р»СЊРЅС‹Рµ С†РІРµС‚Р° РєРѕРјР°РЅРґ
+                if (mc.player.isSpectator() || mc.player.isCreative()) {
+                    if (info.team.equalsIgnoreCase("RED")) {
+                        r = 1.0f; g = 0.2f; b = 0.2f; // РљСЂР°СЃРЅС‹Р№
+                    }
+                } else {
+                    // РЎС‚Р°СЂР°СЏ Р»РѕРіРёРєР°: РµСЃР»Рё СЏ РІ РѕС‚СЂСЏРґРµ - Р·РµР»РµРЅС‹Р№
+                    if (info.squadId != -1 && info.squadId == mySquadId) {
+                        r = 0.2f; g = 1.0f; b = 0.2f;
+                    }
                 }
 
                 pose.pushPose();
@@ -3946,13 +3953,13 @@ public class AASMapRenderer implements AutoCloseable {
     public void centerOnPlayer() { mapPanX = 0; mapPanZ = 0; }
     public double getCenterX(LocalPlayer player) { return player.getX() + mapPanX; }
     public double getCenterZ(LocalPlayer player) { return player.getZ() + mapPanZ; }
-    public double getBlocksPerPixel() { return mapScale; }
+    public double getBlocksPerPixel() { return ClientData.mapScale; }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (isMouseOver(mouseX, mouseY)) {
             // РџСЂРёР±Р»РёР¶РµРЅРёРµ/РѕС‚РґР°Р»РµРЅРёРµ (РјРµРЅСЏРµРј РєРѕР»-РІРѕ Р±Р»РѕРєРѕРІ РІ 1 РїРёРєСЃРµР»Рµ СЌРєСЂР°РЅР°)
-            if (delta > 0) mapScale /= 1.2; else mapScale *= 1.2;
-            mapScale = Mth.clamp(mapScale, 0.5, 25.0);
+            if (delta > 0) ClientData.mapScale /= 1.2; else ClientData.mapScale *= 1.2;
+            ClientData.mapScale = Mth.clamp(ClientData.mapScale, 0.5, 25.0);
             return true;
         }
         return false;
@@ -3969,11 +3976,11 @@ public class AASMapRenderer implements AutoCloseable {
             if (name.contains("BLUE")) myTeam = "BLUE";
             else if (name.contains("RED")) myTeam = "RED";
         }
-        boolean isAdmin = mc.player.isCreative();
+        boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
 
         for (AASWorldData.VehicleRecord record : ClientData.clientVehicles) {
             // Р¤РёР»СЊС‚СЂ: РІРёРґРёРј С‚РѕР»СЊРєРѕ СЃРІРѕСЋ РєРѕРјР°РЅРґСѓ (РёР»Рё Р°РґРјРёРЅ)
-            if (!record.team.equalsIgnoreCase(myTeam) && !isAdmin) continue;
+            if (!record.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
             // Р’РђР–РќРћ: РСЃРїРѕР»СЊР·СѓРµРј РєРѕРѕСЂРґРёРЅР°С‚С‹ x Рё z РїСЂСЏРјРѕ РёР· record (СЃРµСЂРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ)
             // Р­С‚Рѕ РїРѕР·РІРѕР»СЏРµС‚ РІРёРґРµС‚СЊ С‚РµС…РЅРёРєСѓ, РґР°Р¶Рµ РµСЃР»Рё РѕРЅР° РЅРµ РїСЂРѕРіСЂСѓР¶РµРЅР° Сѓ С‚РµР±СЏ Р»РёС‡РЅРѕ
@@ -4013,13 +4020,13 @@ public class AASMapRenderer implements AutoCloseable {
             if (name.contains("BLUE")) myTeam = "BLUE";
             else if (name.contains("RED")) myTeam = "RED";
         }
-        boolean isAdmin = mc.player.isCreative();
+        boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
 
         // 2. РћРўР РРЎРћР’РљРђ РҐРђР‘РћР’ (FOB)
         for (AASWorldData.HubInfo hub : ClientData.clientHubs) {
             // РЈСЃР»РѕРІРёРµ: РҐР°Р± РїРѕСЃС‚СЂРѕРµРЅ Р (РїСЂРёРЅР°РґР»РµР¶РёС‚ С‚РІРѕРµР№ РєРѕРјР°РЅРґРµ РР›Р С‚С‹ Р°РґРјРёРЅ)
             if (!hub.constructed) continue;
-            if (!hub.team.equalsIgnoreCase(myTeam) && !isAdmin) continue;
+            if (!hub.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
             // РџРѕР·РёС†РёСЏ С…Р°Р±Р° (РѕРЅ РІСЃРµРіРґР° СЃС‚РѕРёС‚ РЅР° С†РµР»С‹С… РєРѕРѕСЂРґРёРЅР°С‚Р°С… Р±Р»РѕРєР°)
             double dx = (hub.pos.getX() + 0.5 - cx) / bpp;
@@ -4043,7 +4050,7 @@ public class AASMapRenderer implements AutoCloseable {
         for (AASWorldData.Squad squad : ClientData.clientSquads) {
             // РЈСЃР»РѕРІРёРµ: РЈ РѕС‚СЂСЏРґР° РµСЃС‚СЊ СЂР°Р»Р»РёРє Р (СЌС‚Рѕ С‚РІРѕР№ РѕС‚СЂСЏРґ/РєРѕРјР°РЅРґР° РР›Р С‚С‹ Р°РґРјРёРЅ)
             if (squad.rallyPos == null) continue;
-            if (!squad.team.equalsIgnoreCase(myTeam) && !isAdmin) continue;
+            if (!squad.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
             double dx = (squad.rallyPos.getX() + 0.5 - cx) / bpp;
             double dy = (squad.rallyPos.getZ() + 0.5 - cz) / bpp;
@@ -4250,8 +4257,8 @@ public class AASMapRenderer implements AutoCloseable {
     }
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (isDraggingMap && button == 0) {
-            mapPanX -= (mouseX - lastMouseX) * mapScale;
-            mapPanZ -= (mouseY - lastMouseY) * mapScale;
+            mapPanX -= (mouseX - lastMouseX) * ClientData.mapScale;
+            mapPanZ -= (mouseY - lastMouseY) * ClientData.mapScale;
             lastMouseX = mouseX;
             lastMouseY = mouseY;
             return true;
@@ -4330,7 +4337,7 @@ public class CrateRadialScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
 
-        String matText = "Mats: " + materials + " / 50";
+        String matText = "Mats: " + materials + " / " + AASConfig.SUPPLY_CRATE_MATERIALS.get();
         gui.drawCenteredString(this.font, matText, centerX, centerY + 5, 0xFFFFAA00);
 
         double dx = mouseX - centerX;
@@ -4714,11 +4721,12 @@ public class DownedScreen extends Screen {
         gui.drawCenteredString(this.font, "YOU ARE CRITICALLY INJURED", this.width / 2, this.height / 2 - 20, 0xFFFFFF);
 
         // Р РђРЎР§Р•Рў РћРЎРўРђР’РЁР•Р“РћРЎРЇ Р’Р Р•РњР•РќР Р”Р›РЇ BLEED OUT (3 РјРёРЅСѓС‚С‹ = 180 СЃРµРєСѓРЅРґ)
+        int maxSeconds = com.example.aas.config.AASConfig.MAX_DOWNED_TIME_SECONDS.get();
         long elapsedMillis = System.currentTimeMillis() - this.screenOpenTime;
-        long remainingBleedoutSeconds = 180 - (elapsedMillis / 1000);
+        long remainingBleedoutSeconds = maxSeconds - (elapsedMillis / 1000);
+
         if (remainingBleedoutSeconds < 0) remainingBleedoutSeconds = 0;
 
-        // РћС‚СЂРёСЃРѕРІРєР° С‚Р°Р№РјРµСЂР° РІ СЃР°РјРѕРј РЅРёР·Сѓ СЌРєСЂР°РЅР°, РїРѕРґ РєРЅРѕРїРєР°РјРё
         String timerText = "BLEEDING OUT IN: " + remainingBleedoutSeconds + "s";
         gui.drawCenteredString(this.font, timerText, this.width / 2, this.height - 15, 0xFF5555);
 
@@ -5053,7 +5061,6 @@ public class HubRadialScreen extends Screen {
 FILE: KitEditorScreen.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\gui\KitEditorScreen.java
 ==========================================
-// PATH: src\main\java\com\example\aas\client\gui\KitEditorScreen.java
 package com.example.aas.client.gui;
 
 import com.example.aas.menu.KitEditorMenu;
@@ -5069,7 +5076,7 @@ import net.minecraft.world.entity.player.Inventory;
 public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
     private EditBox maxTeamBox;
     private EditBox maxSquadBox;
-    private EditBox minPlayersBox; // <--- РќРћР’РћР• РџРћР›Р•
+    private EditBox minPlayersBox;
 
     public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -5085,7 +5092,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         int x = leftPos;
         int y = topPos;
 
-        // РљРѕРјРїР°РєС‚РЅРѕРµ СЂР°Р·РјРµС‰РµРЅРёРµ, С‡С‚РѕР±С‹ СѓРјРµСЃС‚РёС‚СЊ 3 РїРѕР»СЏ
         addRenderableWidget(Button.builder(Component.literal(menu.isLeaderOnly ? "[X] Squad Ld Only" : "[ ] Squad Ld Only"), b -> {
             menu.isLeaderOnly = !menu.isLeaderOnly;
             b.setMessage(Component.literal(menu.isLeaderOnly ? "[X] Squad Ld Only" : "[ ] Squad Ld Only"));
@@ -5099,7 +5105,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         maxSquadBox.setValue(String.valueOf(menu.maxPerSquad));
         addRenderableWidget(maxSquadBox);
 
-        // РџРѕР»Рµ "РњРёРЅРёРјСѓРј РёРіСЂРѕРєРѕРІ РІ РѕС‚СЂСЏРґРµ"
         minPlayersBox = new EditBox(font, x + 144, y + 50, 24, 14, Component.empty());
         minPlayersBox.setValue(String.valueOf(menu.minSquadPlayers));
         addRenderableWidget(minPlayersBox);
@@ -5114,7 +5119,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         try { menu.maxPerSquad = Integer.parseInt(maxSquadBox.getValue()); } catch(Exception ignored){}
         try { menu.minSquadPlayers = Integer.parseInt(minPlayersBox.getValue()); } catch(Exception ignored){}
 
-        // РџР•Р Р•Р”РђР•Рњ 8 РђР Р“РЈРњР•РќРўРћР’ (РґРѕР±Р°РІР»РµРЅ menu.saveNbtFlags РІ РєРѕРЅС†Рµ)
         PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
                 menu.team, menu.kitName, menu.isLeaderOnly,
                 menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
@@ -5132,41 +5136,33 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
         int x = leftPos;
         int y = topPos;
-        int labelColor = 0xCCCCCC; // РЎРІРµС‚Р»Рѕ-СЃРµСЂС‹Р№ РґР»СЏ РїРѕРґРїРёСЃРµР№
-        int hintColor = 0xAAAAAA;  // РЎРµСЂС‹Р№ РґР»СЏ РёРЅСЃС‚СЂСѓРєС†РёР№
+        int labelColor = 0xCCCCCC;
 
-        // --- 1. РџРћР”РџРРЎР Рљ РџРћР›РЇРњ (РЎР»РµРІР° РѕС‚ РєРѕСЂРѕР±РѕРє) ---
-        // Р РёСЃСѓРµРј СЃРїСЂР°РІР° РЅР°Р»РµРІРѕ, С‡С‚РѕР±С‹ РІС‹СЂРѕРІРЅСЏС‚СЊ РїРѕ РїСЂР°РІРѕРјСѓ РєСЂР°СЋ РїРµСЂРµРґ РїРѕР»СЏРјРё
         gui.drawString(font, "Max/team", x + 98, y + 17, labelColor, false);
         gui.drawString(font, "Max/Sqd",  x + 103, y + 35, labelColor, false);
         gui.drawString(font, "Min/Sqd",  x + 103, y + 53, labelColor, false);
 
-        // --- 2. РРќРЎРўР РЈРљР¦РР РџРћ РЈРџР РђР’Р›Р•РќРР® (РџРѕРґ РєРЅРѕРїРєРѕР№) ---
-        // РЎРјРµС‰РµРЅРёРµ y + 36, С‚Р°Рє РєР°Рє РєРЅРѕРїРєР° Р·Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР° y + 32
         gui.pose().pushPose();
-        gui.pose().scale(0.9f, 0.9f, 1.0f); // РќРµРјРЅРѕРіРѕ СѓРјРµРЅСЊС€РёРј С‚РµРєСЃС‚, С‡С‚РѕР±С‹ РІР»РµР·Р»Рѕ
-
-        // РџРµСЂРµСЃС‡РёС‚С‹РІР°РµРј РєРѕРѕСЂРґРёРЅР°С‚С‹ РёР·-Р·Р° СЃРєРµР№Р»Р° (x/0.9, y/0.9)
+        gui.pose().scale(0.9f, 0.9f, 1.0f);
         int scaledX = (int)((x + 8) / 0.9f);
         int scaledY = (int)((y + 36) / 0.9f);
-
-        gui.drawString(font, "MMB: Toggle Resupply", scaledX, scaledY, 0x80FF80, false); // РЎРІРµС‚Р»Рѕ-Р·РµР»РµРЅС‹Р№
-        gui.drawString(font, "Shift + MMB: Save NBT", scaledX, scaledY + 10, 0x80FFFF, false); // Р‘РёСЂСЋР·РѕРІС‹Р№
-
+        gui.drawString(font, "MMB: Toggle Resupply", scaledX, scaledY, 0x80FF80, false);
+        gui.drawString(font, "Shift + MMB: Save NBT", scaledX, scaledY + 10, 0x80FFFF, false);
         gui.pose().popPose();
 
-        // --- 3. Р›РћР“РРљРђ РћРўР РРЎРћР’РљР Р РђРњРћРљ (РўРІРѕР№ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РєРѕРґ) ---
+        // --- Р›РћР“РРљРђ РћРўР РРЎРћР’РљР Р РђРњРћРљ (РћР±РЅРѕРІР»РµРЅРѕ РґРѕ 49 СЃР»РѕС‚РѕРІ) ---
         for (int i = 0; i < menu.slots.size(); i++) {
             net.minecraft.world.inventory.Slot slot = menu.slots.get(i);
             if (slot.container == menu.kitInventory) {
                 int idx = slot.getContainerSlot();
-                if (idx >= 0 && idx < 41) {
+                // РўРµРїРµСЂСЊ РїСЂРѕРІРµСЂСЏРµРј РґРѕ 49 (0-48)
+                if (idx >= 0 && idx < 49) {
                     if (menu.saveNbtFlags[idx]) {
-                        // Р—РµР»РµРЅР°СЏ СЂР°РјРєР° РґР»СЏ NBT
+                        // РЎРёРЅСЏСЏ СЂР°РјРєР° РґР»СЏ NBT
                         gui.fill(leftPos + slot.x, topPos + slot.y, leftPos + slot.x + 16, topPos + slot.y + 16, 0x600000FF);
                     }
                     else if (menu.resupplyFlags[idx]) {
-                        // Р–РµР»С‚Р°СЏ/Р—РµР»РµРЅР°СЏ РїСЂРѕР·СЂР°С‡РЅР°СЏ РґР»СЏ Resupply
+                        // Р–РµР»С‚Р°СЏ РїСЂРѕР·СЂР°С‡РЅР°СЏ РґР»СЏ Resupply
                         gui.fill(leftPos + slot.x, topPos + slot.y, leftPos + slot.x + 16, topPos + slot.y + 16, 0x60FFFF00);
                     }
                 }
@@ -5180,12 +5176,11 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             net.minecraft.world.inventory.Slot slot = this.hoveredSlot;
             if (slot != null && slot.container == menu.kitInventory) {
                 int idx = slot.getContainerSlot();
-                if (idx >= 0 && idx < 41) {
+                // РўРµРїРµСЂСЊ СЂР°Р·СЂРµС€Р°РµРј РєР»РёРєРё РїРѕ РёРЅРґРµРєСЃР°Рј РґРѕ 49 (Curios СЃР»РѕС‚С‹)
+                if (idx >= 0 && idx < 49) {
                     if (hasShiftDown()) {
-                        // Shift + РЎРљРњ = РџРµСЂРµРєР»СЋС‡РёС‚СЊ СЃРѕС…СЂР°РЅРµРЅРёРµ NBT
                         menu.saveNbtFlags[idx] = !menu.saveNbtFlags[idx];
                     } else {
-                        // РџСЂРѕСЃС‚Рѕ РЎРљРњ = РџРµСЂРµРєР»СЋС‡РёС‚СЊ СЂРµСЃР°РїР»Р°Р№
                         menu.resupplyFlags[idx] = !menu.resupplyFlags[idx];
                     }
                     return true;
@@ -5197,8 +5192,15 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
     @Override
     protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {
+        // РћСЃРЅРѕРІРЅРѕР№ С„РѕРЅ
         gui.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF333333);
 
+        // --- РќРћР’РћР•: РўРµРјРЅР°СЏ РїР°РЅРµР»СЊ СЃР»РµРІР° РґР»СЏ EXTRA/CURIOS СЃР»РѕС‚РѕРІ ---
+        // РЎРјРµС‰РµРЅРёРµ X: -42, С€РёСЂРёРЅР° 40 РїРёРєСЃРµР»РµР№. Р’С‹СЃРѕС‚Р° СЃРѕРІРїР°РґР°РµС‚ СЃ РѕР±Р»Р°СЃС‚СЊСЋ СЃР»РѕС‚РѕРІ.
+        gui.fill(leftPos - 42, topPos + 62, leftPos - 2, topPos + 142, 0xFF222222);
+        gui.renderOutline(leftPos - 42, topPos + 62, 40, 80, 0xFF000000);
+
+        // РћС‚СЂРёСЃРѕРІРєР° РІСЃРµС… СЂР°РјРѕРє СЃР»РѕС‚РѕРІ (РІРєР»СЋС‡Р°СЏ С‚Рµ, С‡С‚Рѕ Р·Р° РіСЂР°РЅРёС†Р°РјРё РѕСЃРЅРѕРІРЅРѕРіРѕ РѕРєРЅР°)
         for (net.minecraft.world.inventory.Slot slot : menu.slots) {
             gui.fill(leftPos + slot.x - 1, topPos + slot.y - 1, leftPos + slot.x + 17, topPos + slot.y + 17, 0xFF000000);
             gui.fill(leftPos + slot.x, topPos + slot.y, leftPos + slot.x + 16, topPos + slot.y + 16, 0xFF8B8B8B);
@@ -6320,39 +6322,48 @@ public class SquadSelectionScreen extends Screen {
             int arrowX = (actionX > 0 ? actionX : SIDEBAR_WIDTH - 10) - 12;
             int lockX = arrowX - 12;
 
-            if (amILeader) {
-                if (mouseX >= lockX && mouseX <= lockX + 8 && mouseY >= currentY && mouseY <= currentY + 9) {
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
-                    playClickSound(); return;
-                }
+            // РљР»РёРєРё РїРѕ РєРЅРѕРїРєР°Рј РѕС‚СЂСЏРґР° (Lock, Expand, Join/Leave)
+            if (amILeader && mouseX >= lockX && mouseX <= lockX + 8 && mouseY >= currentY && mouseY <= currentY + 9) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
+                playClickSound(); return;
             }
             if (mouseX >= arrowX && mouseX <= arrowX + 8 && mouseY >= currentY && mouseY <= currentY + 9) {
                 if (isExpanded) expandedSquads.remove(squad.id); else expandedSquads.add(squad.id);
                 playClickSound(); return;
             }
-            if (!actionText.isEmpty() && clickable) {
-                if (mouseX >= actionX && mouseX <= actionX + actionWidth && mouseY >= currentY && mouseY <= currentY + 9) {
-                    int act = isMySquad ? 2 : 1;
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(act, squad.id, ""));
-                    playClickSound(); return;
-                }
+            if (!actionText.isEmpty() && clickable && mouseX >= actionX && mouseX <= actionX + actionWidth && mouseY >= currentY && mouseY <= currentY + 9) {
+                int act = isMySquad ? 2 : 1;
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(act, squad.id, ""));
+                playClickSound(); return;
             }
+
             currentY += 12;
 
             if (isExpanded) {
                 List<String> sortedMembers = getSortedMembers(squad);
                 for (String member : sortedMembers) {
+                    boolean isOnline = this.minecraft.getConnection().getPlayerInfo(member) != null;
+                    boolean isLeaderMember = member.equals(squad.leader);
 
-                    // Р•РЎР›Р РљР›РРљРќРЈР›Р РќРђ РљРќРћРџРљРЈ [K] Р’Р«Р‘РћР Рђ РљРРўРђ
-                    if (isMySquad && member.equals(myName)) {
-                        int btnX = 30; // РЎС‚Р°СЂС‚РѕРІС‹Р№ X РґР»СЏ РєРЅРѕРїРєРё K
-                        if (mouseX >= btnX && mouseX <= btnX + 10 && mouseY >= currentY && mouseY <= currentY + 10) {
-                            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
-                            playClickSound();
-                            return;
+                    // РљРЅРѕРїРєР° K РґР»СЏ РєРёРєР° РѕС„С„Р»Р°Р№РЅ Р»РёРґРµСЂР° СЂСЏРґРѕРІС‹РјРё Р±РѕР№С†Р°РјРё
+                    if (isMySquad && !isOnline && isLeaderMember && !amILeader) {
+                        int kX = SIDEBAR_WIDTH - 25;
+                        if (mouseX >= kX && mouseX <= kX + 10 && mouseY >= currentY && mouseY <= currentY + 9) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(3, squad.id, member));
+                            playClickSound(); return;
                         }
                     }
 
+                    // РљРЅРѕРїРєР° [K] РІС‹Р±РѕСЂР° РєРёС‚Р° РґР»СЏ СЃРµР±СЏ
+                    if (isMySquad && member.equals(myName)) {
+                        int btnX = 30;
+                        if (mouseX >= btnX && mouseX <= btnX + 10 && mouseY >= currentY && mouseY <= currentY + 10) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+                            playClickSound(); return;
+                        }
+                    }
+
+                    // РљРЅРѕРїРєРё Р»РёРґРµСЂР° (Kick, Promote)
                     if (amILeader && !member.equals(myName)) {
                         int kX = SIDEBAR_WIDTH - 25;
                         if (mouseX >= kX && mouseX <= kX + 10 && mouseY >= currentY && mouseY <= currentY + 9) {
@@ -6467,6 +6478,7 @@ public class SquadSelectionScreen extends Screen {
                 List<String> sortedMembers = getSortedMembers(squad);
                 for (String member : sortedMembers) {
                     boolean isLeaderMember = member.equals(squad.leader);
+                    boolean isOnline = this.minecraft.getConnection().getPlayerInfo(member) != null;
 
                     // РџР Р•Р¤РРљРЎ РџРћР›РќРћРЎРўР¬Р® РЈР‘Р РђРќ
                     String prefix = "";
@@ -6494,7 +6506,12 @@ public class SquadSelectionScreen extends Screen {
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
                         xOffset += 12; // РћС‚СЃС‚СѓРї РїРѕСЃР»Рµ РёРєРѕРЅРєРё РґРѕ РЅРёРєР°
                     }
-
+                    // --- Р›РћР“РРљРђ РљРќРћРџРљР РљРРљРђ Р”Р›РЇ РћР¤Р¤Р›РђР™Рќ Р›РР”Р•Р Рђ ---
+                    if (isLeaderMember && !isOnline && isMySquad && !amILeader) {
+                        int kickX = SIDEBAR_WIDTH - 25;
+                        boolean hKick = mouseX >= kickX && mouseX <= kickX + 10 && mouseY >= currentY && mouseY <= currentY + 9;
+                        gui.drawString(this.font, "K", kickX, currentY + 1, hKick ? 0xFFFFFFFF : 0xFFFF5555, false);
+                    }
                     // Р РёСЃСѓРµРј РЅРёРє (РїСЂРµС„РёРєСЃ С‚РµРїРµСЂСЊ РїСѓСЃС‚РѕР№ "")
                     gui.drawString(this.font, prefix + member, xOffset, currentY + 1, col, false);
 
@@ -6570,6 +6587,8 @@ public class SquadSelectionScreen extends Screen {
             case "russia": return FLAG_RUSSIA;
             case "usa": return FLAG_USA;
             case "nato": return FLAG_NATO;
+            case "bluefor": return FLAG_BLUEFOR;
+            case "redfor": return FLAG_REDFOR;
             default: return null;
         }
     }
@@ -8145,7 +8164,17 @@ public class AASDeathScreen extends DeathScreen {
         rallySpawnButton.active = false;
         this.addRenderableWidget(rallySpawnButton);
 
-        hubSpawnButton = Button.builder(Component.literal("HUB SPAWN \u25BC"), button -> {
+        // Р›РѕРіРёРєР° РїСЂРѕРІРµСЂРєРё РЅР°Р»РёС‡РёСЏ С…Р°Р±РѕРІ РґР»СЏ С‚РµРєСЃС‚Р°
+        boolean hubsExist = false;
+        if (team != null) {
+            String myTeam = team.getName();
+            hubsExist = ClientData.clientHubs.stream()
+                    .anyMatch(h -> h.team.equalsIgnoreCase(myTeam) && h.constructed && h.dimension.equals(currentDim));
+        }
+
+        String hubBtnText = hubsExist ? "HUB SPAWN \u25BC" : "NO HUBS AVAILABLE";
+
+        hubSpawnButton = Button.builder(Component.literal(hubBtnText), button -> {
             isHubListOpen = !isHubListOpen;
             if (!isHubListOpen) scrollAmount = 0.0f;
             if (isHubListOpen) createHubButtons();
@@ -8253,7 +8282,31 @@ public class AASDeathScreen extends DeathScreen {
         boolean timerFinished = (secondsLeft == 0);
 
         mainSpawnButton.active = timerFinished;
-        hubSpawnButton.active = timerFinished;
+        // 1. РџСЂРѕРІРµСЂСЏРµРј, Р·Р°РєРѕРЅС‡РёР»СЃСЏ Р»Рё С‚Р°Р№РјРµСЂ РІРѕР·СЂРѕР¶РґРµРЅРёСЏ
+        boolean timerFinished = (secondsLeft == 0);
+
+        // 2. РС‰РµРј, РµСЃС‚СЊ Р»Рё Сѓ РЅР°С€РµР№ РєРѕРјР°РЅРґС‹ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ РіРѕС‚РѕРІС‹Р№ РҐР°Р± РІ СЌС‚РѕРј РјРёСЂРµ
+        boolean hasAtLeastOneHub = false;
+        Team team = this.minecraft.player.getTeam();
+        if (team != null) {
+            String myTeam = team.getName();
+            String myDimension = this.minecraft.level.dimension().location().toString();
+
+            for (com.example.aas.world.AASWorldData.HubInfo hub : ClientData.clientHubs) {
+                // РЈСЃР»РѕРІРёСЏ: РєРѕРјР°РЅРґР° СЃРѕРІРїР°РґР°РµС‚, РҐР°Р± РґРѕСЃС‚СЂРѕРµРЅ, РјРёСЂ СЃРѕРІРїР°РґР°РµС‚
+                if (hub.team.equalsIgnoreCase(myTeam) && hub.constructed && hub.dimension.equals(myDimension)) {
+                    // РћРїС†РёРѕРЅР°Р»СЊРЅРѕ: РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ !hub.isBlocked,
+                    // С‡С‚РѕР±С‹ РєРЅРѕРїРєР° РЅРµ РіРѕСЂРµР»Р°, РµСЃР»Рё РІСЃРµ С…Р°Р±С‹ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РІСЂР°РіРѕРј
+                    if (!hub.isBlocked) {
+                        hasAtLeastOneHub = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. РљРЅРѕРїРєР° Р°РєС‚РёРІРЅР° С‚РѕР»СЊРєРѕ РµСЃР»Рё С‚Р°Р№РјРµСЂ РІС‹С€РµР» Р РµСЃС‚СЊ РєСѓРґР° РїСЂС‹РіР°С‚СЊ
+        hubSpawnButton.active = timerFinished && hasAtLeastOneHub;
 
         boolean hasSquadRally = false;
         String currentDim = this.minecraft.level.dimension().location().toString();
@@ -8430,6 +8483,7 @@ public class AASOverlay {
     private static final ResourceLocation FLAG_BLUEFOR = new ResourceLocation("aas", "textures/gui/flags/bluefor.png");
     private static final ResourceLocation FLAG_REDFOR = new ResourceLocation("aas", "textures/gui/flags/redfor.png");
     private static final ResourceLocation VIGNETTE_TEXTURE = new ResourceLocation("aas", "textures/misc/vignette.png");
+    private static final ResourceLocation ARROW_TEX = new ResourceLocation("aas", "textures/gui/capture_arrow.png");
     private static AASMapRenderer HUD_SIDE_MAP;
 
     @SubscribeEvent
@@ -8763,8 +8817,11 @@ public class AASOverlay {
             }
         }
 
-        // Р’С‹Р·РѕРІ РјРµС‚РѕРґР° РѕС‚СЂРёСЃРѕРІРєРё РїРѕР»РѕСЃРѕРє (РєРѕС‚РѕСЂС‹Р№ РЅРёР¶Рµ)
+
         renderProgressBars(gui, mc, centerX, flagY + flagHeight + 3, color);
+
+        // Р’С‹Р·РѕРІ РјРµС‚РѕРґР° РѕС‚СЂРёСЃРѕРІРєРё РїРѕР»РѕСЃРѕРє (РєРѕС‚РѕСЂС‹Р№ РЅРёР¶Рµ
+        renderCaptureArrows(gui, mc, centerX, flagY + flagHeight + 3);
     }
 
     // Р’РћРў Р­РўРћРў РњР•РўРћР” РќРЈР–РќРћ Р”РћР‘РђР’РРўР¬ Р’ AASOverlay.java, С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ РѕС€РёР±РєРё!
@@ -8794,6 +8851,46 @@ public class AASOverlay {
             }
         }
     }
+    private static void renderCaptureArrows(GuiGraphics gui, Minecraft mc, int centerX, int y) {
+        int rate = ClientData.pointCaptureRate;
+        if (rate == 0) return;
+
+        int absRate = Math.min(Math.abs(rate), 4);
+        boolean isForward = rate > 0;
+
+        // Р‘РµСЂРµРј С†РІРµС‚ РєРѕРјР°РЅРґС‹, РєРѕС‚РѕСЂР°СЏ С„РёР·РёС‡РµСЃРєРё РІРѕР·РґРµР№СЃС‚РІСѓРµС‚ РЅР° С‚РѕС‡РєСѓ СЃРµР№С‡Р°СЃ
+        String capTeam = ClientData.pointCapturingTeam;
+        int color = 0xFFFFFFFF;
+        if (capTeam.equalsIgnoreCase("BLUE")) color = 0xFF3366CC;
+        else if (capTeam.equalsIgnoreCase("RED")) color = 0xFFCC3333;
+
+        RenderSystem.enableBlend();
+        float r = ((color >> 16) & 0xFF) / 255f;
+        float g = ((color >> 8) & 0xFF) / 255f;
+        float b = (color & 0xFF) / 255f;
+        RenderSystem.setShaderColor(r, g, b, 1.0f);
+
+        int arrowSize = 12;
+        int barsStartX = centerX - 40;
+        int segmentWidth = 20;
+
+        for (int i = 0; i < absRate; i++) {
+            int segmentIndex = isForward ? i : (3 - i);
+            int xPos = barsStartX + (segmentIndex * segmentWidth) + 2;
+            int yPos = y - 4;
+
+            if (isForward) {
+                gui.blit(ARROW_TEX, xPos, yPos, 0, 0, arrowSize, arrowSize, arrowSize, arrowSize);
+            } else {
+                gui.pose().pushPose();
+                gui.pose().translate(xPos + (arrowSize / 2.0), yPos + (arrowSize / 2.0), 0);
+                gui.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180));
+                gui.blit(ARROW_TEX, -arrowSize / 2, -arrowSize / 2, 0, 0, arrowSize, arrowSize, arrowSize, arrowSize);
+                gui.pose().popPose();
+            }
+        }
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+    }
 
     private static void renderSupplyTruckInfo(GuiGraphics gui, Minecraft mc, int width, int height) {
         Entity ridingEntity = mc.player.getVehicle();
@@ -8801,8 +8898,10 @@ public class AASOverlay {
         Entity supplyTruck = getSupplyTruckEntity(ridingEntity);
         if (supplyTruck != null) {
             int crates = supplyTruck.getPersistentData().getInt("AAS_SupplyAmmo");
+            int maxCrates = com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get();
             boolean isCharging = false;
-            if (crates < 2) {
+
+            if (crates < maxCrates) {
                 BlockPos vPos = supplyTruck.blockPosition();
                 for (BlockPos pos : BlockPos.betweenClosed(vPos.offset(-5, -2, -5), vPos.offset(5, 2, 5))) {
                     if (mc.level.getBlockState(pos).getBlock() instanceof MainSupplyBlock) {
@@ -8818,7 +8917,7 @@ public class AASOverlay {
             } else if (crates == 0) {
                 color = 0xFFFF5555;
             }
-            String text = "Supplies: " + crates + " / 2";
+            String text = "Supplies: " + crates + " / " + maxCrates;
             int textWidth = mc.font.width(text);
             int x = width - textWidth - 10;
             int y = height - 25;
@@ -9065,6 +9164,8 @@ public class ClientData {
         if (type == 1) SQUAD_SPEAKERS.put(id, System.currentTimeMillis());
         else if (type == 2) COMMAND_SPEAKERS.put(id, System.currentTimeMillis());
     }
+    public static double mapScale = 4.0;
+    public static int pointCaptureRate = 0;
     public static int mapMinX = -1000;
     public static int mapMinZ = -1000;
     public static int mapMaxX = 1000;
@@ -9126,6 +9227,7 @@ import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.EntityHitResult;
@@ -9198,6 +9300,33 @@ public class ClientEvents {
             if (mc.player.getPersistentData().contains("AAS_DownedYaw")) {
                 mc.player.getPersistentData().remove("AAS_DownedYaw");
                 mc.player.getPersistentData().remove("AAS_DownedPitch");
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+
+        // Р•СЃР»Рё РєР°СЂС‚Р° РѕС‚РєСЂС‹С‚Р° (РЅР°РїСЂРёРјРµСЂ, РЅР° TAB)
+        if (ClientData.isMapOpen && mc.screen == null) {
+            double scrollDelta = event.getScrollDelta();
+
+            if (scrollDelta != 0) {
+                // РР·РјРµРЅСЏРµРј РјР°СЃС€С‚Р°Р± РІ ClientData
+                // Р•СЃР»Рё РєСЂСѓС‚РёРј РІРІРµСЂС… (delta > 0) - РїСЂРёР±Р»РёР¶Р°РµРј (СѓРјРµРЅСЊС€Р°РµРј С‡РёСЃР»Рѕ Р±Р»РѕРєРѕРІ РЅР° РїРёРєСЃРµР»СЊ)
+                if (scrollDelta > 0) {
+                    ClientData.mapScale /= 1.2;
+                } else {
+                    ClientData.mapScale *= 1.2;
+                }
+
+                // РћРіСЂР°РЅРёС‡РёРІР°РµРј Р·СѓРј (РѕС‚ 0.5 РґРѕ 25.0 Р±Р»РѕРєРѕРІ РЅР° РїРёРєСЃРµР»СЊ)
+                if (ClientData.mapScale < 0.5) ClientData.mapScale = 0.5;
+                if (ClientData.mapScale > 25.0) ClientData.mapScale = 25.0;
+
+                // Р’РђР–РќРћ: РћС‚РјРµРЅСЏРµРј СЃРѕР±С‹С‚РёРµ, С‡С‚РѕР±С‹ С…РѕС‚Р±Р°СЂ РЅРµ РєСЂСѓС‚РёР»СЃСЏ
+                event.setCanceled(true);
             }
         }
     }
@@ -9288,24 +9417,6 @@ public class ClientEvents {
             }
             else if (event.getAction() == GLFW.GLFW_RELEASE) {
                 ClientData.isMapOpen = false; // РћС‚РїСѓСЃС‚РёР» вЂ” Р·Р°РєСЂС‹Р»Р°СЃСЊ
-            }
-        }
-
-        if (event.getAction() == GLFW.GLFW_PRESS) {
-            boolean isDebugKey = (event.getKey() == GLFW.GLFW_KEY_F9 ||
-                    event.getKey() == GLFW.GLFW_KEY_F10 ||
-                    event.getKey() == GLFW.GLFW_KEY_F8);
-
-            if (isDebugKey && !mc.player.isCreative()) return;
-
-            if (event.getKey() == GLFW.GLFW_KEY_F9) PacketHandler.INSTANCE.sendToServer(new PacketDebugFill());
-            if (event.getKey() == GLFW.GLFW_KEY_F10) {
-                PacketHandler.INSTANCE.sendToServer(new PacketDebugSpawnRally("BLUE"));
-                mc.player.sendSystemMessage(Component.literal("Spawning BLUE Rally..."));
-            }
-            if (event.getKey() == GLFW.GLFW_KEY_F8) {
-                PacketHandler.INSTANCE.sendToServer(new PacketDebugSpawnRally("RED"));
-                mc.player.sendSystemMessage(Component.literal("Spawning RED Rally..."));
             }
         }
     }
@@ -9521,6 +9632,7 @@ public class ClientHooks {
         ClientData.nextObjectiveName = msg.nextObjective;
         ClientData.isContested = msg.isContested;
         ClientData.pointCapturingTeam = msg.capturingTeam;
+        ClientData.pointCaptureRate = msg.captureRate;
     }
 }
 ==========================================
@@ -10091,6 +10203,17 @@ public class ModCommands {
                         )
                 )
 
+                // === РџР РРќРЈР”РРўР•Р›Р¬РќР«Р™ Р—РђРҐР’РђРў РўРћР§РљР ===
+                .then(Commands.literal("pointcapture")
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .suggests((ctx, builder) -> suggestLocalPoints(ctx, builder))
+                                        .executes(ctx -> forceCapturePoint(ctx.getSource(), StringArgumentType.getString(ctx, "team"), StringArgumentType.getString(ctx, "name")))
+                                )
+                        )
+                )
+
                 // --- РЎРџРђР’РќР« ---
                 .then(Commands.literal("teamspawn")
                         .then(Commands.argument("team", StringArgumentType.word())
@@ -10322,6 +10445,44 @@ public class ModCommands {
         return 0;
     }
 
+    // === РџР РРќРЈР”РРўР•Р›Р¬РќР«Р™ Р—РђРҐР’РђРў РљРћРќРљР Р•РўРќРћР™ РўРћР§РљР ===
+    private static int forceCapturePoint(CommandSourceStack source, String teamInput, String name) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+        String targetTeam = teamInput.toUpperCase();
+
+        if (!targetTeam.equals("BLUE") && !targetTeam.equals("RED")) {
+            source.sendFailure(Component.literal("Invalid team! Please use 'blue' or 'red'."));
+            return 0;
+        }
+
+        for (AASWorldData.CapturePoint point : data.capturePoints) {
+            if (point.name.equals(name)) {
+                point.owner = targetTeam;
+                point.progress = 1.0f; // 100% РїСЂРѕРіСЂРµСЃСЃР°
+                point.capturingTeam = "NONE";
+
+                data.setDirty();
+                syncDataToAll(level, data); // РћР±РЅРѕРІР»СЏРµРј Сѓ РІСЃРµС… РёРіСЂРѕРєРѕРІ
+
+                ChatFormatting color = targetTeam.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
+
+                // РЎРѕРѕР±С‰РµРЅРёРµ Р°РґРјРёРЅСѓ
+                source.sendSuccess(() -> Component.literal("Point '" + name + "' forcefully captured by " + targetTeam + "!").withStyle(color), true);
+
+                // РЈРІРµРґРѕРјР»РµРЅРёРµ РІ РіР»РѕР±Р°Р»СЊРЅС‹Р№ С‡Р°С‚ Рѕ Р·Р°С…РІР°С‚Рµ
+                level.getServer().getPlayerList().broadcastSystemMessage(
+                        Component.literal("[ADMIN] Point " + name + " forcefully captured by " + targetTeam).withStyle(color), false
+                );
+
+                return 1;
+            }
+        }
+
+        source.sendFailure(Component.literal("Point '" + name + "' not found in THIS world!"));
+        return 0;
+    }
+
     private static int setTeamSpawn(CommandSourceStack source, String teamName, BlockPos pos) {
         ServerLevel level = source.getLevel();
         AASWorldData data = AASWorldData.get(level);
@@ -10407,6 +10568,7 @@ public class AASConfig {
     public static final ForgeConfigSpec.BooleanValue ALLOW_BREAKING_DEFENSES;
     public static final ForgeConfigSpec.BooleanValue AUTO_GIVE_SL_RADIO;
     public static final ForgeConfigSpec.BooleanValue HUB_PLACEMENT_REQUIRES_CRATE;
+    public static final ForgeConfigSpec.IntValue MAX_DOWNED_TIME_SECONDS;
 
     // Р Р°РґРёСѓСЃС‹ Рё Р±Р°Р»Р°РЅСЃ
     public static final ForgeConfigSpec.IntValue MIN_HUB_DISTANCE;
@@ -10419,6 +10581,8 @@ public class AASConfig {
     public static final ForgeConfigSpec.IntValue CRATE_BUILD_RADIUS;
     public static final ForgeConfigSpec.IntValue HUB_BLOCK_ENEMY_COUNT;
     public static final ForgeConfigSpec.IntValue RALLY_BLOCK_ENEMY_COUNT;
+    public static final ForgeConfigSpec.IntValue SUPPLY_TRUCK_CRATES;
+    public static final ForgeConfigSpec.IntValue SUPPLY_CRATE_MATERIALS;
 
     // РРјРµРЅР° РєРѕРјР°РЅРґ
     public static final ForgeConfigSpec.ConfigValue<String> BLUE_TEAM_CUSTOM_NAME;
@@ -10446,6 +10610,8 @@ public class AASConfig {
         ENABLE_KNOCKOUT = BUILDER.comment("Enable knockout mechanic").define("enableKnockout", true);
         REVIVE_ITEM = BUILDER.comment("Registry name of the item used to revive (e.g. 'minecraft:paper')").define("reviveItem", "minecraft:paper");
         REVIVE_COOLDOWN_SECONDS = BUILDER.comment("Time in seconds where dying again results in instant death").defineInRange("reviveCooldownSeconds", 120, 0, 600);
+        MAX_DOWNED_TIME_SECONDS = BUILDER.comment("Max time in downed state before bleeding out (seconds)")
+                .defineInRange("maxDownedTimeSeconds", 180, 5, 3600);
 
         BUILDER.push("Balance Settings");
         MIN_HUB_DISTANCE = BUILDER.defineInRange("minHubDistance", 150, 0, 10000);
@@ -10458,6 +10624,8 @@ public class AASConfig {
         CRATE_BUILD_RADIUS = BUILDER.defineInRange("crateBuildRadius", 50, 5, 200);
         HUB_BLOCK_ENEMY_COUNT = BUILDER.defineInRange("hubBlockEnemyCount", 3, 1, 20);
         RALLY_BLOCK_ENEMY_COUNT = BUILDER.defineInRange("rallyBlockEnemyCount", 1, 1, 20);
+        SUPPLY_TRUCK_CRATES = BUILDER.comment("Max supply crates in a truck").defineInRange("supplyTruckCrates", 2, 1, 20);
+        SUPPLY_CRATE_MATERIALS = BUILDER.comment("Materials per dropped supply crate").defineInRange("supplyCrateMaterials", 50, 10, 1000);
         BUILDER.pop();
 
         BUILDER.push("Faction Settings");
@@ -11653,7 +11821,8 @@ public class SupplyCrateEntity extends Entity {
         this(ModEntities.SUPPLY_CRATE.get(), level);
         this.setPos(x, y, z);
         this.setTeamOwner(team);
-        this.setMaterials(50); // <--- Р’ РЇР©РРљР• Р РћР’РќРћ 50 РњРђРўР•Р РРђР›РћР’
+        // Р—Р°РјРµРЅСЏРµРј 50 РЅР° РєРѕРЅС„РёРі:
+        this.setMaterials(com.example.aas.config.AASConfig.SUPPLY_CRATE_MATERIALS.get());
         this.ownerId = ownerId;
     }
 
@@ -11759,11 +11928,19 @@ public class SupplyCrateEntity extends Entity {
         }
 
         AABB searchArea = this.getBoundingBox().inflate(10.0);
-        List<Entity> vehicles = level.getEntities(this, searchArea, e -> e.isAlive());
+        List<Entity> vehicles = level.getEntities(this, searchArea, e -> e.isAlive() && e.getPersistentData().contains("AAS_VehicleTeam"));
+
+        // === РџР РРћР РРўР•Рў РњР°С€РёРЅС‹ СЃ РёРіСЂРѕРєРѕРј ===
+        vehicles.sort((e1, e2) -> {
+            boolean p1 = !e1.getPassengers().isEmpty();
+            boolean p2 = !e2.getPassengers().isEmpty();
+            if (p1 && !p2) return -1;
+            if (!p1 && p2) return 1;
+            return 0;
+        });
 
         for (Entity vehicle : vehicles) {
-            if (!vehicle.getPersistentData().contains("AAS_VehicleTeam")) continue;
-
+            // РџСЂРѕРІРµСЂРєР° РєРѕРјР°РЅРґС‹
             String vTeam = vehicle.getPersistentData().getString("AAS_VehicleTeam");
             if (!this.getTeamOwner().equals("NEUTRAL") && !vTeam.isEmpty() && !vTeam.equalsIgnoreCase(this.getTeamOwner())) {
                 continue;
@@ -12138,32 +12315,25 @@ public class GameLogicEvents {
 
             // === 1. Р РђРЎРЎР«Р›РљРђ РџРћР—РР¦РР™ РР“Р РћРљРћР’ (РћРїС‚РёРјРёР·Р°С†РёСЏ: РєР°Р¶РґС‹Рµ 2 С‚РёРєР°) ===
             if (globalTick % 2 == 0) {
-                List<ServerPlayer> bluePlayers = new ArrayList<>();
-                List<ServerPlayer> redPlayers = new ArrayList<>();
+                // РЎРѕР±РёСЂР°РµРј РґР°РЅРЅС‹Рµ РћР‘Рћ Р’РЎР•РҐ РёРіСЂРѕРєР°С… РѕРґРёРЅ СЂР°Р·
+                List<MapPlayerInfo> allPlayersInfo = buildPlayerInfo(level.players(), data);
+                PacketSyncMapPlayers allPlayersPacket = new PacketSyncMapPlayers(allPlayersInfo);
 
                 for (ServerPlayer p : level.players()) {
-                    if (p.isSpectator()) continue;
-                    if (p.getTeam() != null) {
-                        if (p.getTeam().getName().equalsIgnoreCase("Blue")) bluePlayers.add(p);
-                        else if (p.getTeam().getName().equalsIgnoreCase("Red")) redPlayers.add(p);
+                    if (p.isSpectator() || p.isCreative()) {
+                        // Р—СЂРёС‚РµР»Рё Рё РєСЂРµР°С‚РёРІ РІРёРґСЏС‚ Р’РЎР•РҐ
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), allPlayersPacket);
+                    }
+                    else if (p.getTeam() != null) {
+                        // РћР±С‹С‡РЅС‹Рµ РёРіСЂРѕРєРё РІРёРґСЏС‚ С‚РѕР»СЊРєРѕ СЃРІРѕРёС…
+                        String myTeamName = p.getTeam().getName();
+                        List<MapPlayerInfo> teamOnly = allPlayersInfo.stream()
+                                .filter(info -> info.team.equalsIgnoreCase(myTeamName))
+                                .toList();
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), new PacketSyncMapPlayers(teamOnly));
                     }
                 }
 
-                if (!bluePlayers.isEmpty()) {
-                    List<MapPlayerInfo> blueInfo = buildPlayerInfo(bluePlayers, data);
-                    PacketSyncMapPlayers packet = new PacketSyncMapPlayers(blueInfo);
-                    for (ServerPlayer bp : bluePlayers) {
-                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> bp), packet);
-                    }
-                }
-
-                if (!redPlayers.isEmpty()) {
-                    List<MapPlayerInfo> redInfo = buildPlayerInfo(redPlayers, data);
-                    PacketSyncMapPlayers packet = new PacketSyncMapPlayers(redInfo);
-                    for (ServerPlayer rp : redPlayers) {
-                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> rp), packet);
-                    }
-                }
                 // PATH: src/main/java/com/example/aas/events/GameLogicEvents.java
 
                 if (globalTick % 5 == 0) { // РћР±РЅРѕРІР»СЏРµРј С‡Р°С‰Рµ (РєР°Р¶РґС‹Рµ 0.25 СЃРµРє) РґР»СЏ РїР»Р°РІРЅРѕСЃС‚Рё РїРѕРІРѕСЂРѕС‚Р°
@@ -12363,6 +12533,7 @@ public class GameLogicEvents {
 
         for (ServerPlayer p : players) {
             String pName = p.getScoreboardName();
+            String pTeam = (p.getTeam() != null) ? p.getTeam().getName().toUpperCase() : "NEUTRAL";
             int squadId = -1;
             boolean isLeader = false;
 
@@ -12390,7 +12561,8 @@ public class GameLogicEvents {
                     isLeader,
                     downed,
                     shout,
-                    inVehicle
+                    inVehicle,
+                    pTeam
             ));
         }
         return infoList;
@@ -12407,43 +12579,13 @@ public class GameLogicEvents {
         Set<UUID> playersInPreciseZones = new HashSet<>();
 
         for (AASWorldData.CapturePoint point : data.capturePoints) {
-            // Р‘РµСЂРµРј РІСЃРµС… РІ РєРІР°РґСЂР°С‚Рµ (AABB) РґР»СЏ РЅР°С‡Р°Р»Р°
             List<ServerPlayer> playersInBox = level.getEntitiesOfClass(ServerPlayer.class, point.area);
-
             int blueOnPointLiving = 0;
             int redOnPointLiving = 0;
-            boolean isTimeLocked = level.getGameTime() < point.lockedUntilTick;
 
             for (ServerPlayer p : playersInBox) {
                 if (!p.isAlive() || p.isSpectator()) continue;
-
-                // Р¤РРљРЎ РЈР“Р›РћР’: РџСЂРѕРІРµСЂРєР° СЂРµР°Р»СЊРЅРѕ РІРЅСѓС‚СЂРё С†РёР»РёРЅРґСЂР° РёР»Рё РєСѓР±Р°
                 if (point.isInside(p.position())) {
-                    playersInPreciseZones.add(p.getUUID());
-
-                    boolean lockedUI = false;
-                    String nextObjectiveForPlayer = "";
-
-                    if (p.getTeam() != null) {
-                        String teamName = p.getTeam().getName();
-                        String teamKey = teamName.equalsIgnoreCase("Blue") ? "BLUE" : "RED";
-
-                        if (!teamKey.isEmpty()) {
-                            if (isTimeLocked) {
-                                lockedUI = true;
-                                long totalSeconds = (point.lockedUntilTick - level.getGameTime()) / 20;
-                                nextObjectiveForPlayer = String.format("LOCKED: %dРј %dСЃ", totalSeconds / 60, totalSeconds % 60);
-                            } else if (!canCapture(point, teamKey, data)) {
-                                lockedUI = true;
-                                nextObjectiveForPlayer = findRequiredPointName(point, teamKey, data);
-                            }
-                        }
-                    }
-
-                    // РЁР»РµРј РґР°РЅРЅС‹Рµ С‚РѕР»СЊРєРѕ С‚РµРј, РєС‚Рѕ РІРЅСѓС‚СЂРё С„РѕСЂРјС‹
-                    PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p),
-                            new PacketSyncPoint(true, point.name, point.owner, point.progress, lockedUI, nextObjectiveForPlayer, false, point.capturingTeam));
-
                     if (p.getTeam() != null) {
                         if (p.getTeam().getName().equalsIgnoreCase("Blue")) blueOnPointLiving++;
                         else if (p.getTeam().getName().equalsIgnoreCase("Red")) redOnPointLiving++;
@@ -12451,10 +12593,10 @@ public class GameLogicEvents {
                 }
             }
 
-            // РўР’РћРЇ РџРћР›РќРђРЇ Р›РћР“РРљРђ Р—РђРҐР’РђРўРђ
             String dominantTeam = "NONE";
             int alliesOnPoint = 0;
             boolean isContested = false;
+            boolean isTimeLocked = level.getGameTime() < point.lockedUntilTick;
 
             if (blueOnPointLiving > 0 && redOnPointLiving > 0) {
                 if (blueOnPointLiving >= redOnPointLiving * 2) { dominantTeam = "BLUE"; alliesOnPoint = blueOnPointLiving; }
@@ -12466,13 +12608,62 @@ public class GameLogicEvents {
                 dominantTeam = "RED"; alliesOnPoint = redOnPointLiving;
             }
 
+            float multiplier = 1.0f;
+            if (alliesOnPoint > 1) multiplier += (alliesOnPoint - 1) * 0.5f;
+            if (multiplier > 4.0f) multiplier = 4.0f;
+
+            // --- Р›РћР“РРљРђ РЎРўР Р•Р›РћРљ Р Р¦Р’Р•РўРђ ---
+            int currentRate = 0;
+            String teamToSync = "NONE";
+
+            if (!dominantTeam.equals("NONE") && !isContested && !isTimeLocked) {
+                teamToSync = dominantTeam; // РљРѕРјР°РЅРґР°, РєРѕС‚РѕСЂР°СЏ РЎР•Р™Р§РђРЎ СЃС‚РѕРёС‚ РЅР° С‚РѕС‡РєРµ
+
+                // РџСЂРѕРІРµСЂСЏРµРј, РЅСѓР¶РЅРѕ Р»Рё РІРѕРѕР±С‰Рµ СЂРёСЃРѕРІР°С‚СЊ СЃС‚СЂРµР»РєРё
+                boolean isOwner = point.owner.equals(dominantTeam);
+                boolean isFullyCaptured = (isOwner && point.progress >= 1.0f);
+
+                if (!isFullyCaptured) {
+                    if (canCapture(point, dominantTeam, data)) {
+                        boolean isNeutralizing = (!point.owner.equals("NEUTRAL") && !point.owner.equals(dominantTeam))
+                                || (point.owner.equals("NEUTRAL") && !point.capturingTeam.equals("NONE") && !point.capturingTeam.equals(dominantTeam));
+
+                        currentRate = Math.round(multiplier);
+                        if (isNeutralizing) currentRate = -currentRate;
+                    }
+                } else {
+                    currentRate = 0; // РўРѕС‡РєР° СѓР¶Рµ РЅР°С€Р° РЅР° 100%, СЃС‚СЂРµР»РєРё РЅРµ РЅСѓР¶РЅС‹
+                }
+            }
+
+            for (ServerPlayer p : playersInBox) {
+                if (point.isInside(p.position())) {
+                    playersInPreciseZones.add(p.getUUID());
+                    boolean lockedUI = false;
+                    String nextObjectiveForPlayer = "";
+
+                    if (p.getTeam() != null) {
+                        String teamKey = p.getTeam().getName().equalsIgnoreCase("Blue") ? "BLUE" : "RED";
+                        if (isTimeLocked) {
+                            lockedUI = true;
+                            long totalSeconds = (point.lockedUntilTick - level.getGameTime()) / 20;
+                            nextObjectiveForPlayer = String.format("LOCKED: %dРј %dСЃ", totalSeconds / 60, totalSeconds % 60);
+                        } else if (!canCapture(point, teamKey, data)) {
+                            lockedUI = true;
+                            nextObjectiveForPlayer = findRequiredPointName(point, teamKey, data);
+                        }
+                    }
+
+                    // РЁР»РµРј teamToSync РІ РєР°С‡РµСЃС‚РІРµ capturingTeam, С‡С‚РѕР±С‹ РєР»РёРµРЅС‚ Р·РЅР°Р», РІ РєР°РєРѕР№ С†РІРµС‚ РєСЂР°СЃРёС‚СЊ СЃС‚СЂРµР»РєРё
+                    PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p),
+                            new PacketSyncPoint(true, point.name, point.owner, point.progress, lockedUI, nextObjectiveForPlayer, isContested, teamToSync, currentRate));
+                }
+            }
+
+            // Р›РѕРіРёРєР° Р·Р°С…РІР°С‚Р° (СЃС‚Р°РЅРґР°СЂС‚РЅР°СЏ)
             if (!dominantTeam.equals("NONE") && !isContested && !isTimeLocked) {
                 if (canCapture(point, dominantTeam, data)) {
                     float baseSpeed = 1.0f / (point.captureTimeMinutes * 60 * 20);
-                    float multiplier = 1.0f;
-                    if (alliesOnPoint > 1) multiplier += (alliesOnPoint - 1) * 0.5f;
-                    if (multiplier > 4.0f) multiplier = 4.0f;
-
                     String oldOwner = point.owner;
                     handleTeamInfluence(point, dominantTeam, multiplier, baseSpeed, data, level);
 
@@ -12492,14 +12683,15 @@ public class GameLogicEvents {
             }
         }
 
-        // РћС‡РёСЃС‚РєР° UI РґР»СЏ С‚РµС…, РєС‚Рѕ РІС‹С€РµР» РёР· С„РѕСЂРјС‹ (РєР°Р¶РґС‹Р№ С‚РёРє РґР»СЏ С‚РѕС‡РЅРѕСЃС‚Рё С†РёР»РёРЅРґСЂР°)
         for (ServerPlayer player : level.players()) {
             if (!playersInPreciseZones.contains(player.getUUID())) {
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                        new PacketSyncPoint(false, "", "", 0, false, "", false, "NONE"));
+                        new PacketSyncPoint(false, "", "", 0, false, "", false, "NONE", 0));
             }
         }
     }
+
+
     @SubscribeEvent
     public static void onPlayerChangeDimension(net.minecraftforge.event.entity.EntityTravelToDimensionEvent event) {
         // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРµСЂРµРјРµС‰Р°РµС‚СЃСЏ РёРјРµРЅРЅРѕ РёРіСЂРѕРє Рё СЌС‚Рѕ РїСЂРѕРёСЃС…РѕРґРёС‚ РЅР° СЃРµСЂРІРµСЂРµ
@@ -13585,6 +13777,23 @@ import java.util.function.Consumer;
 public class EntrenchingToolItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
+    @Override
+    public float getDestroySpeed(ItemStack stack, BlockState state) {
+        // Р•СЃР»Рё СЌС‚Рѕ РѕРґРЅР° РёР· РЅР°С€РёС… РїРѕСЃС‚СЂРѕРµРє Рё РѕРЅР° Р•Р©Р• РќР• Р”РћРЎРўР РћР•РќРђ
+        if (isAASConstruction(state) && !isConstructed(state)) {
+            return 50.0F; // РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ СЃРєРѕСЂРѕСЃС‚СЊ (РјРіРЅРѕРІРµРЅРЅРѕ)
+        }
+        return super.getDestroySpeed(stack, state);
+    }
+
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        if (!slotChanged && oldStack.getItem() == newStack.getItem()) {
+            return false;
+        }
+        return super.shouldCauseReequipAnimation(oldStack, newStack, slotChanged);
+    }
+
     public EntrenchingToolItem() {
         super(new Properties().stacksTo(1));
         SingletonGeoAnimatable.registerSyncedAnimatable(this);
@@ -14039,6 +14248,16 @@ import java.util.function.Consumer;
 
 public class RallyItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    // Р”РѕР±Р°РІРёС‚СЊ РІ РєР»Р°СЃСЃ РїСЂРµРґРјРµС‚Р°
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        // Р•СЃР»Рё РјС‹ СЃРјРµРЅРёР»Рё СЃР»РѕС‚ вЂ” Р°РЅРёРјР°С†РёСЏ РЅСѓР¶РЅР°.
+        // Р•СЃР»Рё РїСЂРµРґРјРµС‚ РІ С‚РѕРј Р¶Рµ СЃР»РѕС‚Рµ, РЅРѕ РѕР±РЅРѕРІРёР»СЃСЏ NBT вЂ” Р°РЅРёРјР°С†РёСЋ РќР• РїСЂРѕРёРіСЂС‹РІР°РµРј.
+        if (!slotChanged && oldStack.getItem() == newStack.getItem()) {
+            return false;
+        }
+        return super.shouldCauseReequipAnimation(oldStack, newStack, slotChanged);
+    }
 
     public RallyItem() {
         super(new Properties().stacksTo(1));
@@ -14134,10 +14353,11 @@ public class SupplyTruckMarkerItem extends Item {
         ChatFormatting color = team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
         tooltip.add(Component.literal("Team: " + team).withStyle(color));
         tooltip.add(Component.literal("Type: " + vehicleType).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Max 2 Crates. Press X to drop.").withStyle(ChatFormatting.YELLOW));
-        // Р”РёРЅР°РјРёС‡РµСЃРєРёР№ РІС‹РІРѕРґ С€С‚СЂР°С„Р°
-        tooltip.add(Component.literal("Loss Penalty: -" + penalty + " Tickets").withStyle(ChatFormatting.RED));
 
+        // Р—Р°РјРµРЅРёР»Рё РЅР° РґРёРЅР°РјРёС‡РµСЃРєРѕРµ Р·РЅР°С‡РµРЅРёРµ:
+        tooltip.add(Component.literal("Max " + com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get() + " Crates. Press X to drop.").withStyle(ChatFormatting.YELLOW));
+
+        tooltip.add(Component.literal("Loss Penalty: -" + penalty + " Tickets").withStyle(ChatFormatting.RED));
         tooltip.add(Component.literal("thank exactly").withStyle(ChatFormatting.DARK_PURPLE).withStyle(ChatFormatting.ITALIC));
     }
 }
@@ -14185,7 +14405,6 @@ public class VehicleMarkerItem extends Item {
 FILE: KitEditorMenu.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\menu\KitEditorMenu.java
 ==========================================
-// PATH: src\main\java\com\example\aas\menu\KitEditorMenu.java
 package com.example.aas.menu;
 
 import com.mojang.datafixers.util.Pair;
@@ -14201,6 +14420,9 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class KitEditorMenu extends AbstractContainerMenu {
+    // 1. РЈРІРµР»РёС‡РёРІР°РµРј РєРѕРЅСЃС‚Р°РЅС‚Сѓ РґРѕ 49 (41 СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ + 8 РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹С…)
+    public static final int MAX_KIT_SLOTS = 49;
+
     public final Container kitInventory;
     public final String team;
     public final String kitName;
@@ -14209,7 +14431,7 @@ public class KitEditorMenu extends AbstractContainerMenu {
     public int maxPerSquad;
     public int minSquadPlayers;
     public final boolean[] resupplyFlags;
-    public final boolean[] saveNbtFlags; // Р¤Р»Р°РіРё РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ NBT РїРѕСЃР»Рµ СЃРјРµСЂС‚Рё
+    public final boolean[] saveNbtFlags;
 
     private static final ResourceLocation[] ARMOR_SLOT_TEXTURES = new ResourceLocation[]{
             InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS,
@@ -14218,29 +14440,27 @@ public class KitEditorMenu extends AbstractContainerMenu {
             InventoryMenu.EMPTY_ARMOR_SLOT_HELMET
     };
 
-    // Р§С‚РµРЅРёРµ РїР°РєРµС‚Р° РєР»РёРµРЅС‚РѕРј (РІС‹Р·С‹РІР°РµС‚СЃСЏ С‡РµСЂРµР· PacketOpenKitEditor)
+    // Р§С‚РµРЅРёРµ РїР°РєРµС‚Р° РєР»РёРµРЅС‚РѕРј
     public KitEditorMenu(int id, Inventory playerInv, FriendlyByteBuf data) {
-        this(id, playerInv, new SimpleContainer(41),
-                data.readUtf(),         // team
-                data.readUtf(),         // kitName
-                data.readBoolean(),     // isLeaderOnly
-                data.readInt(),         // maxPerTeam
-                data.readInt(),         // maxPerSquad
-                data.readInt(),         // minSquadPlayers
-                new boolean[41],        // РІСЂРµРјРµРЅРЅС‹Р№ РјР°СЃСЃРёРІ РґР»СЏ resupply
-                new boolean[41]);       // РІСЂРµРјРµРЅРЅС‹Р№ РјР°СЃСЃРёРІ РґР»СЏ saveNbt
+        // Р—РґРµСЃСЊ РІРµР·РґРµ РјРµРЅСЏРµРј 41 РЅР° 49
+        this(id, playerInv, new SimpleContainer(MAX_KIT_SLOTS),
+                data.readUtf(),
+                data.readUtf(),
+                data.readBoolean(),
+                data.readInt(),
+                data.readInt(),
+                data.readInt(),
+                new boolean[MAX_KIT_SLOTS],
+                new boolean[MAX_KIT_SLOTS]);
 
-        // Р§РёС‚Р°РµРј С„Р»Р°РіРё СЂРµСЃР°РїР»Р°СЏ
-        for (int i = 0; i < 41; i++) {
+        for (int i = 0; i < MAX_KIT_SLOTS; i++) {
             this.resupplyFlags[i] = data.readBoolean();
         }
-        // Р§РёС‚Р°РµРј С„Р»Р°РіРё СЃРѕС…СЂР°РЅРµРЅРёСЏ NBT
-        for (int i = 0; i < 41; i++) {
+        for (int i = 0; i < MAX_KIT_SLOTS; i++) {
             this.saveNbtFlags[i] = data.readBoolean();
         }
     }
 
-    // РћСЃРЅРѕРІРЅРѕР№ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ (РЎРµСЂРІРµСЂРЅС‹Р№ + РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РєР»РёРµРЅС‚СЃРєРёРј)
     public KitEditorMenu(int id, Inventory playerInv, Container kitInv, String t, String k,
                          boolean l, int mt, int ms, int minPlayers,
                          boolean[] flags, boolean[] nbtFlags) {
@@ -14255,22 +14475,21 @@ public class KitEditorMenu extends AbstractContainerMenu {
         this.resupplyFlags = flags;
         this.saveNbtFlags = nbtFlags;
 
-        // --- РЎР›РћРўР« РљРРўРђ (РЎР»РѕС‚С‹ 0 - 40) ---
+        // --- РЎРўРђРќР”РђР РўРќР«Р• РЎР›РћРўР« РљРРўРђ (0 - 40) ---
 
-        // 1. РћСЃРЅРѕРІРЅР°СЏ СЃРµС‚РєР° РёРЅРІРµРЅС‚Р°СЂСЏ РєРёС‚Р° (СЃР»РѕС‚С‹ 9 - 35)
+        // 1. РћСЃРЅРѕРІРЅР°СЏ СЃРµС‚РєР° (9 - 35)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
                 this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, 66 + row * 18));
             }
         }
 
-        // 2. РҐРѕС‚Р±Р°СЂ РєРёС‚Р° (СЃР»РѕС‚С‹ 0 - 8)
+        // 2. РҐРѕС‚Р±Р°СЂ (0 - 8)
         for (int col = 0; col < 9; ++col) {
             this.addSlot(new Slot(kitInv, col, 8 + col * 18, 124));
         }
 
-        // 3. Р‘СЂРѕРЅСЏ РєРёС‚Р° (СЃР»РѕС‚С‹ 36 - 39)
-        // 36: Boots, 37: Legs, 38: Chest, 39: Helmet
+        // 3. Р‘СЂРѕРЅСЏ (36 - 39)
         for (int i = 0; i < 4; ++i) {
             final int armorIndex = i;
             int slotIndex = 36 + i;
@@ -14282,7 +14501,7 @@ public class KitEditorMenu extends AbstractContainerMenu {
             });
         }
 
-        // 4. Р’С‚РѕСЂР°СЏ СЂСѓРєР° РєРёС‚Р° (СЃР»РѕС‚ 40)
+        // 4. Р’С‚РѕСЂР°СЏ СЂСѓРєР° (40)
         this.addSlot(new Slot(kitInv, 40, 84, 150) {
             @Override
             public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
@@ -14290,16 +14509,23 @@ public class KitEditorMenu extends AbstractContainerMenu {
             }
         });
 
-        // --- РЎР›РћРўР« РР“Р РћРљРђ (РЎС‚Р°РЅРґР°СЂС‚РЅС‹Рµ) ---
+        // --- 5. РќРћР’Р«Р• "CURSE" РЎР›РћРўР« (41 - 48) ---
+        // Р Р°Р·РјРµС‰Р°РµРј РёС… РІ РґРІР° СЃС‚РѕР»Р±РёРєР° СЃР»РµРІР° РѕС‚ РѕСЃРЅРѕРІРЅРѕРіРѕ РёРЅРІРµРЅС‚Р°СЂСЏ
+        // РљРѕРѕСЂРґРёРЅР°С‚Р° X: -36 Рё -18 (РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ Р»РµРІРѕРіРѕ РєСЂР°СЏ РѕСЃРЅРѕРІРЅРѕРіРѕ РѕРєРЅР°)
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 2; col++) {
+                int slotIndex = 41 + (row * 2 + col);
+                // X = -36 РґР»СЏ РїРµСЂРІРѕРіРѕ СЃС‚РѕР»Р±С†Р°, -18 РґР»СЏ РІС‚РѕСЂРѕРіРѕ. Y РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ 66.
+                this.addSlot(new Slot(kitInv, slotIndex, -36 + col * 18, 66 + row * 18));
+            }
+        }
 
-        // РћСЃРЅРѕРІРЅРѕР№ РёРЅРІРµРЅС‚Р°СЂСЊ РёРіСЂРѕРєР°
+        // --- РЎР›РћРўР« РРќР’Р•РќРўРђР РЇ РР“Р РћРљРђ ---
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
                 this.addSlot(new Slot(playerInv, j + i * 9 + 9, 8 + j * 18, 180 + i * 18));
             }
         }
-
-        // РҐРѕС‚Р±Р°СЂ РёРіСЂРѕРєР°
         for (int i = 0; i < 9; ++i) {
             this.addSlot(new Slot(playerInv, i, 8 + i * 18, 238));
         }
@@ -14312,7 +14538,6 @@ public class KitEditorMenu extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player p, int index) {
-        // РћС‚РєР»СЋС‡РµРЅРѕ РІ СЂРµРґР°РєС‚РѕСЂРµ, С‡С‚РѕР±С‹ РёРіСЂРѕРєРё РЅРµ РїСѓС‚Р°Р»РёСЃСЊ РїСЂРё РЅР°СЃС‚СЂРѕР№РєРµ С„Р»Р°РіРѕРІ
         return ItemStack.EMPTY;
     }
 }
@@ -14675,6 +14900,8 @@ public class DownedHandler {
 
             // РќРћР’РћР•: РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ Give Up С‡РµСЂРµР· 3 РјРёРЅСѓС‚С‹ (3 * 60 * 20 = 3600 С‚РёРєРѕРІ)
             long downedTick = player.getPersistentData().getLong("AAS_DownedTick");
+            long maxDownedTicks = AASConfig.MAX_DOWNED_TIME_SECONDS.get() * 20L;
+
             if (player.level().getGameTime() - downedTick >= 3600) {
                 forceGiveUp(player);
             }
@@ -14778,8 +15005,9 @@ public class MapPlayerInfo {
     public boolean isDowned;
     public long lastShoutTime;
     public boolean inVehicle; // Р­С‚Рѕ РїРѕР»Рµ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ Р·РґРµСЃСЊ!
+    public String team;
 
-    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle) {
+    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle, String team) {
         this.name = name;
         this.x = x;
         this.z = z;
@@ -14789,6 +15017,7 @@ public class MapPlayerInfo {
         this.isDowned = isDowned;
         this.lastShoutTime = lastShoutTime;
         this.inVehicle = inVehicle;
+        this.team = team;
     }
 }
 ==========================================
@@ -14809,6 +15038,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
+import net.minecraft.core.BlockPos;
 
 public class PacketApplyMarker {
     private final int targetEntityId;
@@ -14862,7 +15092,7 @@ public class PacketApplyMarker {
                     if (isSupply) {
                         target.getPersistentData().putBoolean("AAS_IsSupplyTruck", true);
                         // Р”Р°РµРј 2 СЏС‰РёРєР° СЃСЂР°Р·Сѓ РїСЂРё РєР»РµР№РјРµ
-                        target.getPersistentData().putInt("AAS_SupplyAmmo", 2);
+                        target.getPersistentData().putInt("AAS_SupplyAmmo", com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get());
                     } else {
                         // Р•СЃР»Рё РїРµСЂРµРєР»РµР№РјРёР»Рё РІ РѕР±С‹С‡РЅСѓСЋ С‚РµС…РЅРёРєСѓ - Р·Р°Р±РёСЂР°РµРј РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РєРёРґР°С‚СЊ СЏС‰РёРєРё
                         target.getPersistentData().remove("AAS_IsSupplyTruck");
@@ -14872,6 +15102,11 @@ public class PacketApplyMarker {
                     // РЈРґР°Р»СЏРµРј СЃС‚Р°СЂСѓСЋ Р·Р°РїРёСЃСЊ РїРѕ UUID, РµСЃР»Рё РѕРЅР° Р±С‹Р»Р° (РїРµСЂРµРєР»РµР№Рј)
                     data.markedVehicles.removeIf(v -> v.uuid.equals(target.getUUID()));
 
+                    BlockPos spawnerPos = null;
+                    if (target.getPersistentData().contains("AAS_SpawnerPos")) {
+                        spawnerPos = BlockPos.of(target.getPersistentData().getLong("AAS_SpawnerPos"));
+                    }
+
                     // Р”РѕР±Р°РІР»СЏРµРј РЅРѕРІСѓСЋ
                     data.markedVehicles.add(new AASWorldData.VehicleRecord(
                             target.getUUID(),
@@ -14880,7 +15115,8 @@ public class PacketApplyMarker {
                             target.getX(),
                             target.getY(),
                             target.getZ(),
-                            target.getYRot()
+                            target.getYRot(),
+                            spawnerPos
                     ));
 
                     // 3. РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ
@@ -15308,8 +15544,8 @@ public class PacketOpenKitEditor {
                     NetworkHooks.openScreen(player, new net.minecraft.world.MenuProvider() {
                         @Override public Component getDisplayName() { return Component.literal("Edit Kit: " + kit.name); }
                         @Override public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inv, net.minecraft.world.entity.player.Player p) {
-                            SimpleContainer container = new SimpleContainer(41);
-                            for(int i=0; i<41; i++) container.setItem(i, kit.inventory.get(i).copy());
+                            SimpleContainer container = new SimpleContainer(49);
+                            for(int i=0; i<49; i++) container.setItem(i, kit.inventory.get(i).copy());
 
                             // === РРЎРџР РђР’Р›Р•РќРќРђРЇ РЎРўР РћРљРђ: РџРµСЂРµРґР°РµРј 11 Р°СЂРіСѓРјРµРЅС‚РѕРІ (РІРєР»СЋС‡Р°СЏ kit.saveNbtFlags РІ РєРѕРЅС†Рµ) ===
                             return new KitEditorMenu(id, inv, container, msg.team, kit.name,
@@ -16586,10 +16822,10 @@ public class PacketSaveKit {
         buf.writeInt(msg.minSquadPlayers);
 
         // 3. РџРРЁР•Рњ РџР•Р Р’Р«Р™ РњРђРЎРЎРР’ (Р РµСЃР°РїР»Р°Р№)
-        for(int i=0; i<41; i++) buf.writeBoolean(msg.resupplyFlags[i]);
+        for(int i=0; i<49; i++) buf.writeBoolean(msg.resupplyFlags[i]);
 
         // 4. РџРРЁР•Рњ Р’РўРћР РћР™ РњРђРЎРЎРР’ (NBT)
-        for(int i=0; i<41; i++) buf.writeBoolean(msg.nbtFlags[i]);
+        for(int i=0; i<49; i++) buf.writeBoolean(msg.nbtFlags[i]);
     }
 
     public static PacketSaveKit decode(FriendlyByteBuf buf) {
@@ -16601,12 +16837,12 @@ public class PacketSaveKit {
         int minP = buf.readInt();
 
         // 5. Р§РРўРђР•Рњ РџР•Р Р’Р«Р™ РњРђРЎРЎРР’
-        boolean[] f1 = new boolean[41];
-        for(int i=0; i<41; i++) f1[i] = buf.readBoolean();
+        boolean[] f1 = new boolean[49];
+        for(int i=0; i<49; i++) f1[i] = buf.readBoolean();
 
         // 6. Р§РРўРђР•Рњ Р’РўРћР РћР™ РњРђРЎРЎРР’
-        boolean[] f2 = new boolean[41];
-        for(int i=0; i<41; i++) f2[i] = buf.readBoolean();
+        boolean[] f2 = new boolean[49];
+        for(int i=0; i<49; i++) f2[i] = buf.readBoolean();
 
         return new PacketSaveKit(t, k, l, mt, ms, minP, f1, f2);
     }
@@ -16630,7 +16866,7 @@ public class PacketSaveKit {
                     kit.saveNbtFlags = msg.nbtFlags; // <--- Р’РђР–РќРћ: СЃРѕС…СЂР°РЅСЏРµРј NBT С„Р»Р°РіРё
 
                     // РљРѕРїРёСЂСѓРµРј РїСЂРµРґРјРµС‚С‹ РёР· РёРЅРІРµРЅС‚Р°СЂСЏ РјРµРЅСЋ РІ РєРёС‚
-                    for(int i=0; i<41; i++) {
+                    for(int i=0; i<49; i++) {
                         kit.inventory.set(i, menu.kitInventory.getItem(i).copy());
                     }
 
@@ -16892,16 +17128,46 @@ public class PacketSquadAction {
             }
             // === 3. KICK ===
             else if (msg.action == 3) {
-                AASWorldData.Squad mySquad = getPlayerSquad(pName, data);
-                if (mySquad != null && mySquad.leader.equals(pName)) {
+                AASWorldData.Squad targetSquad = null;
+                // РС‰РµРј РѕС‚СЂСЏРґ РїРѕ ID
+                for(AASWorldData.Squad s : data.squads) { if(s.id == msg.squadId) { targetSquad = s; break; } }
+
+                if (targetSquad != null) {
                     String targetName = msg.stringData;
-                    if (!targetName.equals(pName) && mySquad.members.remove(targetName)) {
-                        ServerPlayer target = player.server.getPlayerList().getPlayerByName(targetName);
-                        if (target != null) {
-                            removePlayerTags(target);
-                            target.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
+                    ServerPlayer targetEntity = player.server.getPlayerList().getPlayerByName(targetName);
+
+                    // РЈРЎР›РћР’РР• 1: Р›РёРґРµСЂ РєРёРєР°РµС‚ РёРіСЂРѕРєР° (РєР°Рє СЂР°РЅСЊС€Рµ)
+                    boolean isLeaderKicking = targetSquad.leader.equals(pName) && !targetName.equals(pName);
+
+                    // РЈРЎР›РћР’РР• 2: РРіСЂРѕРє РєРёРєР°РµС‚ РѕС„С„Р»Р°Р№РЅ-Р»РёРґРµСЂР°
+                    boolean isKickingOfflineLeader = targetName.equals(targetSquad.leader) && targetEntity == null && targetSquad.members.contains(pName);
+
+                    if (isLeaderKicking || isKickingOfflineLeader) {
+                        if (targetSquad.members.remove(targetName)) {
+                            // Р•СЃР»Рё РєРёРєРЅСѓР»Рё Р»РёРґРµСЂР° вЂ” РЅР°Р·РЅР°С‡Р°РµРј РЅРѕРІРѕРіРѕ (РїРµСЂРІРѕРіРѕ РІ СЃРїРёСЃРєРµ)
+                            if (targetName.equals(targetSquad.leader) && !targetSquad.members.isEmpty()) {
+                                targetSquad.leader = targetSquad.members.get(0);
+
+                                // Р’С‹РґР°РµРј РЅРѕРІРѕРјСѓ Р»РёРґРµСЂСѓ С‚РµРіРё Рё СЂР°РґРёРѕ
+                                ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(targetSquad.leader);
+                                if (newLeader != null) {
+                                    updatePlayerTags(newLeader, targetSquad.id, true);
+                                    if (AASConfig.AUTO_GIVE_SL_RADIO.get()) giveRadio(newLeader);
+                                    newLeader.sendSystemMessage(Component.literal("The previous leader was offline and removed. You are the new Leader!").withStyle(ChatFormatting.GOLD));
+                                }
+                            }
+
+                            // Р•СЃР»Рё РєРёРєРЅСѓС‚С‹Р№ РёРіСЂРѕРє Р±С‹Р» РѕРЅР»Р°Р№РЅ вЂ” С‡РёСЃС‚РёРј РµРјСѓ С‚РµРіРё
+                            if (targetEntity != null) {
+                                removePlayerTags(targetEntity);
+                                removeRadio(targetEntity);
+                                targetEntity.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
+                            }
+
+                            player.server.getPlayerList().broadcastSystemMessage(
+                                    Component.literal("Offline leader " + targetName + " was removed from squad " + targetSquad.name).withStyle(ChatFormatting.YELLOW), false
+                            );
                         }
-                        player.sendSystemMessage(Component.literal("Kicked " + targetName).withStyle(ChatFormatting.RED));
                     }
                 }
             }
@@ -17405,7 +17671,7 @@ public class PacketSyncGameData {
         // 3. Р§РёС‚Р°РµРј СЃРїРёСЃРѕРє С‚РµС…РЅРёРєРё (Record)
         List<AASWorldData.VehicleRecord> vL = buf.readList(b -> new AASWorldData.VehicleRecord(
                 b.readUUID(), b.readUtf(), b.readUtf(),
-                b.readDouble(), b.readDouble(), b.readDouble(), b.readFloat()
+                b.readDouble(), b.readDouble(), b.readDouble(), b.readFloat(), null
         ));
 
         // 4. Р§РёС‚Р°РµРј СЃРїРёСЃРѕРє РҐР°Р±РѕРІ (HubInfo)
@@ -17491,6 +17757,7 @@ public class PacketSyncMapPlayers {
             buf.writeBoolean(p.isDowned);
             buf.writeLong(p.lastShoutTime);
             buf.writeBoolean(p.inVehicle);
+            buf.writeUtf(p.team);
         }
     }
 
@@ -17501,7 +17768,8 @@ public class PacketSyncMapPlayers {
             list.add(new MapPlayerInfo(
                     buf.readUtf(), buf.readDouble(), buf.readDouble(),
                     buf.readFloat(), buf.readInt(), buf.readBoolean(),
-                    buf.readBoolean(), buf.readLong(), buf.readBoolean()
+                    buf.readBoolean(), buf.readLong(), buf.readBoolean(),
+                    buf.readUtf()
             ));
         }
         return new PacketSyncMapPlayers(list);
@@ -17538,10 +17806,10 @@ public class PacketSyncPoint {
     public final boolean isLocked;
     public final String nextObjective;
     public final boolean isContested;
-    // РќРћР’РћР• РџРћР›Р•
     public final String capturingTeam;
+    public final int captureRate;
 
-    public PacketSyncPoint(boolean isInside, String name, String owner, float progress, boolean locked, String nextObj, boolean contested, String capturingTeam) {
+    public PacketSyncPoint(boolean isInside, String name, String owner, float progress, boolean locked, String nextObj, boolean contested, String capturingTeam, int captureRate) {
         this.isInside = isInside;
         this.name = name;
         this.owner = owner;
@@ -17550,6 +17818,7 @@ public class PacketSyncPoint {
         this.nextObjective = nextObj;
         this.isContested = contested;
         this.capturingTeam = capturingTeam;
+        this.captureRate = captureRate;
     }
 
     public static void encode(PacketSyncPoint msg, FriendlyByteBuf buf) {
@@ -17561,6 +17830,7 @@ public class PacketSyncPoint {
         buf.writeUtf(msg.nextObjective);
         buf.writeBoolean(msg.isContested);
         buf.writeUtf(msg.capturingTeam); // РџРёС€РµРј
+        buf.writeInt(msg.captureRate);
     }
 
     public static PacketSyncPoint decode(FriendlyByteBuf buf) {
@@ -17572,7 +17842,8 @@ public class PacketSyncPoint {
                 buf.readBoolean(),
                 buf.readUtf(),
                 buf.readBoolean(),
-                buf.readUtf() // Р§РёС‚Р°РµРј
+                buf.readUtf(), // Р§РёС‚Р°РµРј
+                buf.readInt()
         );
     }
 
@@ -17924,70 +18195,106 @@ public class RecoilHandler {
 FILE: ResupplyHandler.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\ResupplyHandler.java
 ==========================================
-// PATH: src\main\java\com\example\aas\network\ResupplyHandler.java
 package com.example.aas.network;
 
 import com.example.aas.world.AASWorldData;
+import com.example.aas.events.GameLogicEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import java.util.Map;  // <--- Р”РћР‘РђР’Р›Р•РќРћ
-import java.util.UUID; // <--- Р”РћР‘РђР’Р›Р•РќРћ
+import net.minecraftforge.fml.ModList;
+
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.nbt.CompoundTag;
-import com.example.aas.events.GameLogicEvents;
+import java.util.Map;
 
 public class ResupplyHandler {
 
     /**
-     * Р’Р«Р”РђР§Рђ РљРРўРђ: РћС‡РёС‰Р°РµС‚ РёРЅРІРµРЅС‚Р°СЂСЊ РёРіСЂРѕРєР° Рё СЂР°СЃСЃС‚Р°РІР»СЏРµС‚ РІРµС‰Рё РЎРўР РћР“Рћ РІ С‚Рµ СЃР»РѕС‚С‹,
-     * РєРѕС‚РѕСЂС‹Рµ Р±С‹Р»Рё РЅР°СЃС‚СЂРѕРµРЅС‹ РІ Kit Editor'Рµ.
+     * Р’Р«Р”РђР§Рђ РљРРўРђ: РћС‡РёС‰Р°РµС‚ РёРЅРІРµРЅС‚Р°СЂСЊ Рё Р·Р°РїРѕР»РЅСЏРµС‚ РµРіРѕ.
+     * РЎР»РѕС‚С‹ 41-48 РїС‹С‚Р°СЋС‚СЃСЏ СЃРЅР°С‡Р°Р»Р° РїРѕРїР°СЃС‚СЊ РІ Curios.
      */
     public static void applyKitToPlayer(ServerPlayer player, AASWorldData.KitInfo kit) {
         Inventory pInv = player.getInventory();
         pInv.clearContent();
 
-        // Р”РѕСЃС‚Р°РµРј СЃРѕС…СЂР°РЅРµРЅРЅС‹Рµ С‚РµРіРё
         Map<Integer, CompoundTag> savedTags = GameLogicEvents.PERSISTENT_NBT_STORAGE.remove(player.getUUID());
 
-        for (int i = 0; i < 41; i++) {
+        for (int i = 0; i < 49; i++) {
             ItemStack kitStack = kit.inventory.get(i);
-            if (!kitStack.isEmpty()) {
-                ItemStack itemToGive = kitStack.copy();
+            if (kitStack.isEmpty()) continue;
 
-                // Р•СЃР»Рё РґР»СЏ СЌС‚РѕРіРѕ СЃР»РѕС‚Р° РІРєР»СЋС‡РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ NBT Рё С‚РµРі СЃСѓС‰РµСЃС‚РІСѓРµС‚
-                if (kit.saveNbtFlags[i] && savedTags != null && savedTags.containsKey(i)) {
-                    itemToGive.setTag(savedTags.get(i));
+            ItemStack itemToGive = kitStack.copy();
+
+            if (i < kit.saveNbtFlags.length && kit.saveNbtFlags[i] && savedTags != null && savedTags.containsKey(i)) {
+                itemToGive.setTag(savedTags.get(i));
+            }
+
+            if (i < 41) {
+                pInv.setItem(i, itemToGive);
+            } else {
+                boolean equipped = false;
+                if (ModList.get().isLoaded("curios")) {
+                    equipped = tryEquipInCurios(player, itemToGive);
                 }
 
-                pInv.setItem(i, itemToGive);
+                if (!equipped) {
+                    if (!pInv.add(itemToGive)) {
+                        player.drop(itemToGive, false);
+                    }
+                }
             }
         }
         player.getPersistentData().putString("AAS_CurrentKit", kit.name);
     }
 
     /**
-     * РџРћРџРћР›РќР•РќРР• РљРРўРђ: Р’С‹Р·С‹РІР°РµС‚СЃСЏ, РєРѕРіРґР° РёРіСЂРѕРє РїРѕРїРѕР»РЅСЏРµС‚СЃСЏ Сѓ СЏС‰РёРєР° РЅР° Р±Р°Р·Рµ.
-     * РџСЂР°РІРёР»СЊРЅРѕ РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РЅРµСЃРєРѕР»СЊРєРѕ СЃС‚Р°РєРѕРІ РѕРґРЅРѕРіРѕ Рё С‚РѕРіРѕ Р¶Рµ РїСЂРµРґРјРµС‚Р°.
+     * Р›РѕРіРёРєР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕР№ СЌРєРёРїРёСЂРѕРІРєРё РІ Curios (РСЃРїСЂР°РІР»РµРЅРѕ РїРѕРґ 1.20.1).
+     */
+    private static boolean tryEquipInCurios(ServerPlayer player, ItemStack stack) {
+        try {
+            // Р’ 1.20.1 РёСЃРїРѕР»СЊР·СѓРµРј getCuriosInventory РІРјРµСЃС‚Рѕ getCuriosHandler
+            return top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).map(handler -> {
+                for (var entry : handler.getCurios().entrySet()) {
+                    var stacksHandler = entry.getValue().getStacks();
+
+                    for (int i = 0; i < stacksHandler.getSlots(); i++) {
+                        // stacksHandler.isStackValid РїСЂРѕРІРµСЂСЏРµС‚, РїРѕРґС…РѕРґРёС‚ Р»Рё РїСЂРµРґРјРµС‚ РґР»СЏ СЌС‚РѕРіРѕ С‚РёРїР° СЃР»РѕС‚Р°
+                        if (stacksHandler.getStackInSlot(i).isEmpty() && stacksHandler.isItemValid(i, stack)) {
+                            stacksHandler.setStackInSlot(i, stack.copy());
+                            stack.setCount(0);
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }).orElse(false);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * РџРћРџРћР›РќР•РќРР• РљРРўРђ: РўРµРїРµСЂСЊ СѓС‡РёС‚С‹РІР°РµС‚ РІСЃРµ 49 СЃР»РѕС‚РѕРІ.
      */
     public static boolean resupplyPlayer(ServerPlayer player, AASWorldData.KitInfo kit, boolean isAmmoBagSource) {
         boolean gaveSomething = false;
         Inventory pInv = player.getInventory();
-
-        // РћС‚СЃР»РµР¶РёРІР°РµРј, РєР°РєРёРµ РїСЂРµРґРјРµС‚С‹ РјС‹ СѓР¶Рµ РїРѕРїРѕР»РЅРёР»Рё, С‡С‚РѕР±С‹ РЅРµ СЃС‡РёС‚Р°С‚СЊ РѕРґРёРЅ С‚РёРї РґРІР°Р¶РґС‹
         List<ItemStack> processedItems = new ArrayList<>();
 
-        for (int i = 0; i < 41; i++) {
-            if (!kit.resupplyFlags[i]) continue; // РРіРЅРѕСЂРёСЂСѓРµРј РїСЂРµРґРјРµС‚С‹ Р±РµР· Р·РµР»РµРЅРѕР№ СЂР°РјРєРё
+        for (int i = 0; i < 49; i++) {
+            if (!kit.resupplyFlags[i]) continue;
 
             ItemStack targetStack = kit.inventory.get(i);
             if (targetStack.isEmpty()) continue;
-            // === РќРћР’РђРЇ Р›РћР“РРљРђ: Р—РђРџР Р•Рў РЎРЈРњРљР Р’ РЎРЈРњРљР• ===
+
             if (isAmmoBagSource && targetStack.getItem() == com.example.aas.item.ModItems.AMMO_BAG.get()) {
-                continue; // Р•СЃР»Рё РјС‹ РїРѕРїРѕР»РЅСЏРµРјСЃСЏ РёР· СЃСѓРјРєРё, РёРіРЅРѕСЂРёСЂСѓРµРј РїСЂРµРґРјРµС‚ "СЃСѓРјРєР°" РІ РєРёС‚Рµ
+                continue;
             }
-            // РџСЂРѕРІРµСЂСЏРµРј, РЅРµ РѕР±СЂР°Р±Р°С‚С‹РІР°Р»Рё Р»Рё РјС‹ СѓР¶Рµ СЌС‚РѕС‚ С‚РёРї РїСЂРµРґРјРµС‚Р° РІ СЌС‚РѕРј С†РёРєР»Рµ
+
             boolean alreadyProcessed = false;
             for (ItemStack processed : processedItems) {
                 if (ItemStack.isSameItemSameTags(processed, targetStack)) {
@@ -17996,12 +18303,10 @@ public class ResupplyHandler {
                 }
             }
             if (alreadyProcessed) continue;
-
             processedItems.add(targetStack);
 
-            // 1. РЎС‡РёС‚Р°РµРј СЃРєРѕР»СЊРєРѕ Р’РЎР•Р“Рћ СЌС‚РѕРіРѕ РїСЂРµРґРјРµС‚Р° С‚СЂРµР±СѓРµС‚ РєРёС‚ (РїРѕ РІСЃРµРј СЃР»РѕС‚Р°Рј СЃ РіР°Р»РѕС‡РєРѕР№)
             int totalKitNeeds = 0;
-            for (int k = 0; k < 41; k++) {
+            for (int k = 0; k < 49; k++) {
                 if (kit.resupplyFlags[k]) {
                     ItemStack kStack = kit.inventory.get(k);
                     if (ItemStack.isSameItemSameTags(kStack, targetStack)) {
@@ -18010,7 +18315,6 @@ public class ResupplyHandler {
                 }
             }
 
-            // 2. РЎС‡РёС‚Р°РµРј СЃРєРѕР»СЊРєРѕ Р’РЎР•Р“Рћ СЌС‚РѕРіРѕ РїСЂРµРґРјРµС‚Р° СѓР¶Рµ РµСЃС‚СЊ Сѓ РёРіСЂРѕРєР° РІРѕ РІСЃРµРј РёРЅРІРµРЅС‚Р°СЂРµ
             int totalPlayerHas = 0;
             for (int j = 0; j < pInv.getContainerSize(); j++) {
                 ItemStack s = pInv.getItem(j);
@@ -18019,50 +18323,19 @@ public class ResupplyHandler {
                 }
             }
 
-            // 3. Р’С‹С‡РёСЃР»СЏРµРј РґРµС„РёС†РёС‚ (СЃРєРѕР»СЊРєРѕ С€С‚СѓРє РЅСѓР¶РЅРѕ РґРѕРєРёРЅСѓС‚СЊ)
-            int deficit = totalKitNeeds - totalPlayerHas;
+            if (ModList.get().isLoaded("curios")) {
+                totalPlayerHas += countInCurios(player, targetStack);
+            }
 
+            int deficit = totalKitNeeds - totalPlayerHas;
             if (deficit > 0) {
                 gaveSomething = true;
-
-                // 4. Р Р°СЃРїСЂРµРґРµР»СЏРµРј РЅРµРґРѕСЃС‚Р°СЋС‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РїРѕ РёРґРµР°Р»СЊРЅС‹Рј СЃР»РѕС‚Р°Рј РєРёС‚Р°
-                for (int k = 0; k < 41; k++) {
-                    if (deficit <= 0) break;
-
-                    if (kit.resupplyFlags[k]) {
-                        ItemStack kStack = kit.inventory.get(k);
-                        if (ItemStack.isSameItemSameTags(kStack, targetStack)) {
-
-                            ItemStack currentInSlot = pInv.getItem(k);
-
-                            if (currentInSlot.isEmpty()) {
-                                // Р•СЃР»Рё СЃР»РѕС‚ РїСѓСЃС‚, РєР»Р°РґРµРј С‚СѓРґР° СЃРєРѕР»СЊРєРѕ РІР»РµР·Р°РµС‚ (РЅРѕ РЅРµ Р±РѕР»СЊС€Рµ С‡РµРј С‚СЂРµР±СѓРµС‚ СЌС‚РѕС‚ СЃР»РѕС‚ РІ РєРёС‚Рµ)
-                                int toPut = Math.min(deficit, kStack.getCount());
-                                ItemStack newStack = targetStack.copy();
-                                newStack.setCount(toPut);
-                                pInv.setItem(k, newStack);
-                                deficit -= toPut;
-                            }
-                            else if (ItemStack.isSameItemSameTags(currentInSlot, targetStack)) {
-                                // Р•СЃР»Рё РІ СЃР»РѕС‚Рµ СѓР¶Рµ Р»РµР¶РёС‚ СЌС‚РѕС‚ РїСЂРµРґРјРµС‚, РґРѕР±РёРІР°РµРј РµРіРѕ РґРѕ РЅСѓР¶РЅРѕРіРѕ РєРѕР»РёС‡РµСЃС‚РІР°
-                                int spaceInSlot = Math.min(kStack.getCount(), currentInSlot.getMaxStackSize()) - currentInSlot.getCount();
-                                if (spaceInSlot > 0) {
-                                    int toPut = Math.min(deficit, spaceInSlot);
-                                    currentInSlot.grow(toPut);
-                                    deficit -= toPut;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 5. Р—Р°РїР°СЃРЅРѕР№ РІР°СЂРёР°РЅС‚: РµСЃР»Рё РёРґРµР°Р»СЊРЅС‹Рµ СЃР»РѕС‚С‹ С‡РµРј-С‚Рѕ Р·Р°Р±РёС‚С‹, РІС‹РґР°РµРј РѕСЃС‚Р°РІС€РµРµСЃСЏ РІ Р»СЋР±РѕР№ СЃРІРѕР±РѕРґРЅС‹Р№ СЃР»РѕС‚
                 while (deficit > 0) {
                     int toGive = Math.min(deficit, targetStack.getMaxStackSize());
                     ItemStack addStack = targetStack.copy();
                     addStack.setCount(toGive);
                     if (!pInv.add(addStack)) {
-                        player.drop(addStack, false); // Р’С‹Р±СЂР°СЃС‹РІР°РµРј, РµСЃР»Рё РёРЅРІРµРЅС‚Р°СЂСЊ РїРѕР»РѕРЅ
+                        player.drop(addStack, false);
                     }
                     deficit -= toGive;
                 }
@@ -18072,9 +18345,24 @@ public class ResupplyHandler {
     }
 
     /**
-     * РџРћРџР«РўРљРђ Р’Р«Р”РђР§Р "РћР–РР”РђР®Р©Р•Р“Рћ" РљРРўРђ:
-     * РџСЂРѕРІРµСЂСЏРµС‚ РІСЃРµ Р»РёРјРёС‚С‹ РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё РїРµСЂРµРґ С„Р°РєС‚РёС‡РµСЃРєРѕР№ РІС‹РґР°С‡РµР№ РєРёС‚Р° РёРіСЂРѕРєСѓ.
+     * РџРѕРґСЃС‡РµС‚ РїСЂРµРґРјРµС‚РѕРІ РІ СЃР»РѕС‚Р°С… Curios (РСЃРїСЂР°РІР»РµРЅРѕ РїРѕРґ 1.20.1).
      */
+    private static int countInCurios(ServerPlayer player, ItemStack target) {
+        return top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).map(handler -> {
+            int count = 0;
+            for (var entry : handler.getCurios().values()) {
+                var stacks = entry.getStacks();
+                for (int i = 0; i < stacks.getSlots(); i++) {
+                    ItemStack s = stacks.getStackInSlot(i);
+                    if (ItemStack.isSameItemSameTags(s, target)) {
+                        count += s.getCount();
+                    }
+                }
+            }
+            return count;
+        }).orElse(0);
+    }
+
     public static void tryApplyPendingKit(ServerPlayer player, AASWorldData data) {
         String pending = player.getPersistentData().getString("AAS_PendingKit");
         if (pending.isEmpty()) return;
@@ -18085,31 +18373,26 @@ public class ResupplyHandler {
         AASWorldData.KitInfo kit = teamName.equals("BLUE") ? data.blueKits.get(pending) : data.redKits.get(pending);
         if (kit == null) return;
 
-        // Р•СЃР»Рё СЌС‚Рѕ РїСѓСЃС‚РѕР№ РєРёС‚, РѕС‚РґР°РµРј Р±РµР· РїСЂРѕРІРµСЂРѕРє Р»РёРјРёС‚РѕРІ
         if (pending.equals("Unassigned")) {
             applyKitToPlayer(player, kit);
             player.getPersistentData().remove("AAS_PendingKit");
-            com.example.aas.network.PacketHandler.sendToAllClients(player.serverLevel(), data);
+            PacketHandler.sendToAllClients(player.serverLevel(), data);
             return;
         }
 
-        // РЎР§РРўРђР•Рњ Р›РРњРРўР« РќРђ Р”РђРќРќР«Р™ РњРћРњР•РќРў
         int teamCount = 0;
         int squadCount = 0;
         String pName = player.getScoreboardName();
         AASWorldData.Squad mySquad = null;
 
-        // РС‰РµРј РѕС‚СЂСЏРґ РёРіСЂРѕРєР°
         for (AASWorldData.Squad s : data.squads) {
             if (s.members.contains(pName)) {
                 mySquad = s; break;
             }
         }
 
-        // РџСЂРѕРІРµСЂСЏРµРј РёРЅРІРµРЅС‚Р°СЂРё (РєРёС‚С‹) РґСЂСѓРіРёС… РёРіСЂРѕРєРѕРІ РІ РєРѕРјР°РЅРґРµ
         for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-            if (p == player) continue; // РЎРµР±СЏ РЅРµ СЃС‡РёС‚Р°РµРј
-
+            if (p == player) continue;
             if (p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(teamName)) {
                 String otherKit = p.getPersistentData().getString("AAS_CurrentKit");
                 if (otherKit.equals(pending)) {
@@ -18121,7 +18404,6 @@ public class ResupplyHandler {
             }
         }
 
-        // РџР РћР’Р•Р РЇР•Рњ РЈРЎР›РћР’РРЇ (Р»РёРјРёС‚С‹ РЅР° РєРѕРјР°РЅРґСѓ, РѕС‚СЂСЏРґ, РјРёРЅРёРјСѓРј РёРіСЂРѕРєРѕРІ, Р»РёРґРµСЂСЃС‚РІРѕ)
         boolean allowed = true;
         if (kit.maxPerTeam > 0 && teamCount >= kit.maxPerTeam) allowed = false;
         if (kit.maxPerSquad > 0 && squadCount >= kit.maxPerSquad) allowed = false;
@@ -18129,22 +18411,15 @@ public class ResupplyHandler {
         if (kit.isLeaderOnly && (mySquad == null || !mySquad.leader.equals(pName))) allowed = false;
 
         if (allowed) {
-            // Р’СЃРµ Р»РёРјРёС‚С‹ СЃРѕР±Р»СЋРґРµРЅС‹, РІС‹РґР°РµРј РєРёС‚
             applyKitToPlayer(player, kit);
         } else {
-            // Р›РёРјРёС‚ РїСЂРµРІС‹С€РµРЅ (РёР»Рё РєС‚Рѕ-С‚Рѕ РІР·СЏР» РµРіРѕ Р±С‹СЃС‚СЂРµРµ), РІС‹РґР°РµРј РїСѓСЃС‚РѕР№ РєРёС‚
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Kit " + pending + " is full or blocked! Spawning as Unassigned.").withStyle(net.minecraft.ChatFormatting.RED));
+            player.sendSystemMessage(Component.literal("Kit " + pending + " is full or blocked! Spawning as Unassigned.").withStyle(ChatFormatting.RED));
             AASWorldData.KitInfo unassigned = teamName.equals("BLUE") ? data.blueKits.get("Unassigned") : data.redKits.get("Unassigned");
-            if (unassigned != null) {
-                applyKitToPlayer(player, unassigned);
-            }
+            if (unassigned != null) applyKitToPlayer(player, unassigned);
         }
 
-        // РћС‡РёС‰Р°РµРј СЃС‚Р°С‚СѓСЃ "РѕР¶РёРґР°СЋС‰РµРіРѕ" РєРёС‚Р° РІ NBT
         player.getPersistentData().remove("AAS_PendingKit");
-
-        // РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј, С‡С‚РѕР±С‹ Сѓ РІСЃРµС… РјРѕРјРµРЅС‚Р°Р»СЊРЅРѕ РѕР±РЅРѕРІРёР»Р°СЃСЊ РёРєРѕРЅРєР° РЅР°Рґ РіРѕР»РѕРІРѕР№/РІ РјРµРЅСЋ
-        com.example.aas.network.PacketHandler.sendToAllClients(player.serverLevel(), data);
+        PacketHandler.sendToAllClients(player.serverLevel(), data);
     }
 }
 ==========================================
@@ -18650,10 +18925,10 @@ public class AASWorldData extends SavedData {
     // === РќРћР’Р«Р™ Р’РќРЈРўР Р•РќРќРР™ РљР›РђРЎРЎ Р”Р›РЇ РљРРўРћР’ ===
     public static class KitInfo {
         public String name;
-        public net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> inventory = net.minecraft.core.NonNullList.withSize(41, net.minecraft.world.item.ItemStack.EMPTY);
-        public boolean[] resupplyFlags = new boolean[41];
+        public net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> inventory = net.minecraft.core.NonNullList.withSize(49, net.minecraft.world.item.ItemStack.EMPTY);
+        public boolean[] resupplyFlags = new boolean[49];
+        public boolean[] saveNbtFlags = new boolean[49];
         public boolean isLeaderOnly = false;
-        public boolean[] saveNbtFlags = new boolean[41];
         public int maxPerTeam = -1; // -1 = Р±РµСЃРєРѕРЅРµС‡РЅРѕ, 0 = РІС‹РєР»СЋС‡РµРЅ
         public int maxPerSquad = -1;
         public int minSquadPlayers = 0;
@@ -18668,7 +18943,7 @@ public class AASWorldData extends SavedData {
             t.putInt("MaxSquad", maxPerSquad);
             t.putInt("MinSquadPlayers", minSquadPlayers);
             ListTag items = new ListTag();
-            for (int i = 0; i < 41; i++) {
+            for (int i = 0; i < 49; i++) {
                 if (!inventory.get(i).isEmpty()) {
                     CompoundTag itemTag = new CompoundTag();
                     itemTag.putByte("Slot", (byte) i);
@@ -18694,7 +18969,7 @@ public class AASWorldData extends SavedData {
             for (int i = 0; i < items.size(); i++) {
                 CompoundTag itemTag = items.getCompound(i);
                 int slot = itemTag.getByte("Slot") & 255;
-                if (slot >= 0 && slot < 41) {
+                if (slot >= 0 && slot < 49) {
                     k.inventory.set(slot, net.minecraft.world.item.ItemStack.of(itemTag));
                     k.resupplyFlags[slot] = itemTag.getBoolean("Resupply");
                     k.saveNbtFlags[slot] = itemTag.getBoolean("SaveNbt");
@@ -18703,19 +18978,23 @@ public class AASWorldData extends SavedData {
             return k;
         }
     }
+    // Р’РЅСѓС‚СЂРё AASWorldData.java
     public static class VehicleRecord {
         public UUID uuid;
         public String team;
         public String type;
-        public double x, y, z; // РќРћР’Р«Р• РџРћР›РЇ
-        public float yaw;      // РќРћР’РћР• РџРћР›Р•
+        public double x, y, z;
+        public float yaw;
+        public BlockPos spawnerPos; // <--- 1. РџРѕР»Рµ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ С‚СѓС‚
 
-        public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw) {
+        // 2. РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ Р”РћР›Р–Р•Рќ РїСЂРёРЅРёРјР°С‚СЊ 8 Р°СЂРіСѓРјРµРЅС‚РѕРІ
+        public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw, BlockPos spawnerPos) {
             this.uuid = uuid;
             this.team = team;
             this.type = type;
             this.x = x; this.y = y; this.z = z;
             this.yaw = yaw;
+            this.spawnerPos = spawnerPos; // <--- 3. РџСЂРёСЃРІР°РёРІР°РµРј
         }
 
         public CompoundTag save() {
@@ -18725,15 +19004,17 @@ public class AASWorldData extends SavedData {
             tag.putString("Type", type);
             tag.putDouble("X", x); tag.putDouble("Y", y); tag.putDouble("Z", z);
             tag.putFloat("Yaw", yaw);
+            if (spawnerPos != null) tag.putLong("SpawnerPos", spawnerPos.asLong()); // РЎРѕС…СЂР°РЅРµРЅРёРµ
             return tag;
         }
 
         public static VehicleRecord load(CompoundTag tag) {
+            BlockPos sPos = tag.contains("SpawnerPos") ? BlockPos.of(tag.getLong("SpawnerPos")) : null;
+            // 4. Р’ РјРµС‚РѕРґРµ load С‚РѕР¶Рµ РїРµСЂРµРґР°РµРј 8 Р°СЂРіСѓРјРµРЅС‚РѕРІ
             return new VehicleRecord(tag.getUUID("UUID"), tag.getString("Team"), tag.getString("Type"),
-                    tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"), tag.getFloat("Yaw"));
+                    tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"), tag.getFloat("Yaw"), sPos);
         }
     }
-
 }
 ==========================================
 FILE: AASMod.java

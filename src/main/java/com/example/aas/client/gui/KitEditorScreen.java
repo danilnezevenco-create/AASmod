@@ -1,4 +1,3 @@
-// PATH: src\main\java\com\example\aas\client\gui\KitEditorScreen.java
 package com.example.aas.client.gui;
 
 import com.example.aas.menu.KitEditorMenu;
@@ -14,7 +13,7 @@ import net.minecraft.world.entity.player.Inventory;
 public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
     private EditBox maxTeamBox;
     private EditBox maxSquadBox;
-    private EditBox minPlayersBox; // <--- НОВОЕ ПОЛЕ
+    private EditBox minPlayersBox;
 
     public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -30,7 +29,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         int x = leftPos;
         int y = topPos;
 
-        // Компактное размещение, чтобы уместить 3 поля
         addRenderableWidget(Button.builder(Component.literal(menu.isLeaderOnly ? "[X] Squad Ld Only" : "[ ] Squad Ld Only"), b -> {
             menu.isLeaderOnly = !menu.isLeaderOnly;
             b.setMessage(Component.literal(menu.isLeaderOnly ? "[X] Squad Ld Only" : "[ ] Squad Ld Only"));
@@ -44,7 +42,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         maxSquadBox.setValue(String.valueOf(menu.maxPerSquad));
         addRenderableWidget(maxSquadBox);
 
-        // Поле "Минимум игроков в отряде"
         minPlayersBox = new EditBox(font, x + 144, y + 50, 24, 14, Component.empty());
         minPlayersBox.setValue(String.valueOf(menu.minSquadPlayers));
         addRenderableWidget(minPlayersBox);
@@ -59,7 +56,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         try { menu.maxPerSquad = Integer.parseInt(maxSquadBox.getValue()); } catch(Exception ignored){}
         try { menu.minSquadPlayers = Integer.parseInt(minPlayersBox.getValue()); } catch(Exception ignored){}
 
-        // ПЕРЕДАЕМ 8 АРГУМЕНТОВ (добавлен menu.saveNbtFlags в конце)
         PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
                 menu.team, menu.kitName, menu.isLeaderOnly,
                 menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
@@ -77,41 +73,33 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
         int x = leftPos;
         int y = topPos;
-        int labelColor = 0xCCCCCC; // Светло-серый для подписей
-        int hintColor = 0xAAAAAA;  // Серый для инструкций
+        int labelColor = 0xCCCCCC;
 
-        // --- 1. ПОДПИСИ К ПОЛЯМ (Слева от коробок) ---
-        // Рисуем справа налево, чтобы выровнять по правому краю перед полями
         gui.drawString(font, "Max/team", x + 98, y + 17, labelColor, false);
         gui.drawString(font, "Max/Sqd",  x + 103, y + 35, labelColor, false);
         gui.drawString(font, "Min/Sqd",  x + 103, y + 53, labelColor, false);
 
-        // --- 2. ИНСТРУКЦИИ ПО УПРАВЛЕНИЮ (Под кнопкой) ---
-        // Смещение y + 36, так как кнопка заканчивается на y + 32
         gui.pose().pushPose();
-        gui.pose().scale(0.9f, 0.9f, 1.0f); // Немного уменьшим текст, чтобы влезло
-
-        // Пересчитываем координаты из-за скейла (x/0.9, y/0.9)
+        gui.pose().scale(0.9f, 0.9f, 1.0f);
         int scaledX = (int)((x + 8) / 0.9f);
         int scaledY = (int)((y + 36) / 0.9f);
-
-        gui.drawString(font, "MMB: Toggle Resupply", scaledX, scaledY, 0x80FF80, false); // Светло-зеленый
-        gui.drawString(font, "Shift + MMB: Save NBT", scaledX, scaledY + 10, 0x80FFFF, false); // Бирюзовый
-
+        gui.drawString(font, "MMB: Toggle Resupply", scaledX, scaledY, 0x80FF80, false);
+        gui.drawString(font, "Shift + MMB: Save NBT", scaledX, scaledY + 10, 0x80FFFF, false);
         gui.pose().popPose();
 
-        // --- 3. ЛОГИКА ОТРИСОВКИ РАМОК (Твой существующий код) ---
+        // --- ЛОГИКА ОТРИСОВКИ РАМОК (Обновлено до 49 слотов) ---
         for (int i = 0; i < menu.slots.size(); i++) {
             net.minecraft.world.inventory.Slot slot = menu.slots.get(i);
             if (slot.container == menu.kitInventory) {
                 int idx = slot.getContainerSlot();
-                if (idx >= 0 && idx < 41) {
+                // Теперь проверяем до 49 (0-48)
+                if (idx >= 0 && idx < 49) {
                     if (menu.saveNbtFlags[idx]) {
-                        // Зеленая рамка для NBT
+                        // Синяя рамка для NBT
                         gui.fill(leftPos + slot.x, topPos + slot.y, leftPos + slot.x + 16, topPos + slot.y + 16, 0x600000FF);
                     }
                     else if (menu.resupplyFlags[idx]) {
-                        // Желтая/Зеленая прозрачная для Resupply
+                        // Желтая прозрачная для Resupply
                         gui.fill(leftPos + slot.x, topPos + slot.y, leftPos + slot.x + 16, topPos + slot.y + 16, 0x60FFFF00);
                     }
                 }
@@ -125,12 +113,11 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             net.minecraft.world.inventory.Slot slot = this.hoveredSlot;
             if (slot != null && slot.container == menu.kitInventory) {
                 int idx = slot.getContainerSlot();
-                if (idx >= 0 && idx < 41) {
+                // Теперь разрешаем клики по индексам до 49 (Curios слоты)
+                if (idx >= 0 && idx < 49) {
                     if (hasShiftDown()) {
-                        // Shift + СКМ = Переключить сохранение NBT
                         menu.saveNbtFlags[idx] = !menu.saveNbtFlags[idx];
                     } else {
-                        // Просто СКМ = Переключить ресаплай
                         menu.resupplyFlags[idx] = !menu.resupplyFlags[idx];
                     }
                     return true;
@@ -142,8 +129,15 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
     @Override
     protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {
+        // Основной фон
         gui.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF333333);
 
+        // --- НОВОЕ: Темная панель слева для EXTRA/CURIOS слотов ---
+        // Смещение X: -42, ширина 40 пикселей. Высота совпадает с областью слотов.
+        gui.fill(leftPos - 42, topPos + 62, leftPos - 2, topPos + 142, 0xFF222222);
+        gui.renderOutline(leftPos - 42, topPos + 62, 40, 80, 0xFF000000);
+
+        // Отрисовка всех рамок слотов (включая те, что за границами основного окна)
         for (net.minecraft.world.inventory.Slot slot : menu.slots) {
             gui.fill(leftPos + slot.x - 1, topPos + slot.y - 1, leftPos + slot.x + 17, topPos + slot.y + 17, 0xFF000000);
             gui.fill(leftPos + slot.x, topPos + slot.y, leftPos + slot.x + 16, topPos + slot.y + 16, 0xFF8B8B8B);

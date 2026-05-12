@@ -39,10 +39,10 @@ public class PacketSaveKit {
         buf.writeInt(msg.minSquadPlayers);
 
         // 3. ПИШЕМ ПЕРВЫЙ МАССИВ (Ресаплай)
-        for(int i=0; i<41; i++) buf.writeBoolean(msg.resupplyFlags[i]);
+        for(int i=0; i<49; i++) buf.writeBoolean(msg.resupplyFlags[i]);
 
         // 4. ПИШЕМ ВТОРОЙ МАССИВ (NBT)
-        for(int i=0; i<41; i++) buf.writeBoolean(msg.nbtFlags[i]);
+        for(int i=0; i<49; i++) buf.writeBoolean(msg.nbtFlags[i]);
     }
 
     public static PacketSaveKit decode(FriendlyByteBuf buf) {
@@ -54,12 +54,12 @@ public class PacketSaveKit {
         int minP = buf.readInt();
 
         // 5. ЧИТАЕМ ПЕРВЫЙ МАССИВ
-        boolean[] f1 = new boolean[41];
-        for(int i=0; i<41; i++) f1[i] = buf.readBoolean();
+        boolean[] f1 = new boolean[49];
+        for(int i=0; i<49; i++) f1[i] = buf.readBoolean();
 
         // 6. ЧИТАЕМ ВТОРОЙ МАССИВ
-        boolean[] f2 = new boolean[41];
-        for(int i=0; i<41; i++) f2[i] = buf.readBoolean();
+        boolean[] f2 = new boolean[49];
+        for(int i=0; i<49; i++) f2[i] = buf.readBoolean();
 
         return new PacketSaveKit(t, k, l, mt, ms, minP, f1, f2);
     }
@@ -83,7 +83,7 @@ public class PacketSaveKit {
                     kit.saveNbtFlags = msg.nbtFlags; // <--- ВАЖНО: сохраняем NBT флаги
 
                     // Копируем предметы из инвентаря меню в кит
-                    for(int i=0; i<41; i++) {
+                    for(int i=0; i<49; i++) {
                         kit.inventory.set(i, menu.kitInventory.getItem(i).copy());
                     }
 

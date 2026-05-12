@@ -1,8 +1,10 @@
 // PATH: src/main/java/com/example/aas/client/MapPlayerInfo.java
 package com.example.aas.network;
+import java.util.UUID;
 
 public class MapPlayerInfo {
     public String name;
+    public UUID uuid;
     public double x, z;
     public float rot;
     public int squadId;
@@ -12,8 +14,9 @@ public class MapPlayerInfo {
     public boolean inVehicle; // Это поле должно быть здесь!
     public String team;
 
-    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle, String team) {
+    public MapPlayerInfo(String name, UUID uuid, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle, String team) {
         this.name = name;
+        this.uuid = uuid; // Теперь эта переменная берется из аргументов выше
         this.x = x;
         this.z = z;
         this.rot = rot;

@@ -27,6 +27,12 @@ public class ClientData {
         if (type == 1) SQUAD_SPEAKERS.put(id, System.currentTimeMillis());
         else if (type == 2) COMMAND_SPEAKERS.put(id, System.currentTimeMillis());
     }
+    public static boolean voteActive = false;
+    public static int voteTimer = 0;
+    public static Map<UUID, Boolean> votes = new HashMap<>();
+    public static float voteTransition = 0f;
+    public static double mapScale = 4.0;
+    public static int pointCaptureRate = 0;
     public static int mapMinX = -1000;
     public static int mapMinZ = -1000;
     public static int mapMaxX = 1000;

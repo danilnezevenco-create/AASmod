@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.EntityHitResult;
@@ -28,6 +29,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketVehicleShoot;
+import com.example.aas.client.RecoilHandler;
 
 @Mod.EventBusSubscriber(modid = "aas", value = Dist.CLIENT)
 public class ClientEvents {
@@ -93,6 +95,34 @@ public class ClientEvents {
     }
 
     @SubscribeEvent
+    public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+
+        // Если карта открыта (например, на TAB)
+        if (ClientData.isMapOpen && mc.screen == null) {
+            double scrollDelta = event.getScrollDelta();
+
+            if (scrollDelta != 0) {
+                // Изменяем масштаб в ClientData
+                // Если крутим вверх (delta > 0) - приближаем (уменьшаем число блоков на пиксель)
+                if (scrollDelta > 0) {
+                    ClientData.mapScale /= 1.2;
+                } else {
+                    ClientData.mapScale *= 1.2;
+                }
+
+                // Ограничиваем зум (от 0.5 до 25.0 блоков на пиксель)
+                if (ClientData.mapScale < 0.5) ClientData.mapScale = 0.5;
+                if (ClientData.mapScale > 25.0) ClientData.mapScale = 25.0;
+
+                // ВАЖНО: Отменяем событие, чтобы хотбар не крутился
+                event.setCanceled(true);
+            }
+        }
+    }
+
+
+    @SubscribeEvent
     public static void onMouseInput(InputEvent.MouseButton.Pre event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
@@ -154,12 +184,27 @@ public class ClientEvents {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
+        // 1. ЛОГИКА ГОЛОСОВАНИЯ (F1/F2)
+        if (ClientData.voteActive && mc.screen == null && event.getAction() == GLFW.GLFW_PRESS) {
+            if (event.getKey() == GLFW.GLFW_KEY_F9) {
+                PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(true));
+                // event.setCanceled(true); // УДАЛЕНО, так как вызывает краш
+                return;
+            } else if (event.getKey() == GLFW.GLFW_KEY_F10) {
+                PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(false));
+                // event.setCanceled(true); // УДАЛЕНО, так как вызывает краш
+                return;
+            }
+        }
+
+        // 2. СБРОС ЯЩИКА (X)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.DROP_SUPPLY_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.player.getVehicle() != null) {
                 PacketHandler.INSTANCE.sendToServer(new PacketDropCrate());
             }
         }
 
+        // 3. МЕНЮ ОТРЯДОВ (K)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.screen == null) {
                 String teamName = (mc.player.getTeam() != null) ? mc.player.getTeam().getName() : "";
@@ -172,30 +217,14 @@ public class ClientEvents {
                 }
             }
         }
+
+        // 4. КАРТА (TAB)
         if (ModKeyBindings.SHOW_MAP_KEY.matches(event.getKey(), event.getScanCode())) {
             if (event.getAction() == GLFW.GLFW_PRESS) {
-                ClientData.isMapOpen = true; // Нажал — открылась
+                ClientData.isMapOpen = true;
             }
             else if (event.getAction() == GLFW.GLFW_RELEASE) {
-                ClientData.isMapOpen = false; // Отпустил — закрылась
-            }
-        }
-
-        if (event.getAction() == GLFW.GLFW_PRESS) {
-            boolean isDebugKey = (event.getKey() == GLFW.GLFW_KEY_F9 ||
-                    event.getKey() == GLFW.GLFW_KEY_F10 ||
-                    event.getKey() == GLFW.GLFW_KEY_F8);
-
-            if (isDebugKey && !mc.player.isCreative()) return;
-
-            if (event.getKey() == GLFW.GLFW_KEY_F9) PacketHandler.INSTANCE.sendToServer(new PacketDebugFill());
-            if (event.getKey() == GLFW.GLFW_KEY_F10) {
-                PacketHandler.INSTANCE.sendToServer(new PacketDebugSpawnRally("BLUE"));
-                mc.player.sendSystemMessage(Component.literal("Spawning BLUE Rally..."));
-            }
-            if (event.getKey() == GLFW.GLFW_KEY_F8) {
-                PacketHandler.INSTANCE.sendToServer(new PacketDebugSpawnRally("RED"));
-                mc.player.sendSystemMessage(Component.literal("Spawning RED Rally..."));
+                ClientData.isMapOpen = false;
             }
         }
     }

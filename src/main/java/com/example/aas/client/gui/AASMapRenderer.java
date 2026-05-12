@@ -24,7 +24,7 @@ public class AASMapRenderer implements AutoCloseable {
 
     private int mapX, mapY, mapSize;
     // Текущий зум (сколько блоков в одном пикселе интерфейса)
-    private double mapScale = 4.0;
+    private double getMapScale() { return ClientData.mapScale; }
 
     private double mapPanX = 0;
     private double mapPanZ = 0;
@@ -92,6 +92,7 @@ public class AASMapRenderer implements AutoCloseable {
         if (localPlayer == null) return;
 
         // 1. Координаты камеры (игрок + перетаскивание карты)
+        double currentScale = ClientData.mapScale;
         double cx = localPlayer.getX() + mapPanX;
         double cz = localPlayer.getZ() + mapPanZ;
 
@@ -106,7 +107,7 @@ public class AASMapRenderer implements AutoCloseable {
 
         // 3. Масштабирование и центрирование
         pose.translate(mapX + mapSize / 2.0, mapY + mapSize / 2.0, 0);
-        float scale = 1.0f / (float) mapScale;
+        float scale = 1.0f / (float) currentScale;
         pose.scale(scale, scale, 1.0f);
 
         int s = ClientData.mapSizeBlocks;
@@ -133,12 +134,12 @@ public class AASMapRenderer implements AutoCloseable {
         pose.popPose();
 
         // 4. Отрисовка объектов (флаги, игроки, техника)
-        renderOverlays(gui, mc, cx, cz, mapScale);
-        renderStructures(gui, mc, cx, cz, mapScale);
-        renderVehicles(gui, mc, cx, cz, mapScale);
-        renderAllPlayers(gui, mc, localPlayer, cx, cz, mapScale);
-        renderSquadMarkerLogic(gui, mc, cx, cz, mapScale);
-        renderTacticalMarkers(gui, mc, cx, cz, mapScale);
+        renderOverlays(gui, mc, cx, cz, currentScale);
+        renderStructures(gui, mc, cx, cz, currentScale);
+        renderVehicles(gui, mc, cx, cz, currentScale);
+        renderAllPlayers(gui, mc, localPlayer, cx, cz, currentScale);
+        renderSquadMarkerLogic(gui, mc, cx, cz, currentScale);
+        renderTacticalMarkers(gui, mc, cx, cz, currentScale);
 
         gui.disableScissor();
     }
@@ -303,13 +304,13 @@ public class AASMapRenderer implements AutoCloseable {
     public void centerOnPlayer() { mapPanX = 0; mapPanZ = 0; }
     public double getCenterX(LocalPlayer player) { return player.getX() + mapPanX; }
     public double getCenterZ(LocalPlayer player) { return player.getZ() + mapPanZ; }
-    public double getBlocksPerPixel() { return mapScale; }
+    public double getBlocksPerPixel() { return ClientData.mapScale; }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (isMouseOver(mouseX, mouseY)) {
             // Приближение/отдаление (меняем кол-во блоков в 1 пикселе экрана)
-            if (delta > 0) mapScale /= 1.2; else mapScale *= 1.2;
-            mapScale = Mth.clamp(mapScale, 0.5, 25.0);
+            if (delta > 0) ClientData.mapScale /= 1.2; else ClientData.mapScale *= 1.2;
+            ClientData.mapScale = Mth.clamp(ClientData.mapScale, 0.5, 25.0);
             return true;
         }
         return false;
@@ -607,8 +608,8 @@ public class AASMapRenderer implements AutoCloseable {
     }
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (isDraggingMap && button == 0) {
-            mapPanX -= (mouseX - lastMouseX) * mapScale;
-            mapPanZ -= (mouseY - lastMouseY) * mapScale;
+            mapPanX -= (mouseX - lastMouseX) * ClientData.mapScale;
+            mapPanZ -= (mouseY - lastMouseY) * ClientData.mapScale;
             lastMouseX = mouseX;
             lastMouseY = mouseY;
             return true;

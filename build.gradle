@@ -64,10 +64,15 @@ mixin {
 repositories {
     maven { url 'https://repo.spongepowered.org/repository/maven-public/' }
     maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+    maven {
+        url = "https://maven.theillusivec4.top/"
+    }
     mavenCentral()
 }
 
 dependencies {
+    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.4.0+1.20.1:api")
+    runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.4.0+1.20.1")
 // Forge
     minecraft "net.minecraftforge:forge:1.20.1-47.4.10"
 // GeckoLib

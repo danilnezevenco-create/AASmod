@@ -60,6 +60,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketSquadMarker.class, PacketSquadMarker::encode, PacketSquadMarker::decode, PacketSquadMarker::handle);
         INSTANCE.registerMessage(id++, PacketPlaceMapMarker.class, PacketPlaceMapMarker::encode, PacketPlaceMapMarker::decode, PacketPlaceMapMarker::handle);
         INSTANCE.registerMessage(id++, PacketRadioAction.class, PacketRadioAction::encode, PacketRadioAction::decode, PacketRadioAction::handle);
+        INSTANCE.registerMessage(id++, PacketVoteAction.class, PacketVoteAction::encode, PacketVoteAction::decode, PacketVoteAction::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
@@ -97,13 +98,16 @@ public class PacketHandler {
                 new PacketSyncGameData(blue, red, hasBlue, hasRed, blueBleed, redBleed,
                         respawnTime, blueBlocked, redBlocked, hubs,
                         bFac, rFac, bName, rName, false,
-                        0, 0, 2048, // ТРИ параметра карты вместо ЧЕТЫРЕХ (ЦентрX, ЦентрZ, Размер)
+                        0, 0, 2048,
                         new ArrayList<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
                         getPlayerKitsMap(),
-                        new ArrayList<>(), // 24-й: Список техники
-                        new ArrayList<>(), // 25-й аргумент: Пустой список техники
+                        new ArrayList<>(),
+                        new ArrayList<>(),
                         com.example.aas.config.AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(),
-                        com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get()
+                        com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
+                        false,           // voteActive (НОВОЕ: по умолчанию выключено)
+                        0,               // voteTimer (НОВОЕ)
+                        new HashMap<>()  // votes (НОВОЕ: пустая мапа голосов)
                 ));
     }
 
@@ -141,7 +145,10 @@ public class PacketHandler {
                 data.markedVehicles, // Список техники (последний аргумент)
                 data.activeMarkers,
                 AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(), // Передаем настройку СЕРВЕРА
-                AASConfig.HUB_SPAWN_MATERIAL_COST.get()
+                AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
+                data.voteActive,
+                data.voteTimer,
+                data.votes
         );
     }
 }

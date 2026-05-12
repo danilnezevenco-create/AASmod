@@ -10,6 +10,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
+import com.example.aas.world.AASWorldData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +61,9 @@ public class AASWorldData extends SavedData {
             blueKits.put(name, new KitInfo(name));
             redKits.put(name, new KitInfo(name));
         }
+
     }
+    public List<BlockPos> triggerBlocks = new ArrayList<>();
 
     @Override
     public CompoundTag save(CompoundTag tag) {
@@ -82,6 +85,9 @@ public class AASWorldData extends SavedData {
         for (VehicleRecord v : markedVehicles) {
             vehicleList.add(v.save());
         }
+        ListTag triggerList = new ListTag();
+        for (BlockPos p : triggerBlocks) triggerList.add(LongTag.valueOf(p.asLong()));
+        tag.put("TriggerBlocks", triggerList);
         tag.put("MarkedVehicles", vehicleList);
         ListTag markerList = new ListTag();
         for (MapMarker m : activeMarkers) markerList.add(m.save());
@@ -149,6 +155,10 @@ public class AASWorldData extends SavedData {
         if (tag.contains("TacticalMarkers")) {
             ListTag list = tag.getList("TacticalMarkers", 10);
             for (int i = 0; i < list.size(); i++) data.activeMarkers.add(MapMarker.load(list.getCompound(i)));
+        }
+        if (tag.contains("TriggerBlocks")) {
+            ListTag list = tag.getList("TriggerBlocks", Tag.TAG_LONG);
+            for (Tag t : list) data.triggerBlocks.add(BlockPos.of(((LongTag) t).getAsLong()));
         }
         if (tag.contains("MarkedVehicles")) {
             ListTag list = tag.getList("MarkedVehicles", 10);
@@ -460,10 +470,10 @@ public class AASWorldData extends SavedData {
     // === НОВЫЙ ВНУТРЕННИЙ КЛАСС ДЛЯ КИТОВ ===
     public static class KitInfo {
         public String name;
-        public net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> inventory = net.minecraft.core.NonNullList.withSize(41, net.minecraft.world.item.ItemStack.EMPTY);
-        public boolean[] resupplyFlags = new boolean[41];
+        public net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> inventory = net.minecraft.core.NonNullList.withSize(49, net.minecraft.world.item.ItemStack.EMPTY);
+        public boolean[] resupplyFlags = new boolean[49];
+        public boolean[] saveNbtFlags = new boolean[49];
         public boolean isLeaderOnly = false;
-        public boolean[] saveNbtFlags = new boolean[41];
         public int maxPerTeam = -1; // -1 = бесконечно, 0 = выключен
         public int maxPerSquad = -1;
         public int minSquadPlayers = 0;
@@ -478,7 +488,7 @@ public class AASWorldData extends SavedData {
             t.putInt("MaxSquad", maxPerSquad);
             t.putInt("MinSquadPlayers", minSquadPlayers);
             ListTag items = new ListTag();
-            for (int i = 0; i < 41; i++) {
+            for (int i = 0; i < 49; i++) {
                 if (!inventory.get(i).isEmpty()) {
                     CompoundTag itemTag = new CompoundTag();
                     itemTag.putByte("Slot", (byte) i);
@@ -504,7 +514,7 @@ public class AASWorldData extends SavedData {
             for (int i = 0; i < items.size(); i++) {
                 CompoundTag itemTag = items.getCompound(i);
                 int slot = itemTag.getByte("Slot") & 255;
-                if (slot >= 0 && slot < 41) {
+                if (slot >= 0 && slot < 49) {
                     k.inventory.set(slot, net.minecraft.world.item.ItemStack.of(itemTag));
                     k.resupplyFlags[slot] = itemTag.getBoolean("Resupply");
                     k.saveNbtFlags[slot] = itemTag.getBoolean("SaveNbt");
@@ -513,6 +523,12 @@ public class AASWorldData extends SavedData {
             return k;
         }
     }
+
+    public boolean voteActive = false;
+    public int voteTimer = 0;
+    public boolean blueReady = false;
+    public boolean redReady = false;
+    public Map<UUID, Boolean> votes = new HashMap<>();
     // Внутри AASWorldData.java
     public static class VehicleRecord {
         public UUID uuid;

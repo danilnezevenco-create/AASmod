@@ -21,6 +21,9 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.SQUAD_LEADER_RADIO.get());
                         pOutput.accept(ModItems.ENTRENCHING_TOOL.get());
                         pOutput.accept(ModItems.VEHICLE_SPAWNER_ITEM.get());
+                        pOutput.accept(ModItems.MAIN_SUPPLY_ITEM.get());
+                        pOutput.accept(ModItems.KIT_SETUP_ITEM.get());
+                        pOutput.accept(ModItems.GAME_START_TRIGGER_ITEM.get());
 
                         pOutput.accept(ModItems.M2_AMMO.get());
                         pOutput.accept(ModItems.AGS_AMMO.get());
@@ -51,8 +54,6 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.RED_STATIC_ZU.get());
                         pOutput.accept(ModItems.RED_MOBILE_ZU.get());
                         pOutput.accept(ModItems.RED_BOAT.get());
-                        pOutput.accept(ModItems.MAIN_SUPPLY_ITEM.get());
-                        pOutput.accept(ModItems.KIT_SETUP_ITEM.get());
                     })
                     .build());
 

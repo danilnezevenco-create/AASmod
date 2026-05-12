@@ -14,6 +14,7 @@ public class ModBlocks {
     // PATH: src\main\java\com\example\aas\block\ModBlocks.java
     public static final RegistryObject<Block> AMMO_BAG_BLOCK = BLOCKS.register("ammo_bag", AmmoBagBlock::new);
     // === БЛОКИ ===
+    public static final RegistryObject<Block> GAME_START_TRIGGER = BLOCKS.register("game_start_trigger", GameStartTriggerBlock::new);
     public static final RegistryObject<Block> BLUE_RALLY_BLOCK = BLOCKS.register("blue_rally", RallyPointBlock::new);
     public static final RegistryObject<Block> RED_RALLY_BLOCK = BLOCKS.register("red_rally", RallyPointBlock::new);
     public static final RegistryObject<Block> HUB_BLOCK = BLOCKS.register("hub_block", HubBlock::new);

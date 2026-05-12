@@ -46,6 +46,9 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.state.BlockState;
+import com.example.aas.block.GameStartTriggerBlock;
+import com.example.aas.block.ModBlocks;
 
 @Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class GameLogicEvents {
@@ -196,6 +199,48 @@ public class GameLogicEvents {
             boolean blueIsBleeding = false;
             boolean redIsBleeding = false;
 
+            // Внутри цикла по уровням (level):
+            if (data.voteActive && !data.isGameStarted) {
+                if (globalTick % 20 == 0) {
+                    data.voteTimer--;
+
+                    // 1. Проверяем текущую готовность
+                    boolean currentBlueReady = isTeamReady(level, "Blue", data);
+                    boolean currentRedReady = isTeamReady(level, "Red", data);
+
+                    // 2. Если Синие только что стали готовы
+                    if (currentBlueReady && !data.blueReady) {
+                        data.blueReady = true;
+                        String teamName = data.blueFaction.equals("none") ? AASConfig.BLUE_TEAM_CUSTOM_NAME.get() : formatFactionName(data.blueFaction);
+                        sendTitleToLevel(level, teamName + " is READY!", ChatFormatting.BLUE);
+                        level.players().forEach(p -> p.playNotifySound(net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.MASTER, 1.0f, 1.0f));
+                    }
+
+                    // 3. Если Красные только что стали готовы
+                    if (currentRedReady && !data.redReady) {
+                        data.redReady = true;
+                        String teamName = data.redFaction.equals("none") ? AASConfig.RED_TEAM_CUSTOM_NAME.get() : formatFactionName(data.redFaction);
+                        sendTitleToLevel(level, teamName + " is READY!", ChatFormatting.RED);
+                        level.players().forEach(p -> p.playNotifySound(net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.MASTER, 1.0f, 1.0f));
+                    }
+
+                    // 4. Условие старта: обе готовы или время вышло
+                    if (data.blueReady && data.redReady) {
+                        data.voteActive = false;
+                        broadcastMessage(level, "ALL TEAMS READY! Starting match...", ChatFormatting.GOLD);
+                        startGameCountdown(level);
+                    } else if (data.voteTimer <= 0) {
+                        data.voteActive = false;
+                        broadcastMessage(level, "VOTING TIME EXPIRED! Forcing start...", ChatFormatting.RED);
+                        startGameCountdown(level);
+                    }
+
+                    data.setDirty();
+                    PacketHandler.sendToAllClients(level, data);
+                }
+            }
+
+
             // === 1. РАССЫЛКА ПОЗИЦИЙ ИГРОКОВ (Оптимизация: каждые 2 тика) ===
             if (globalTick % 2 == 0) {
                 // Собираем данные ОБО ВСЕХ игроках один раз
@@ -323,16 +368,21 @@ public class GameLogicEvents {
                 }
             }
             // === 2. ЛОГИКА ОТСЧЕТА ДО СТАРТА ===
-            if (data.countdownActive) {
+            if (data.countdownActive) { // <--- ОБЯЗАТЕЛЬНАЯ ПРОВЕРКА
                 if (data.countdownTicks > 0) {
-                    if (globalTick % 20 == 0) {
+
+                    // Сначала проверяем и показываем цифру, а ТОЛЬКО ПОТОМ уменьшаем
+                    if (data.countdownTicks % 20 == 0) {
                         int seconds = data.countdownTicks / 20;
                         sendTitleToLevel(level, String.valueOf(seconds), ChatFormatting.YELLOW);
                         level.playSound(null, new BlockPos(0, 100, 0), net.minecraft.sounds.SoundEvents.NOTE_BLOCK_HAT.value(), net.minecraft.sounds.SoundSource.MASTER, 1f, 1f);
                     }
+
                     data.countdownTicks--;
                     data.setDirty();
+
                 } else {
+                    // Этот блок сработает ОДИН РАЗ, когда тики станут 0
                     data.countdownActive = false;
                     sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
                     data.isGameStarted = true;
@@ -349,6 +399,16 @@ public class GameLogicEvents {
 
                         if (kitToApply != null && !kitToApply.isEmpty() && !kitToApply.equals("Unassigned")) {
                             com.example.aas.network.ResupplyHandler.tryApplyPendingKit(p, data);
+                        }
+                    }
+
+                    for (BlockPos p : data.triggerBlocks) {
+                        if (level.isLoaded(p)) {
+                            BlockState st = level.getBlockState(p);
+                            if (st.is(ModBlocks.GAME_START_TRIGGER.get())) {
+                                level.setBlock(p, st.setValue(GameStartTriggerBlock.POWERED, true), 3);
+                                level.scheduleTick(p, ModBlocks.GAME_START_TRIGGER.get(), 20);
+                            }
                         }
                     }
 
@@ -410,6 +470,23 @@ public class GameLogicEvents {
         }
     }
 
+    private static boolean isTeamReady(ServerLevel level, String teamName, AASWorldData data) {
+        List<ServerPlayer> teamPlayers = level.players().stream()
+                .filter(p -> p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(teamName))
+                .toList();
+
+        if (teamPlayers.isEmpty()) return true; // Если в команде никого, она не мешает старту
+
+        long yesVotes = teamPlayers.stream()
+                .filter(p -> data.votes.getOrDefault(p.getUUID(), false))
+                .count();
+
+        float percent = (float) yesVotes / teamPlayers.size() * 100f;
+        boolean isReady = percent >= AASConfig.VOTE_REQUIRED_PERCENTAGE.get();
+
+        return isReady;
+    }
+
     // === ВСПОМОГАТЕЛЬНЫЙ МЕТОД ДЛЯ СБОРА ДАННЫХ ОБ ИГРОКАХ ===
     private static List<MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, AASWorldData data) {
         List<MapPlayerInfo> infoList = new ArrayList<>();
@@ -437,6 +514,7 @@ public class GameLogicEvents {
             // 3. Добавляем в список ОДИН раз со всеми 9 аргументами
             infoList.add(new MapPlayerInfo(
                     pName,
+                    p.getUUID(),
                     p.getX(),
                     p.getZ(),
                     p.getYRot(),
@@ -462,43 +540,13 @@ public class GameLogicEvents {
         Set<UUID> playersInPreciseZones = new HashSet<>();
 
         for (AASWorldData.CapturePoint point : data.capturePoints) {
-            // Берем всех в квадрате (AABB) для начала
             List<ServerPlayer> playersInBox = level.getEntitiesOfClass(ServerPlayer.class, point.area);
-
             int blueOnPointLiving = 0;
             int redOnPointLiving = 0;
-            boolean isTimeLocked = level.getGameTime() < point.lockedUntilTick;
 
             for (ServerPlayer p : playersInBox) {
                 if (!p.isAlive() || p.isSpectator()) continue;
-
-                // ФИКС УГЛОВ: Проверка реально внутри цилиндра или куба
                 if (point.isInside(p.position())) {
-                    playersInPreciseZones.add(p.getUUID());
-
-                    boolean lockedUI = false;
-                    String nextObjectiveForPlayer = "";
-
-                    if (p.getTeam() != null) {
-                        String teamName = p.getTeam().getName();
-                        String teamKey = teamName.equalsIgnoreCase("Blue") ? "BLUE" : "RED";
-
-                        if (!teamKey.isEmpty()) {
-                            if (isTimeLocked) {
-                                lockedUI = true;
-                                long totalSeconds = (point.lockedUntilTick - level.getGameTime()) / 20;
-                                nextObjectiveForPlayer = String.format("LOCKED: %dм %dс", totalSeconds / 60, totalSeconds % 60);
-                            } else if (!canCapture(point, teamKey, data)) {
-                                lockedUI = true;
-                                nextObjectiveForPlayer = findRequiredPointName(point, teamKey, data);
-                            }
-                        }
-                    }
-
-                    // Шлем данные только тем, кто внутри формы
-                    PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p),
-                            new PacketSyncPoint(true, point.name, point.owner, point.progress, lockedUI, nextObjectiveForPlayer, false, point.capturingTeam));
-
                     if (p.getTeam() != null) {
                         if (p.getTeam().getName().equalsIgnoreCase("Blue")) blueOnPointLiving++;
                         else if (p.getTeam().getName().equalsIgnoreCase("Red")) redOnPointLiving++;
@@ -506,10 +554,10 @@ public class GameLogicEvents {
                 }
             }
 
-            // ТВОЯ ПОЛНАЯ ЛОГИКА ЗАХВАТА
             String dominantTeam = "NONE";
             int alliesOnPoint = 0;
             boolean isContested = false;
+            boolean isTimeLocked = level.getGameTime() < point.lockedUntilTick;
 
             if (blueOnPointLiving > 0 && redOnPointLiving > 0) {
                 if (blueOnPointLiving >= redOnPointLiving * 2) { dominantTeam = "BLUE"; alliesOnPoint = blueOnPointLiving; }
@@ -521,13 +569,62 @@ public class GameLogicEvents {
                 dominantTeam = "RED"; alliesOnPoint = redOnPointLiving;
             }
 
+            float multiplier = 1.0f;
+            if (alliesOnPoint > 1) multiplier += (alliesOnPoint - 1) * 0.5f;
+            if (multiplier > 4.0f) multiplier = 4.0f;
+
+            // --- ЛОГИКА СТРЕЛОК И ЦВЕТА ---
+            int currentRate = 0;
+            String teamToSync = "NONE";
+
+            if (!dominantTeam.equals("NONE") && !isContested && !isTimeLocked) {
+                teamToSync = dominantTeam; // Команда, которая СЕЙЧАС стоит на точке
+
+                // Проверяем, нужно ли вообще рисовать стрелки
+                boolean isOwner = point.owner.equals(dominantTeam);
+                boolean isFullyCaptured = (isOwner && point.progress >= 1.0f);
+
+                if (!isFullyCaptured) {
+                    if (canCapture(point, dominantTeam, data)) {
+                        boolean isNeutralizing = (!point.owner.equals("NEUTRAL") && !point.owner.equals(dominantTeam))
+                                || (point.owner.equals("NEUTRAL") && !point.capturingTeam.equals("NONE") && !point.capturingTeam.equals(dominantTeam));
+
+                        currentRate = Math.round(multiplier);
+                        if (isNeutralizing) currentRate = -currentRate;
+                    }
+                } else {
+                    currentRate = 0; // Точка уже наша на 100%, стрелки не нужны
+                }
+            }
+
+            for (ServerPlayer p : playersInBox) {
+                if (point.isInside(p.position())) {
+                    playersInPreciseZones.add(p.getUUID());
+                    boolean lockedUI = false;
+                    String nextObjectiveForPlayer = "";
+
+                    if (p.getTeam() != null) {
+                        String teamKey = p.getTeam().getName().equalsIgnoreCase("Blue") ? "BLUE" : "RED";
+                        if (isTimeLocked) {
+                            lockedUI = true;
+                            long totalSeconds = (point.lockedUntilTick - level.getGameTime()) / 20;
+                            nextObjectiveForPlayer = String.format("LOCKED: %dм %dс", totalSeconds / 60, totalSeconds % 60);
+                        } else if (!canCapture(point, teamKey, data)) {
+                            lockedUI = true;
+                            nextObjectiveForPlayer = findRequiredPointName(point, teamKey, data);
+                        }
+                    }
+
+                    // Шлем teamToSync в качестве capturingTeam, чтобы клиент знал, в какой цвет красить стрелки
+                    PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p),
+                            new PacketSyncPoint(true, point.name, point.owner, point.progress, lockedUI, nextObjectiveForPlayer, isContested, teamToSync, currentRate));
+                }
+            }
+
+            // Логика захвата (стандартная)
             if (!dominantTeam.equals("NONE") && !isContested && !isTimeLocked) {
                 if (canCapture(point, dominantTeam, data)) {
                     float baseSpeed = 1.0f / (point.captureTimeMinutes * 60 * 20);
-                    float multiplier = 1.0f;
-                    if (alliesOnPoint > 1) multiplier += (alliesOnPoint - 1) * 0.5f;
-                    if (multiplier > 4.0f) multiplier = 4.0f;
-
                     String oldOwner = point.owner;
                     handleTeamInfluence(point, dominantTeam, multiplier, baseSpeed, data, level);
 
@@ -547,14 +644,15 @@ public class GameLogicEvents {
             }
         }
 
-        // Очистка UI для тех, кто вышел из формы (каждый тик для точности цилиндра)
         for (ServerPlayer player : level.players()) {
             if (!playersInPreciseZones.contains(player.getUUID())) {
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                        new PacketSyncPoint(false, "", "", 0, false, "", false, "NONE"));
+                        new PacketSyncPoint(false, "", "", 0, false, "", false, "NONE", 0));
             }
         }
     }
+
+
     @SubscribeEvent
     public static void onPlayerChangeDimension(net.minecraftforge.event.entity.EntityTravelToDimensionEvent event) {
         // Проверяем, что перемещается именно игрок и это происходит на сервере
@@ -1102,7 +1200,10 @@ public class GameLogicEvents {
                 data.markedVehicles,
                 data.activeMarkers,
                 com.example.aas.config.AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(),
-                com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get()
+                com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
+                data.voteActive,
+                data.voteTimer,
+                data.votes
         );
     }
 

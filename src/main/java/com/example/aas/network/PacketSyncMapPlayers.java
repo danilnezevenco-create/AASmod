@@ -25,6 +25,7 @@ public class PacketSyncMapPlayers {
         buf.writeInt(msg.players.size());
         for (MapPlayerInfo p : msg.players) {
             buf.writeUtf(p.name);
+            buf.writeUUID(p.uuid);
             buf.writeDouble(p.x);
             buf.writeDouble(p.z);
             buf.writeFloat(p.rot);
@@ -42,7 +43,7 @@ public class PacketSyncMapPlayers {
         List<MapPlayerInfo> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             list.add(new MapPlayerInfo(
-                    buf.readUtf(), buf.readDouble(), buf.readDouble(),
+                    buf.readUtf(), buf.readUUID(), buf.readDouble(), buf.readDouble(),
                     buf.readFloat(), buf.readInt(), buf.readBoolean(),
                     buf.readBoolean(), buf.readLong(), buf.readBoolean(),
                     buf.readUtf()

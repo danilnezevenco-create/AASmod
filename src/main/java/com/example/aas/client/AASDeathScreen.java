@@ -102,7 +102,17 @@ public class AASDeathScreen extends DeathScreen {
         rallySpawnButton.active = false;
         this.addRenderableWidget(rallySpawnButton);
 
-        hubSpawnButton = Button.builder(Component.literal("HUB SPAWN \u25BC"), button -> {
+        // Логика проверки наличия хабов для текста
+        boolean hubsExist = false;
+        if (team != null) {
+            String myTeam = team.getName();
+            hubsExist = ClientData.clientHubs.stream()
+                    .anyMatch(h -> h.team.equalsIgnoreCase(myTeam) && h.constructed && h.dimension.equals(currentDim));
+        }
+
+        String hubBtnText = hubsExist ? "HUB SPAWN \u25BC" : "NO HUBS";
+
+        hubSpawnButton = Button.builder(Component.literal(hubBtnText), button -> {
             isHubListOpen = !isHubListOpen;
             if (!isHubListOpen) scrollAmount = 0.0f;
             if (isHubListOpen) createHubButtons();
@@ -210,7 +220,30 @@ public class AASDeathScreen extends DeathScreen {
         boolean timerFinished = (secondsLeft == 0);
 
         mainSpawnButton.active = timerFinished;
-        hubSpawnButton.active = timerFinished;
+        // 1. Проверяем, закончился ли таймер возрождения
+
+        // 2. Ищем, есть ли у нашей команды хотя бы один готовый Хаб в этом мире
+        boolean hasAtLeastOneHub = false;
+        Team team = this.minecraft.player.getTeam();
+        if (team != null) {
+            String myTeam = team.getName();
+            String myDimension = this.minecraft.level.dimension().location().toString();
+
+            for (com.example.aas.world.AASWorldData.HubInfo hub : ClientData.clientHubs) {
+                // Условия: команда совпадает, Хаб достроен, мир совпадает
+                if (hub.team.equalsIgnoreCase(myTeam) && hub.constructed && hub.dimension.equals(myDimension)) {
+                    // Опционально: можно добавить проверку !hub.isBlocked,
+                    // чтобы кнопка не горела, если все хабы заблокированы врагом
+                    if (!hub.isBlocked) {
+                        hasAtLeastOneHub = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. Кнопка активна только если таймер вышел И есть куда прыгать
+        hubSpawnButton.active = timerFinished && hasAtLeastOneHub;
 
         boolean hasSquadRally = false;
         String currentDim = this.minecraft.level.dimension().location().toString();

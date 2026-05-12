@@ -66,7 +66,7 @@ public class PacketApplyMarker {
                     if (isSupply) {
                         target.getPersistentData().putBoolean("AAS_IsSupplyTruck", true);
                         // Даем 2 ящика сразу при клейме
-                        target.getPersistentData().putInt("AAS_SupplyAmmo", 2);
+                        target.getPersistentData().putInt("AAS_SupplyAmmo", com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get());
                     } else {
                         // Если переклеймили в обычную технику - забираем возможность кидать ящики
                         target.getPersistentData().remove("AAS_IsSupplyTruck");

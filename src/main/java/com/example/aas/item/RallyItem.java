@@ -22,6 +22,16 @@ import java.util.function.Consumer;
 
 public class RallyItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    // Добавить в класс предмета
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        // Если мы сменили слот — анимация нужна.
+        // Если предмет в том же слоте, но обновился NBT — анимацию НЕ проигрываем.
+        if (!slotChanged && oldStack.getItem() == newStack.getItem()) {
+            return false;
+        }
+        return super.shouldCauseReequipAnimation(oldStack, newStack, slotChanged);
+    }
 
     public RallyItem() {
         super(new Properties().stacksTo(1));

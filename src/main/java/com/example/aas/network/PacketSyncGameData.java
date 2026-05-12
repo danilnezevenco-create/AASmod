@@ -32,6 +32,9 @@ public class PacketSyncGameData {
     public final List<AASWorldData.MapMarker> activeMarkers;
     public final boolean hubSpawnCosts;
     public final int hubSpawnCost;
+    public final boolean voteActive;
+    public final int voteTimer;
+    public final Map<UUID, Boolean> votes;
 
     public PacketSyncGameData(int blue, int red, boolean hBR, boolean hRR, boolean bBl, boolean rBl, int rTime,
                               boolean bB, boolean rB, List<AASWorldData.HubInfo> hubs, String bF, String rF,
@@ -40,7 +43,8 @@ public class PacketSyncGameData {
                               Map<String, BlockPos> rSp, Map<String, BlockPos> nSp,
                               Map<String, String> kits, List<AASWorldData.VehicleRecord> vehicles,
                               List<AASWorldData.MapMarker> activeMarkers,
-                              boolean hsc, int hsca) {
+                              boolean hsc, int hsca,
+                              boolean vActive, int vTimer, Map<UUID, Boolean> vMap) {
         this.blueTickets = blue; this.redTickets = red;
         this.hasBlueRally = hBR; this.hasRedRally = hRR;
         this.blueBleeding = bBl; this.redBleeding = rBl;
@@ -58,6 +62,9 @@ public class PacketSyncGameData {
         this.activeMarkers = activeMarkers;
         this.hubSpawnCosts = hsc;
         this.hubSpawnCost = hsca;
+        this.voteActive = vActive;
+        this.voteTimer = vTimer;
+        this.votes = vMap;
     }
 
     public static void encode(PacketSyncGameData msg, FriendlyByteBuf buf) {
@@ -127,6 +134,9 @@ public class PacketSyncGameData {
             b.writeUtf(m.team);
             b.writeLong(m.expiryTick);
         });
+        buf.writeBoolean(msg.voteActive);
+        buf.writeInt(msg.voteTimer);
+        buf.writeMap(msg.votes, FriendlyByteBuf::writeUUID, FriendlyByteBuf::writeBoolean);
     }
 
     public static PacketSyncGameData decode(FriendlyByteBuf buf) {
@@ -186,9 +196,13 @@ public class PacketSyncGameData {
         List<AASWorldData.MapMarker> aM = buf.readList(b ->
                 new AASWorldData.MapMarker(b.readBlockPos(), b.readUtf(), b.readUtf(), b.readLong()));
 
+        boolean vActive = buf.readBoolean();
+        int vTimer = buf.readInt();
+        Map<UUID, Boolean> vMap = buf.readMap(FriendlyByteBuf::readUUID, FriendlyByteBuf::readBoolean);
+
         // Возвращаем объект, строго соблюдая порядок аргументов вашего конструктора
         return new PacketSyncGameData(
-                bT, rT, hBR, hRR, bBl, rBl, rTime, bB, rB, hL, bF, rF, bCN, rCN, started, mCX, mCZ, mSB, pL, bSp, rSp, nSp, pK, vL, aM, hsc, hsca
+                bT, rT, hBR, hRR, bBl, rBl, rTime, bB, rB, hL, bF, rF, bCN, rCN, started, mCX, mCZ, mSB, pL, bSp, rSp, nSp, pK, vL, aM, hsc, hsca, vActive, vTimer, vMap
         );
     }
 

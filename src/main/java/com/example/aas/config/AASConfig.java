@@ -25,6 +25,8 @@ public class AASConfig {
     public static final ForgeConfigSpec.BooleanValue AUTO_GIVE_SL_RADIO;
     public static final ForgeConfigSpec.BooleanValue HUB_PLACEMENT_REQUIRES_CRATE;
     public static final ForgeConfigSpec.IntValue MAX_DOWNED_TIME_SECONDS;
+    public static final ForgeConfigSpec.IntValue VOTE_AUTO_START_TIME;
+    public static final ForgeConfigSpec.IntValue VOTE_REQUIRED_PERCENTAGE;
 
     // Радиусы и баланс
     public static final ForgeConfigSpec.IntValue MIN_HUB_DISTANCE;
@@ -37,6 +39,8 @@ public class AASConfig {
     public static final ForgeConfigSpec.IntValue CRATE_BUILD_RADIUS;
     public static final ForgeConfigSpec.IntValue HUB_BLOCK_ENEMY_COUNT;
     public static final ForgeConfigSpec.IntValue RALLY_BLOCK_ENEMY_COUNT;
+    public static final ForgeConfigSpec.IntValue SUPPLY_TRUCK_CRATES;
+    public static final ForgeConfigSpec.IntValue SUPPLY_CRATE_MATERIALS;
 
     // Имена команд
     public static final ForgeConfigSpec.ConfigValue<String> BLUE_TEAM_CUSTOM_NAME;
@@ -59,13 +63,16 @@ public class AASConfig {
         MAIN_SUPPLY_HEAL_RADIUS = BUILDER.comment("Radius for Main Base healing").defineInRange("mainSupplyHealRadius", 5, 1, 50);
         AUTO_GIVE_SL_RADIO = BUILDER.comment("Automatically give radio to new Squad Leaders").define("autoGiveSlRadio", false);
         LOW_TICKETS_SIREN = BUILDER.comment("Play siren at 50 tickets").define("lowTicketsSiren", true);
-        BUILDER.pop();
-
+        VOTE_AUTO_START_TIME = BUILDER.comment("Time in minutes until game starts automatically during voting")
+                .defineInRange("voteAutoStartTime", 10, 1, 60);
+        VOTE_REQUIRED_PERCENTAGE = BUILDER.comment("Percentage of team members needed to be 'Ready'")
+                .defineInRange("voteRequiredPercentage", 100, 1, 100);
         ENABLE_KNOCKOUT = BUILDER.comment("Enable knockout mechanic").define("enableKnockout", true);
         REVIVE_ITEM = BUILDER.comment("Registry name of the item used to revive (e.g. 'minecraft:paper')").define("reviveItem", "minecraft:paper");
         REVIVE_COOLDOWN_SECONDS = BUILDER.comment("Time in seconds where dying again results in instant death").defineInRange("reviveCooldownSeconds", 120, 0, 600);
         MAX_DOWNED_TIME_SECONDS = BUILDER.comment("Max time in downed state before bleeding out (seconds)")
                 .defineInRange("maxDownedTimeSeconds", 180, 5, 3600);
+        BUILDER.pop();
 
         BUILDER.push("Balance Settings");
         MIN_HUB_DISTANCE = BUILDER.defineInRange("minHubDistance", 150, 0, 10000);
@@ -78,6 +85,8 @@ public class AASConfig {
         CRATE_BUILD_RADIUS = BUILDER.defineInRange("crateBuildRadius", 50, 5, 200);
         HUB_BLOCK_ENEMY_COUNT = BUILDER.defineInRange("hubBlockEnemyCount", 3, 1, 20);
         RALLY_BLOCK_ENEMY_COUNT = BUILDER.defineInRange("rallyBlockEnemyCount", 1, 1, 20);
+        SUPPLY_TRUCK_CRATES = BUILDER.comment("Max supply crates in a truck").defineInRange("supplyTruckCrates", 2, 1, 20);
+        SUPPLY_CRATE_MATERIALS = BUILDER.comment("Materials per dropped supply crate").defineInRange("supplyCrateMaterials", 50, 10, 1000);
         BUILDER.pop();
 
         BUILDER.push("Faction Settings");
