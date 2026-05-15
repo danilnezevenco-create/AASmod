@@ -31,7 +31,7 @@
 	#Range: 1 ~ 50
 	mainSupplyHealRadius = 5
 	#Allow players to break walls and barbed wire even if PREVENT_BLOCK_BREAKING is true
-	allowBreakingDefenses = true
+	allowBreakingDefenses = false
 	#Time in minutes until game starts automatically during voting
 	#Range: 1 ~ 60
 	voteAutoStartTime = 10
@@ -48,6 +48,10 @@
 	#Max time in downed state before bleeding out (seconds)
 	#Range: 5 ~ 3600
 	maxDownedTimeSeconds = 180
+	#Completely block access to the vehicle inventory (from the outside via Shift+RMB and from the inside by pressing E)
+	preventVehicleInventoryAccess = true
+	#If the squad leader does not have the "Officer" kit, the squad will disband after 120 seconds.
+	requireOfficerForSL = true
 
 ["Balance Settings"]
 	#Range: 0 ~ 10000

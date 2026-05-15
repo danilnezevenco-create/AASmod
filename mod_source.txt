@@ -850,6 +850,62 @@ public class BarbedWireBlockEntity extends BlockEntity {
     }
 }
 ==========================================
+FILE: GameStartTriggerBlock.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\block\GameStartTriggerBlock.java
+==========================================
+package com.example.aas.block;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+
+public class GameStartTriggerBlock extends Block {
+    public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
+
+    public GameStartTriggerBlock() {
+        super(Properties.of().strength(2.0f));
+        this.registerDefaultState(this.stateDefinition.any().setValue(POWERED, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(POWERED);
+    }
+
+    // РџРѕР·РІРѕР»СЏРµС‚ Р±Р»РѕРєСѓ РїРµСЂРµРґР°РІР°С‚СЊ СЃРёРіРЅР°Р»
+    @Override
+    public boolean isSignalSource(BlockState state) {
+        return true;
+    }
+
+    // РЎРёР»Р° СЃРёРіРЅР°Р»Р° (15 вЂ” РјР°РєСЃРёРјСѓРј)
+    @Override
+    public int getSignal(BlockState state, BlockGetter level, BlockPos pos, Direction side) {
+        return state.getValue(POWERED) ? 15 : 0;
+    }
+
+    @Override
+    public int getDirectSignal(BlockState state, BlockGetter level, BlockPos pos, Direction side) {
+        return state.getValue(POWERED) ? 15 : 0;
+    }
+
+    // Р’С‹Р·С‹РІР°РµС‚СЃСЏ С‡РµСЂРµР· 20 С‚РёРєРѕРІ РїРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°, С‡С‚РѕР±С‹ РІС‹РєР»СЋС‡РёС‚СЊ СЃРёРіРЅР°Р»
+    @Override
+    public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (state.getValue(POWERED)) {
+            level.setBlock(pos, state.setValue(POWERED, false), 3);
+        }
+    }
+}
+==========================================
 FILE: GhostBlock.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\block\GhostBlock.java
 ==========================================
@@ -1956,6 +2012,7 @@ public class ModBlocks {
     // PATH: src\main\java\com\example\aas\block\ModBlocks.java
     public static final RegistryObject<Block> AMMO_BAG_BLOCK = BLOCKS.register("ammo_bag", AmmoBagBlock::new);
     // === Р‘Р›РћРљР ===
+    public static final RegistryObject<Block> GAME_START_TRIGGER = BLOCKS.register("game_start_trigger", GameStartTriggerBlock::new);
     public static final RegistryObject<Block> BLUE_RALLY_BLOCK = BLOCKS.register("blue_rally", RallyPointBlock::new);
     public static final RegistryObject<Block> RED_RALLY_BLOCK = BLOCKS.register("red_rally", RallyPointBlock::new);
     public static final RegistryObject<Block> HUB_BLOCK = BLOCKS.register("hub_block", HubBlock::new);
@@ -8172,7 +8229,7 @@ public class AASDeathScreen extends DeathScreen {
                     .anyMatch(h -> h.team.equalsIgnoreCase(myTeam) && h.constructed && h.dimension.equals(currentDim));
         }
 
-        String hubBtnText = hubsExist ? "HUB SPAWN \u25BC" : "NO HUBS AVAILABLE";
+        String hubBtnText = hubsExist ? "HUB SPAWN \u25BC" : "NO HUBS";
 
         hubSpawnButton = Button.builder(Component.literal(hubBtnText), button -> {
             isHubListOpen = !isHubListOpen;
@@ -8283,7 +8340,6 @@ public class AASDeathScreen extends DeathScreen {
 
         mainSpawnButton.active = timerFinished;
         // 1. РџСЂРѕРІРµСЂСЏРµРј, Р·Р°РєРѕРЅС‡РёР»СЃСЏ Р»Рё С‚Р°Р№РјРµСЂ РІРѕР·СЂРѕР¶РґРµРЅРёСЏ
-        boolean timerFinished = (secondsLeft == 0);
 
         // 2. РС‰РµРј, РµСЃС‚СЊ Р»Рё Сѓ РЅР°С€РµР№ РєРѕРјР°РЅРґС‹ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ РіРѕС‚РѕРІС‹Р№ РҐР°Р± РІ СЌС‚РѕРј РјРёСЂРµ
         boolean hasAtLeastOneHub = false;
@@ -8500,6 +8556,7 @@ public class AASOverlay {
 
         // 1. РўРёРєРµС‚С‹
         renderTickets(gui, mc, width);
+        renderVotePanel(gui, mc, height);
 
         // 2. Р›РѕРіРёРєР° Р·Р°С…РІР°С‚Р° С‚РѕС‡РµРє
         if (ClientData.allCapturePoints != null) {
@@ -8804,10 +8861,6 @@ public class AASOverlay {
         String name = ClientData.pointName;
         drawOutlinedString(gui, mc, name, centerX - (mc.font.width(name) / 2), flagY - 10, 0xFFFFFFFF);
 
-        // РЎС‚Р°С‚СѓСЃ "ENEMY!" РёР»Рё РІСЂРµРјСЏ Р±Р»РѕРєРёСЂРѕРІРєРё
-        if (ClientData.isContested) {
-            drawOutlinedString(gui, mc, "ENEMY!", centerX - (mc.font.width("ENEMY!") / 2), flagY - 22, 0xFFFFAA00);
-        }
 
         if (ClientData.isLocked) {
             String status = ClientData.nextObjectiveName;
@@ -8822,6 +8875,90 @@ public class AASOverlay {
 
         // Р’С‹Р·РѕРІ РјРµС‚РѕРґР° РѕС‚СЂРёСЃРѕРІРєРё РїРѕР»РѕСЃРѕРє (РєРѕС‚РѕСЂС‹Р№ РЅРёР¶Рµ
         renderCaptureArrows(gui, mc, centerX, flagY + flagHeight + 3);
+    }
+
+    private static void renderVotePanel(GuiGraphics gui, Minecraft mc, int height) {
+        // 1. Р›РѕРіРёРєР° Р°РЅРёРјР°С†РёРё (РїР»Р°РІРЅС‹Р№ РІС‹РµР·Рґ СЃР»РµРІР°)
+        float speed = 0.05f;
+        ClientData.voteTransition = Mth.lerp(speed, ClientData.voteTransition, ClientData.voteActive ? 1.0f : 0.0f);
+
+        // Р•СЃР»Рё Р°РЅРёРјР°С†РёСЏ РІ РЅСѓР»Рµ, РЅРёС‡РµРіРѕ РЅРµ СЂРµРЅРґРµСЂРёРј
+        if (ClientData.voteTransition <= 0.001f) return;
+
+        // Р Р°СЃС‡РµС‚ РїРѕР·РёС†РёРё X (РѕС‚ -160 РґРѕ 10 РїРёРєСЃРµР»РµР№)
+        int xPos = (int) Mth.lerp(ClientData.voteTransition, -160, 10);
+        int yPos = 60; // РћС‚СЃС‚СѓРї СЃРІРµСЂС…Сѓ
+
+        // 2. РџРѕР»СѓС‡Р°РµРј СЃРїРёСЃРѕРє РёРіСЂРѕРєРѕРІ СЃРІРѕРµР№ РєРѕРјР°РЅРґС‹ РёР· СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅРЅС‹С… РґР°РЅРЅС‹С… РєР°СЂС‚С‹
+        String myTeam = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "NEUTRAL";
+
+        var teamPlayers = ClientData.mapPlayers.values().stream()
+                .filter(info -> info.team.equalsIgnoreCase(myTeam))
+                .toList();
+
+        // 3. РџР°СЂР°РјРµС‚СЂС‹ СЂР°Р·РјРµСЂРѕРІ РїР°РЅРµР»Рё
+        int panelWidth = 150;
+        int rowHeight = 12;
+        int headerHeight = 35;
+        int footerHeight = 15;
+        // Р’С‹СЃРѕС‚Р° РґРёРЅР°РјРёС‡РµСЃРєРё Р·Р°РІРёСЃРёС‚ РѕС‚ РєРѕР»-РІР° РёРіСЂРѕРєРѕРІ
+        int panelHeight = headerHeight + (teamPlayers.size() * rowHeight) + footerHeight;
+
+        // 4. РћС‚СЂРёСЃРѕРІРєР° С„РѕРЅР° Рё СЂР°РјРєРё (СЃС‚РёР»СЊ РєР°Рє Сѓ РјРµРЅСЋ РѕС‚СЂСЏРґРѕРІ)
+        gui.pose().pushPose();
+        gui.pose().translate(0, 0, 100); // Р§С‚РѕР±С‹ Р±С‹Р»Рѕ РїРѕРІРµСЂС… РѕР±С‹С‡РЅРѕРіРѕ HUD
+
+        // РћСЃРЅРѕРІРЅРѕР№ С„РѕРЅ (С‡РµСЂРЅС‹Р№ РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅС‹Р№)
+        gui.fill(xPos, yPos, xPos + panelWidth, yPos + panelHeight, 0xAA000000);
+        // Р‘РµР»Р°СЏ РѕР±РІРѕРґРєР°
+        gui.renderOutline(xPos, yPos, panelWidth, panelHeight, 0xFFFFFFFF);
+
+        // 5. Р—Р°РіРѕР»РѕРІРѕРє Рё РўР°Р№РјРµСЂ
+        gui.drawCenteredString(mc.font, "VOTE TO START", xPos + panelWidth / 2, yPos + 5, 0xFFFFD700); // Р—РѕР»РѕС‚РѕР№ С†РІРµС‚
+
+        // Р¤РѕСЂРјР°С‚РёСЂСѓРµРј РІСЂРµРјСЏ РёР· СЃРµРєСѓРЅРґ РІ 00:00
+        int seconds = Math.max(0, ClientData.voteTimer);
+        String timeStr = String.format("%02d:%02d", seconds / 60, seconds % 60);
+        gui.drawCenteredString(mc.font, timeStr, xPos + panelWidth / 2, yPos + 18, 0xFFFFFFFF);
+
+        // Р Р°Р·РґРµР»РёС‚РµР»СЊРЅР°СЏ Р»РёРЅРёСЏ РїРѕРґ С‚Р°Р№РјРµСЂРѕРј
+        gui.fill(xPos + 5, yPos + 30, xPos + panelWidth - 5, yPos + 31, 0x55FFFFFF);
+
+        // 6. РЎРїРёСЃРѕРє РёРіСЂРѕРєРѕРІ
+        int currentY = yPos + headerHeight;
+        for (var info : teamPlayers) {
+            // РџС‹С‚Р°РµРјСЃСЏ РЅР°Р№С‚Рё РіРѕР»РѕСЃ РёРіСЂРѕРєР° РїРѕ РµРіРѕ UUID
+            // РџСЂРёРјРµС‡Р°РЅРёРµ: РЈР±РµРґРёСЃСЊ, С‡С‚Рѕ РІ С‚РІРѕРµРј MapPlayerInfo РµСЃС‚СЊ РїРѕР»Рµ uuid (С‚РёРї UUID)
+            Boolean vote = ClientData.votes.get(info.uuid);
+
+            String icon = "в—‹"; // РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ: РµС‰Рµ РЅРµ РіРѕР»РѕСЃРѕРІР°Р»
+            int iconColor = 0xFFAAAAAA; // РЎРµСЂС‹Р№
+
+            if (vote != null) {
+                if (vote) {
+                    icon = "вњ”"; // РЎРѕРіР»Р°СЃРµРЅ
+                    iconColor = 0xFF55FF55; // Р—РµР»РµРЅС‹Р№
+                } else {
+                    icon = "вњ"; // РџСЂРѕС‚РёРІ
+                    iconColor = 0xFFFF5555; // РљСЂР°СЃРЅС‹Р№
+                }
+            }
+
+            // Р РёСЃСѓРµРј РёРєРѕРЅРєСѓ СЃС‚Р°С‚СѓСЃР°
+            gui.drawString(mc.font, icon, xPos + 8, currentY, iconColor, true);
+
+            // Р РёСЃСѓРµРј РЅРёРє РёРіСЂРѕРєР° (С‡СѓС‚СЊ РїСЂР°РІРµРµ РёРєРѕРЅРєРё)
+            // Р•СЃР»Рё СЌС‚Рѕ СЃР°Рј РёРіСЂРѕРє вЂ” РјРѕР¶РЅРѕ РїРѕРґСЃРІРµС‚РёС‚СЊ РЅРёРє Р¶РµР»С‚С‹Рј
+            int nameColor = info.name.equals(mc.player.getScoreboardName()) ? 0xFFFFFF55 : 0xFFFFFFFF;
+            gui.drawString(mc.font, info.name, xPos + 22, currentY, nameColor, true);
+
+            currentY += rowHeight;
+        }
+
+        // 7. РџРѕРґСЃРєР°Р·РєР° РїРѕ РєРЅРѕРїРєР°Рј РІ СЃР°РјРѕРј РЅРёР·Сѓ РїР°РЅРµР»Рё
+        gui.drawCenteredString(mc.font, "F9: YES | F10: NO", xPos + panelWidth / 2, yPos + panelHeight - 12, 0xFFBBBBBB);
+
+        gui.pose().popPose();
     }
 
     // Р’РћРў Р­РўРћРў РњР•РўРћР” РќРЈР–РќРћ Р”РћР‘РђР’РРўР¬ Р’ AASOverlay.java, С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ РѕС€РёР±РєРё!
@@ -9164,6 +9301,10 @@ public class ClientData {
         if (type == 1) SQUAD_SPEAKERS.put(id, System.currentTimeMillis());
         else if (type == 2) COMMAND_SPEAKERS.put(id, System.currentTimeMillis());
     }
+    public static boolean voteActive = false;
+    public static int voteTimer = 0;
+    public static Map<UUID, Boolean> votes = new HashMap<>();
+    public static float voteTransition = 0f;
     public static double mapScale = 4.0;
     public static int pointCaptureRate = 0;
     public static int mapMinX = -1000;
@@ -9240,6 +9381,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketVehicleShoot;
+import com.example.aas.client.RecoilHandler;
 
 @Mod.EventBusSubscriber(modid = "aas", value = Dist.CLIENT)
 public class ClientEvents {
@@ -9331,6 +9473,7 @@ public class ClientEvents {
         }
     }
 
+
     @SubscribeEvent
     public static void onMouseInput(InputEvent.MouseButton.Pre event) {
         Minecraft mc = Minecraft.getInstance();
@@ -9393,12 +9536,27 @@ public class ClientEvents {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
+        // 1. Р›РћР“РРљРђ Р“РћР›РћРЎРћР’РђРќРРЇ (F1/F2)
+        if (ClientData.voteActive && mc.screen == null && event.getAction() == GLFW.GLFW_PRESS) {
+            if (event.getKey() == GLFW.GLFW_KEY_F9) {
+                PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(true));
+                // event.setCanceled(true); // РЈР”РђР›Р•РќРћ, С‚Р°Рє РєР°Рє РІС‹Р·С‹РІР°РµС‚ РєСЂР°С€
+                return;
+            } else if (event.getKey() == GLFW.GLFW_KEY_F10) {
+                PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(false));
+                // event.setCanceled(true); // РЈР”РђР›Р•РќРћ, С‚Р°Рє РєР°Рє РІС‹Р·С‹РІР°РµС‚ РєСЂР°С€
+                return;
+            }
+        }
+
+        // 2. РЎР‘Р РћРЎ РЇР©РРљРђ (X)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.DROP_SUPPLY_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.player.getVehicle() != null) {
                 PacketHandler.INSTANCE.sendToServer(new PacketDropCrate());
             }
         }
 
+        // 3. РњР•РќР® РћРўР РЇР”РћР’ (K)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.screen == null) {
                 String teamName = (mc.player.getTeam() != null) ? mc.player.getTeam().getName() : "";
@@ -9411,12 +9569,14 @@ public class ClientEvents {
                 }
             }
         }
+
+        // 4. РљРђР РўРђ (TAB)
         if (ModKeyBindings.SHOW_MAP_KEY.matches(event.getKey(), event.getScanCode())) {
             if (event.getAction() == GLFW.GLFW_PRESS) {
-                ClientData.isMapOpen = true; // РќР°Р¶Р°Р» вЂ” РѕС‚РєСЂС‹Р»Р°СЃСЊ
+                ClientData.isMapOpen = true;
             }
             else if (event.getAction() == GLFW.GLFW_RELEASE) {
-                ClientData.isMapOpen = false; // РћС‚РїСѓСЃС‚РёР» вЂ” Р·Р°РєСЂС‹Р»Р°СЃСЊ
+                ClientData.isMapOpen = false;
             }
         }
     }
@@ -9621,6 +9781,10 @@ public class ClientHooks {
         ClientData.redSpawns = new HashMap<>(msg.redSpawns);
         ClientData.neutralSpawns = new HashMap<>(msg.neutralSpawns);
         ClientData.playerKits = new HashMap<>(msg.playerKits);
+
+        ClientData.voteActive = msg.voteActive;
+        ClientData.voteTimer = msg.voteTimer;
+        ClientData.votes = new HashMap<>(msg.votes);
     }
 
     public static void handleSyncPoint(PacketSyncPoint msg) {
@@ -10105,6 +10269,7 @@ import net.minecraft.world.scores.Scoreboard;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import com.example.aas.config.AASConfig;
 
 public class ModCommands {
 
@@ -10278,6 +10443,33 @@ public class ModCommands {
                                 )
                         )
                 )
+                .then(Commands.literal("votestart")
+                        .then(Commands.argument("active", BoolArgumentType.bool())
+                                .executes(ctx -> {
+                                    ServerLevel level = ctx.getSource().getLevel();
+                                    AASWorldData data = AASWorldData.get(level);
+                                    boolean active = BoolArgumentType.getBool(ctx, "active");
+
+                                    data.voteActive = active;
+
+                                    if (active) {
+                                        // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РїСЂРё СЃС‚Р°СЂС‚Рµ РіРѕР»РѕСЃРѕРІР°РЅРёСЏ
+                                        data.voteTimer = AASConfig.VOTE_AUTO_START_TIME.get() * 60;
+                                        data.votes.clear();
+
+                                        // РЎР±СЂР°СЃС‹РІР°РµРј С„Р»Р°РіРё, С‡С‚РѕР±С‹ СЃРѕРѕР±С‰РµРЅРёСЏ Рѕ РіРѕС‚РѕРІРЅРѕСЃС‚Рё РєРѕРјР°РЅРґ РјРѕРіР»Рё СЃСЂР°Р±РѕС‚Р°С‚СЊ СЃРЅРѕРІР°
+                                        data.blueReady = false;
+                                        data.redReady = false;
+                                    }
+
+                                    data.setDirty();
+                                    PacketHandler.sendToAllClients(level, data);
+
+                                    String status = active ? "started" : "stopped";
+                                    ctx.getSource().sendSuccess(() -> Component.literal("Voting process " + status), true);
+
+                                    return 1;
+                                })))
         );
     }
 
@@ -10569,6 +10761,8 @@ public class AASConfig {
     public static final ForgeConfigSpec.BooleanValue AUTO_GIVE_SL_RADIO;
     public static final ForgeConfigSpec.BooleanValue HUB_PLACEMENT_REQUIRES_CRATE;
     public static final ForgeConfigSpec.IntValue MAX_DOWNED_TIME_SECONDS;
+    public static final ForgeConfigSpec.IntValue VOTE_AUTO_START_TIME;
+    public static final ForgeConfigSpec.IntValue VOTE_REQUIRED_PERCENTAGE;
 
     // Р Р°РґРёСѓСЃС‹ Рё Р±Р°Р»Р°РЅСЃ
     public static final ForgeConfigSpec.IntValue MIN_HUB_DISTANCE;
@@ -10605,13 +10799,16 @@ public class AASConfig {
         MAIN_SUPPLY_HEAL_RADIUS = BUILDER.comment("Radius for Main Base healing").defineInRange("mainSupplyHealRadius", 5, 1, 50);
         AUTO_GIVE_SL_RADIO = BUILDER.comment("Automatically give radio to new Squad Leaders").define("autoGiveSlRadio", false);
         LOW_TICKETS_SIREN = BUILDER.comment("Play siren at 50 tickets").define("lowTicketsSiren", true);
-        BUILDER.pop();
-
+        VOTE_AUTO_START_TIME = BUILDER.comment("Time in minutes until game starts automatically during voting")
+                .defineInRange("voteAutoStartTime", 10, 1, 60);
+        VOTE_REQUIRED_PERCENTAGE = BUILDER.comment("Percentage of team members needed to be 'Ready'")
+                .defineInRange("voteRequiredPercentage", 100, 1, 100);
         ENABLE_KNOCKOUT = BUILDER.comment("Enable knockout mechanic").define("enableKnockout", true);
         REVIVE_ITEM = BUILDER.comment("Registry name of the item used to revive (e.g. 'minecraft:paper')").define("reviveItem", "minecraft:paper");
         REVIVE_COOLDOWN_SECONDS = BUILDER.comment("Time in seconds where dying again results in instant death").defineInRange("reviveCooldownSeconds", 120, 0, 600);
         MAX_DOWNED_TIME_SECONDS = BUILDER.comment("Max time in downed state before bleeding out (seconds)")
                 .defineInRange("maxDownedTimeSeconds", 180, 5, 3600);
+        BUILDER.pop();
 
         BUILDER.push("Balance Settings");
         MIN_HUB_DISTANCE = BUILDER.defineInRange("minHubDistance", 150, 0, 10000);
@@ -12163,6 +12360,9 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.state.BlockState;
+import com.example.aas.block.GameStartTriggerBlock;
+import com.example.aas.block.ModBlocks;
 
 @Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class GameLogicEvents {
@@ -12313,6 +12513,48 @@ public class GameLogicEvents {
             boolean blueIsBleeding = false;
             boolean redIsBleeding = false;
 
+            // Р’РЅСѓС‚СЂРё С†РёРєР»Р° РїРѕ СѓСЂРѕРІРЅСЏРј (level):
+            if (data.voteActive && !data.isGameStarted) {
+                if (globalTick % 20 == 0) {
+                    data.voteTimer--;
+
+                    // 1. РџСЂРѕРІРµСЂСЏРµРј С‚РµРєСѓС‰СѓСЋ РіРѕС‚РѕРІРЅРѕСЃС‚СЊ
+                    boolean currentBlueReady = isTeamReady(level, "Blue", data);
+                    boolean currentRedReady = isTeamReady(level, "Red", data);
+
+                    // 2. Р•СЃР»Рё РЎРёРЅРёРµ С‚РѕР»СЊРєРѕ С‡С‚Рѕ СЃС‚Р°Р»Рё РіРѕС‚РѕРІС‹
+                    if (currentBlueReady && !data.blueReady) {
+                        data.blueReady = true;
+                        String teamName = data.blueFaction.equals("none") ? AASConfig.BLUE_TEAM_CUSTOM_NAME.get() : formatFactionName(data.blueFaction);
+                        sendTitleToLevel(level, teamName + " is READY!", ChatFormatting.BLUE);
+                        level.players().forEach(p -> p.playNotifySound(net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.MASTER, 1.0f, 1.0f));
+                    }
+
+                    // 3. Р•СЃР»Рё РљСЂР°СЃРЅС‹Рµ С‚РѕР»СЊРєРѕ С‡С‚Рѕ СЃС‚Р°Р»Рё РіРѕС‚РѕРІС‹
+                    if (currentRedReady && !data.redReady) {
+                        data.redReady = true;
+                        String teamName = data.redFaction.equals("none") ? AASConfig.RED_TEAM_CUSTOM_NAME.get() : formatFactionName(data.redFaction);
+                        sendTitleToLevel(level, teamName + " is READY!", ChatFormatting.RED);
+                        level.players().forEach(p -> p.playNotifySound(net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.MASTER, 1.0f, 1.0f));
+                    }
+
+                    // 4. РЈСЃР»РѕРІРёРµ СЃС‚Р°СЂС‚Р°: РѕР±Рµ РіРѕС‚РѕРІС‹ РёР»Рё РІСЂРµРјСЏ РІС‹С€Р»Рѕ
+                    if (data.blueReady && data.redReady) {
+                        data.voteActive = false;
+                        broadcastMessage(level, "ALL TEAMS READY! Starting match...", ChatFormatting.GOLD);
+                        startGameCountdown(level);
+                    } else if (data.voteTimer <= 0) {
+                        data.voteActive = false;
+                        broadcastMessage(level, "VOTING TIME EXPIRED! Forcing start...", ChatFormatting.RED);
+                        startGameCountdown(level);
+                    }
+
+                    data.setDirty();
+                    PacketHandler.sendToAllClients(level, data);
+                }
+            }
+
+
             // === 1. Р РђРЎРЎР«Р›РљРђ РџРћР—РР¦РР™ РР“Р РћРљРћР’ (РћРїС‚РёРјРёР·Р°С†РёСЏ: РєР°Р¶РґС‹Рµ 2 С‚РёРєР°) ===
             if (globalTick % 2 == 0) {
                 // РЎРѕР±РёСЂР°РµРј РґР°РЅРЅС‹Рµ РћР‘Рћ Р’РЎР•РҐ РёРіСЂРѕРєР°С… РѕРґРёРЅ СЂР°Р·
@@ -12440,16 +12682,21 @@ public class GameLogicEvents {
                 }
             }
             // === 2. Р›РћР“РРљРђ РћРўРЎР§Р•РўРђ Р”Рћ РЎРўРђР РўРђ ===
-            if (data.countdownActive) {
+            if (data.countdownActive) { // <--- РћР‘РЇР—РђРўР•Р›Р¬РќРђРЇ РџР РћР’Р•Р РљРђ
                 if (data.countdownTicks > 0) {
-                    if (globalTick % 20 == 0) {
+
+                    // РЎРЅР°С‡Р°Р»Р° РїСЂРѕРІРµСЂСЏРµРј Рё РїРѕРєР°Р·С‹РІР°РµРј С†РёС„СЂСѓ, Р° РўРћР›Р¬РљРћ РџРћРўРћРњ СѓРјРµРЅСЊС€Р°РµРј
+                    if (data.countdownTicks % 20 == 0) {
                         int seconds = data.countdownTicks / 20;
                         sendTitleToLevel(level, String.valueOf(seconds), ChatFormatting.YELLOW);
                         level.playSound(null, new BlockPos(0, 100, 0), net.minecraft.sounds.SoundEvents.NOTE_BLOCK_HAT.value(), net.minecraft.sounds.SoundSource.MASTER, 1f, 1f);
                     }
+
                     data.countdownTicks--;
                     data.setDirty();
+
                 } else {
+                    // Р­С‚РѕС‚ Р±Р»РѕРє СЃСЂР°Р±РѕС‚Р°РµС‚ РћР”РРќ Р РђР—, РєРѕРіРґР° С‚РёРєРё СЃС‚Р°РЅСѓС‚ 0
                     data.countdownActive = false;
                     sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
                     data.isGameStarted = true;
@@ -12466,6 +12713,16 @@ public class GameLogicEvents {
 
                         if (kitToApply != null && !kitToApply.isEmpty() && !kitToApply.equals("Unassigned")) {
                             com.example.aas.network.ResupplyHandler.tryApplyPendingKit(p, data);
+                        }
+                    }
+
+                    for (BlockPos p : data.triggerBlocks) {
+                        if (level.isLoaded(p)) {
+                            BlockState st = level.getBlockState(p);
+                            if (st.is(ModBlocks.GAME_START_TRIGGER.get())) {
+                                level.setBlock(p, st.setValue(GameStartTriggerBlock.POWERED, true), 3);
+                                level.scheduleTick(p, ModBlocks.GAME_START_TRIGGER.get(), 20);
+                            }
                         }
                     }
 
@@ -12527,6 +12784,23 @@ public class GameLogicEvents {
         }
     }
 
+    private static boolean isTeamReady(ServerLevel level, String teamName, AASWorldData data) {
+        List<ServerPlayer> teamPlayers = level.players().stream()
+                .filter(p -> p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(teamName))
+                .toList();
+
+        if (teamPlayers.isEmpty()) return true; // Р•СЃР»Рё РІ РєРѕРјР°РЅРґРµ РЅРёРєРѕРіРѕ, РѕРЅР° РЅРµ РјРµС€Р°РµС‚ СЃС‚Р°СЂС‚Сѓ
+
+        long yesVotes = teamPlayers.stream()
+                .filter(p -> data.votes.getOrDefault(p.getUUID(), false))
+                .count();
+
+        float percent = (float) yesVotes / teamPlayers.size() * 100f;
+        boolean isReady = percent >= AASConfig.VOTE_REQUIRED_PERCENTAGE.get();
+
+        return isReady;
+    }
+
     // === Р’РЎРџРћРњРћР“РђРўР•Р›Р¬РќР«Р™ РњР•РўРћР” Р”Р›РЇ РЎР‘РћР Рђ Р”РђРќРќР«РҐ РћР‘ РР“Р РћРљРђРҐ ===
     private static List<MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, AASWorldData data) {
         List<MapPlayerInfo> infoList = new ArrayList<>();
@@ -12554,6 +12828,7 @@ public class GameLogicEvents {
             // 3. Р”РѕР±Р°РІР»СЏРµРј РІ СЃРїРёСЃРѕРє РћР”РРќ СЂР°Р· СЃРѕ РІСЃРµРјРё 9 Р°СЂРіСѓРјРµРЅС‚Р°РјРё
             infoList.add(new MapPlayerInfo(
                     pName,
+                    p.getUUID(),
                     p.getX(),
                     p.getZ(),
                     p.getYRot(),
@@ -13239,7 +13514,10 @@ public class GameLogicEvents {
                 data.markedVehicles,
                 data.activeMarkers,
                 com.example.aas.config.AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(),
-                com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get()
+                com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
+                data.voteActive,
+                data.voteTimer,
+                data.votes
         );
     }
 
@@ -13418,6 +13696,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import com.example.aas.world.AASWorldData;
+import com.example.aas.block.ModBlocks;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -13466,24 +13746,37 @@ public class InteractionEvents {
     }
 
     @SubscribeEvent
+    public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (event.getPlacedBlock().is(ModBlocks.GAME_START_TRIGGER.get())) {
+            if (event.getLevel() instanceof ServerLevel level) {
+                AASWorldData.get(level).triggerBlocks.add(event.getPos());
+                AASWorldData.get(level).setDirty();
+            }
+        }
+    }
+
+    @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
+        // 1. Р›РѕРіРёРєР° СѓРґР°Р»РµРЅРёСЏ С‚СЂРёРіРіРµСЂРѕРІ (РѕР±СЏР·Р°С‚РµР»СЊРЅР°СЏ)
+        if (event.getState().is(ModBlocks.GAME_START_TRIGGER.get())) {
+            if (event.getLevel() instanceof ServerLevel level) {
+                AASWorldData.get(level).triggerBlocks.remove(event.getPos());
+                AASWorldData.get(level).setDirty();
+            }
+        }
+
+        // 2. Р›РѕРіРёРєР° Р·Р°С‰РёС‚С‹ РѕС‚ Р»РѕРјР°РЅРёСЏ Р±Р»РѕРєРѕРІ (РїРѕ РєРѕРЅС„РёРіСѓ)
         if (com.example.aas.config.AASConfig.PREVENT_BLOCK_BREAKING.get()) {
             Player player = event.getPlayer();
             if (!player.isCreative()) {
-                net.minecraft.world.level.LevelAccessor levelAccessor = event.getLevel();
-
-                if (levelAccessor instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                if (event.getLevel() instanceof ServerLevel serverLevel) {
                     boolean isStarted = com.example.aas.world.AASWorldData.get(serverLevel).isGameStarted;
 
                     if (isStarted) {
-                        BlockState state = event.getState();
-
                         // РџР РћР’Р•Р РљРђ Р‘Р•Р›РћР“Рћ РЎРџРРЎРљРђ
-                        if (isBlockWhitelisted(state)) {
-                            return; // Р Р°Р·СЂРµС€Р°РµРј Р»РѕРјР°С‚СЊ
+                        if (!isBlockWhitelisted(event.getState())) {
+                            event.setCanceled(true);
                         }
-
-                        event.setCanceled(true);
                     }
                 }
             }
@@ -14077,6 +14370,9 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.SQUAD_LEADER_RADIO.get());
                         pOutput.accept(ModItems.ENTRENCHING_TOOL.get());
                         pOutput.accept(ModItems.VEHICLE_SPAWNER_ITEM.get());
+                        pOutput.accept(ModItems.MAIN_SUPPLY_ITEM.get());
+                        pOutput.accept(ModItems.KIT_SETUP_ITEM.get());
+                        pOutput.accept(ModItems.GAME_START_TRIGGER_ITEM.get());
 
                         pOutput.accept(ModItems.M2_AMMO.get());
                         pOutput.accept(ModItems.AGS_AMMO.get());
@@ -14107,8 +14403,6 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.RED_STATIC_ZU.get());
                         pOutput.accept(ModItems.RED_MOBILE_ZU.get());
                         pOutput.accept(ModItems.RED_BOAT.get());
-                        pOutput.accept(ModItems.MAIN_SUPPLY_ITEM.get());
-                        pOutput.accept(ModItems.KIT_SETUP_ITEM.get());
                     })
                     .build());
 
@@ -14137,7 +14431,8 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.AMMO_BAG_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<Item> WALL_ITEM = ITEMS.register("wall_block",
             () -> new BlockItem(ModBlocks.WALL_BLOCK.get(), new Item.Properties()));
-
+    public static final RegistryObject<Item> GAME_START_TRIGGER_ITEM = ITEMS.register("game_start_trigger",
+            () -> new BlockItem(ModBlocks.GAME_START_TRIGGER.get(), new Item.Properties()));
     public static final RegistryObject<Item> BARBED_WIRE_ITEM = ITEMS.register("barbed_wire",
             () -> new BlockItem(ModBlocks.BARBED_WIRE_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLUE_APC = ITEMS.register("blue_apc",
@@ -14995,9 +15290,11 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\MapPl
 ==========================================
 // PATH: src/main/java/com/example/aas/client/MapPlayerInfo.java
 package com.example.aas.network;
+import java.util.UUID;
 
 public class MapPlayerInfo {
     public String name;
+    public UUID uuid;
     public double x, z;
     public float rot;
     public int squadId;
@@ -15007,8 +15304,9 @@ public class MapPlayerInfo {
     public boolean inVehicle; // Р­С‚Рѕ РїРѕР»Рµ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ Р·РґРµСЃСЊ!
     public String team;
 
-    public MapPlayerInfo(String name, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle, String team) {
+    public MapPlayerInfo(String name, UUID uuid, double x, double z, float rot, int squadId, boolean isLeader, boolean isDowned, long lastShoutTime, boolean inVehicle, String team) {
         this.name = name;
+        this.uuid = uuid; // РўРµРїРµСЂСЊ СЌС‚Р° РїРµСЂРµРјРµРЅРЅР°СЏ Р±РµСЂРµС‚СЃСЏ РёР· Р°СЂРіСѓРјРµРЅС‚РѕРІ РІС‹С€Рµ
         this.x = x;
         this.z = z;
         this.rot = rot;
@@ -15423,6 +15721,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketSquadMarker.class, PacketSquadMarker::encode, PacketSquadMarker::decode, PacketSquadMarker::handle);
         INSTANCE.registerMessage(id++, PacketPlaceMapMarker.class, PacketPlaceMapMarker::encode, PacketPlaceMapMarker::decode, PacketPlaceMapMarker::handle);
         INSTANCE.registerMessage(id++, PacketRadioAction.class, PacketRadioAction::encode, PacketRadioAction::decode, PacketRadioAction::handle);
+        INSTANCE.registerMessage(id++, PacketVoteAction.class, PacketVoteAction::encode, PacketVoteAction::decode, PacketVoteAction::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
@@ -15460,13 +15759,16 @@ public class PacketHandler {
                 new PacketSyncGameData(blue, red, hasBlue, hasRed, blueBleed, redBleed,
                         respawnTime, blueBlocked, redBlocked, hubs,
                         bFac, rFac, bName, rName, false,
-                        0, 0, 2048, // РўР Р РїР°СЂР°РјРµС‚СЂР° РєР°СЂС‚С‹ РІРјРµСЃС‚Рѕ Р§Р•РўР«Р Р•РҐ (Р¦РµРЅС‚СЂX, Р¦РµРЅС‚СЂZ, Р Р°Р·РјРµСЂ)
+                        0, 0, 2048,
                         new ArrayList<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
                         getPlayerKitsMap(),
-                        new ArrayList<>(), // 24-Р№: РЎРїРёСЃРѕРє С‚РµС…РЅРёРєРё
-                        new ArrayList<>(), // 25-Р№ Р°СЂРіСѓРјРµРЅС‚: РџСѓСЃС‚РѕР№ СЃРїРёСЃРѕРє С‚РµС…РЅРёРєРё
+                        new ArrayList<>(),
+                        new ArrayList<>(),
                         com.example.aas.config.AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(),
-                        com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get()
+                        com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
+                        false,           // voteActive (РќРћР’РћР•: РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІС‹РєР»СЋС‡РµРЅРѕ)
+                        0,               // voteTimer (РќРћР’РћР•)
+                        new HashMap<>()  // votes (РќРћР’РћР•: РїСѓСЃС‚Р°СЏ РјР°РїР° РіРѕР»РѕСЃРѕРІ)
                 ));
     }
 
@@ -15504,7 +15806,10 @@ public class PacketHandler {
                 data.markedVehicles, // РЎРїРёСЃРѕРє С‚РµС…РЅРёРєРё (РїРѕСЃР»РµРґРЅРёР№ Р°СЂРіСѓРјРµРЅС‚)
                 data.activeMarkers,
                 AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(), // РџРµСЂРµРґР°РµРј РЅР°СЃС‚СЂРѕР№РєСѓ РЎР•Р Р’Р•Р Рђ
-                AASConfig.HUB_SPAWN_MATERIAL_COST.get()
+                AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
+                data.voteActive,
+                data.voteTimer,
+                data.votes
         );
     }
 }
@@ -17553,6 +17858,9 @@ public class PacketSyncGameData {
     public final List<AASWorldData.MapMarker> activeMarkers;
     public final boolean hubSpawnCosts;
     public final int hubSpawnCost;
+    public final boolean voteActive;
+    public final int voteTimer;
+    public final Map<UUID, Boolean> votes;
 
     public PacketSyncGameData(int blue, int red, boolean hBR, boolean hRR, boolean bBl, boolean rBl, int rTime,
                               boolean bB, boolean rB, List<AASWorldData.HubInfo> hubs, String bF, String rF,
@@ -17561,7 +17869,8 @@ public class PacketSyncGameData {
                               Map<String, BlockPos> rSp, Map<String, BlockPos> nSp,
                               Map<String, String> kits, List<AASWorldData.VehicleRecord> vehicles,
                               List<AASWorldData.MapMarker> activeMarkers,
-                              boolean hsc, int hsca) {
+                              boolean hsc, int hsca,
+                              boolean vActive, int vTimer, Map<UUID, Boolean> vMap) {
         this.blueTickets = blue; this.redTickets = red;
         this.hasBlueRally = hBR; this.hasRedRally = hRR;
         this.blueBleeding = bBl; this.redBleeding = rBl;
@@ -17579,6 +17888,9 @@ public class PacketSyncGameData {
         this.activeMarkers = activeMarkers;
         this.hubSpawnCosts = hsc;
         this.hubSpawnCost = hsca;
+        this.voteActive = vActive;
+        this.voteTimer = vTimer;
+        this.votes = vMap;
     }
 
     public static void encode(PacketSyncGameData msg, FriendlyByteBuf buf) {
@@ -17648,6 +17960,9 @@ public class PacketSyncGameData {
             b.writeUtf(m.team);
             b.writeLong(m.expiryTick);
         });
+        buf.writeBoolean(msg.voteActive);
+        buf.writeInt(msg.voteTimer);
+        buf.writeMap(msg.votes, FriendlyByteBuf::writeUUID, FriendlyByteBuf::writeBoolean);
     }
 
     public static PacketSyncGameData decode(FriendlyByteBuf buf) {
@@ -17707,9 +18022,13 @@ public class PacketSyncGameData {
         List<AASWorldData.MapMarker> aM = buf.readList(b ->
                 new AASWorldData.MapMarker(b.readBlockPos(), b.readUtf(), b.readUtf(), b.readLong()));
 
+        boolean vActive = buf.readBoolean();
+        int vTimer = buf.readInt();
+        Map<UUID, Boolean> vMap = buf.readMap(FriendlyByteBuf::readUUID, FriendlyByteBuf::readBoolean);
+
         // Р’РѕР·РІСЂР°С‰Р°РµРј РѕР±СЉРµРєС‚, СЃС‚СЂРѕРіРѕ СЃРѕР±Р»СЋРґР°СЏ РїРѕСЂСЏРґРѕРє Р°СЂРіСѓРјРµРЅС‚РѕРІ РІР°С€РµРіРѕ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР°
         return new PacketSyncGameData(
-                bT, rT, hBR, hRR, bBl, rBl, rTime, bB, rB, hL, bF, rF, bCN, rCN, started, mCX, mCZ, mSB, pL, bSp, rSp, nSp, pK, vL, aM, hsc, hsca
+                bT, rT, hBR, hRR, bBl, rBl, rTime, bB, rB, hL, bF, rF, bCN, rCN, started, mCX, mCZ, mSB, pL, bSp, rSp, nSp, pK, vL, aM, hsc, hsca, vActive, vTimer, vMap
         );
     }
 
@@ -17749,6 +18068,7 @@ public class PacketSyncMapPlayers {
         buf.writeInt(msg.players.size());
         for (MapPlayerInfo p : msg.players) {
             buf.writeUtf(p.name);
+            buf.writeUUID(p.uuid);
             buf.writeDouble(p.x);
             buf.writeDouble(p.z);
             buf.writeFloat(p.rot);
@@ -17766,7 +18086,7 @@ public class PacketSyncMapPlayers {
         List<MapPlayerInfo> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             list.add(new MapPlayerInfo(
-                    buf.readUtf(), buf.readDouble(), buf.readDouble(),
+                    buf.readUtf(), buf.readUUID(), buf.readDouble(), buf.readDouble(),
                     buf.readFloat(), buf.readInt(), buf.readBoolean(),
                     buf.readBoolean(), buf.readLong(), buf.readBoolean(),
                     buf.readUtf()
@@ -18140,6 +18460,44 @@ public class PacketVehicleShoot {
     }
 }
 ==========================================
+FILE: PacketVoteAction.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketVoteAction.java
+==========================================
+package com.example.aas.network;
+
+import com.example.aas.world.AASWorldData;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkEvent;
+
+import java.util.function.Supplier;
+
+public class PacketVoteAction {
+    private final boolean agree; // true = F1, false = F2
+
+    public PacketVoteAction(boolean agree) { this.agree = agree; }
+    public static void encode(PacketVoteAction msg, FriendlyByteBuf buf) { buf.writeBoolean(msg.agree); }
+    public static PacketVoteAction decode(FriendlyByteBuf buf) { return new PacketVoteAction(buf.readBoolean()); }
+
+    public static void handle(PacketVoteAction msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player == null || player.getTeam() == null) return;
+
+            AASWorldData data = AASWorldData.get(player.serverLevel());
+            if (!data.voteActive) return;
+
+            data.votes.put(player.getUUID(), msg.agree);
+            data.setDirty();
+
+            // РЎСЂР°Р·Сѓ СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј РґР°РЅРЅС‹Рµ РґР»СЏ РІСЃРµС…
+            PacketHandler.sendToAllClients(player.serverLevel(), data);
+        });
+        ctx.get().setPacketHandled(true);
+    }
+}
+==========================================
 FILE: RecoilHandler.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\RecoilHandler.java
 ==========================================
@@ -18475,6 +18833,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
+import com.example.aas.world.AASWorldData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18525,7 +18884,9 @@ public class AASWorldData extends SavedData {
             blueKits.put(name, new KitInfo(name));
             redKits.put(name, new KitInfo(name));
         }
+
     }
+    public List<BlockPos> triggerBlocks = new ArrayList<>();
 
     @Override
     public CompoundTag save(CompoundTag tag) {
@@ -18547,6 +18908,9 @@ public class AASWorldData extends SavedData {
         for (VehicleRecord v : markedVehicles) {
             vehicleList.add(v.save());
         }
+        ListTag triggerList = new ListTag();
+        for (BlockPos p : triggerBlocks) triggerList.add(LongTag.valueOf(p.asLong()));
+        tag.put("TriggerBlocks", triggerList);
         tag.put("MarkedVehicles", vehicleList);
         ListTag markerList = new ListTag();
         for (MapMarker m : activeMarkers) markerList.add(m.save());
@@ -18614,6 +18978,10 @@ public class AASWorldData extends SavedData {
         if (tag.contains("TacticalMarkers")) {
             ListTag list = tag.getList("TacticalMarkers", 10);
             for (int i = 0; i < list.size(); i++) data.activeMarkers.add(MapMarker.load(list.getCompound(i)));
+        }
+        if (tag.contains("TriggerBlocks")) {
+            ListTag list = tag.getList("TriggerBlocks", Tag.TAG_LONG);
+            for (Tag t : list) data.triggerBlocks.add(BlockPos.of(((LongTag) t).getAsLong()));
         }
         if (tag.contains("MarkedVehicles")) {
             ListTag list = tag.getList("MarkedVehicles", 10);
@@ -18978,6 +19346,12 @@ public class AASWorldData extends SavedData {
             return k;
         }
     }
+
+    public boolean voteActive = false;
+    public int voteTimer = 0;
+    public boolean blueReady = false;
+    public boolean redReady = false;
+    public Map<UUID, Boolean> votes = new HashMap<>();
     // Р’РЅСѓС‚СЂРё AASWorldData.java
     public static class VehicleRecord {
         public UUID uuid;
@@ -19357,6 +19731,15 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\blockstates\c
 {
   "variants": {
     "": { "model": "aas:block/crate_dropped" }
+  }
+}
+==========================================
+FILE: game_start_trigger.json
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\blockstates\game_start_trigger.json
+==========================================
+{
+  "variants": {
+    "": { "model": "minecraft:block/redstone_block" }
   }
 }
 ==========================================

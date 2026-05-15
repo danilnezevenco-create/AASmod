@@ -27,6 +27,8 @@ public class AASConfig {
     public static final ForgeConfigSpec.IntValue MAX_DOWNED_TIME_SECONDS;
     public static final ForgeConfigSpec.IntValue VOTE_AUTO_START_TIME;
     public static final ForgeConfigSpec.IntValue VOTE_REQUIRED_PERCENTAGE;
+    public static final ForgeConfigSpec.BooleanValue PREVENT_VEHICLE_INVENTORY_ACCESS;
+    public static final ForgeConfigSpec.BooleanValue REQUIRE_OFFICER_FOR_SL;
 
     // Радиусы и баланс
     public static final ForgeConfigSpec.IntValue MIN_HUB_DISTANCE;
@@ -41,6 +43,7 @@ public class AASConfig {
     public static final ForgeConfigSpec.IntValue RALLY_BLOCK_ENEMY_COUNT;
     public static final ForgeConfigSpec.IntValue SUPPLY_TRUCK_CRATES;
     public static final ForgeConfigSpec.IntValue SUPPLY_CRATE_MATERIALS;
+
 
     // Имена команд
     public static final ForgeConfigSpec.ConfigValue<String> BLUE_TEAM_CUSTOM_NAME;
@@ -72,6 +75,10 @@ public class AASConfig {
         REVIVE_COOLDOWN_SECONDS = BUILDER.comment("Time in seconds where dying again results in instant death").defineInRange("reviveCooldownSeconds", 120, 0, 600);
         MAX_DOWNED_TIME_SECONDS = BUILDER.comment("Max time in downed state before bleeding out (seconds)")
                 .defineInRange("maxDownedTimeSeconds", 180, 5, 3600);
+        PREVENT_VEHICLE_INVENTORY_ACCESS = BUILDER.comment("Completely block access to the vehicle inventory (from the outside via Shift+RMB and from the inside by pressing E)")
+                .define("preventVehicleInventoryAccess", true);
+        REQUIRE_OFFICER_FOR_SL = BUILDER.comment("If the squad leader does not have the \"Officer\" kit, the squad will disband after 120 seconds.")
+                .define("requireOfficerForSL", false);
         BUILDER.pop();
 
         BUILDER.push("Balance Settings");

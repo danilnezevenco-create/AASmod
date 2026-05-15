@@ -317,6 +317,63 @@ public class GameLogicEvents {
                     PacketHandler.sendToAllClients(level, data);
                 }
             }
+            // Проверка кита лидера отряда (Раз в 10 секунд)
+            if (globalTick % 200 == 0 && com.example.aas.config.AASConfig.REQUIRE_OFFICER_FOR_SL.get()) {
+                boolean anyChanged = false;
+                // Копируем список, чтобы не было ошибки при удалении
+                List<AASWorldData.Squad> squadsToProcess = new ArrayList<>(data.squads);
+
+                for (AASWorldData.Squad squad : squadsToProcess) {
+                    ServerPlayer leader = server.getPlayerList().getPlayerByName(squad.leader);
+
+                    if (leader != null) {
+                        // Если лидер в креативе — таймер не тикает
+                        if (leader.isCreative()) {
+                            squad.slNoOfficerSince = -1;
+                            continue;
+                        }
+
+                        // ПРОВЕРКА: смотрим и текущий кит, и тот что забронирован (Pending)
+                        String current = leader.getPersistentData().getString("AAS_CurrentKit");
+                        String pending = leader.getPersistentData().getString("AAS_PendingKit");
+
+                        boolean isOfficer = current.equalsIgnoreCase("Officer") || pending.equalsIgnoreCase("Officer");
+
+                        if (!isOfficer) {
+                            // Если таймер не запущен — запускаем
+                            if (squad.slNoOfficerSince == -1) {
+                                squad.slNoOfficerSince = level.getGameTime();
+                            }
+
+                            long elapsed = level.getGameTime() - squad.slNoOfficerSince;
+                            long remaining = 2400 - elapsed; // 120 секунд
+
+                            if (remaining <= 0) {
+                                broadcastMessage(level, "Squad " + squad.name + " disbanded: Leader is not an Officer!", ChatFormatting.RED);
+
+                                // Расформировываем отряд через наш обновленный метод
+                                for (String memberName : new ArrayList<>(squad.members)) {
+                                    ServerPlayer member = server.getPlayerList().getPlayerByName(memberName);
+                                    if (member != null) {
+                                        PacketSquadAction.leaveCurrentSquad(member, data);
+                                    }
+                                }
+                                anyChanged = true;
+                            } else if (remaining % 200 == 0) { // Каждые 10 сек предупреждение
+                                leader.displayClientMessage(Component.literal("§6§lWARNING: §eSelect §nOFFICER§e kit or squad disbands in §c" + (remaining/20) + "s!")
+                                        .withStyle(ChatFormatting.GOLD), true);
+                            }
+                        } else {
+                            // Лидер стал офицером (или забронировал его) — сбрасываем таймер
+                            squad.slNoOfficerSince = -1;
+                        }
+                    }
+                }
+                if (anyChanged) {
+                    data.setDirty();
+                    PacketHandler.sendToAllClients(level, data);
+                }
+            }
             // Внутри цикла for (ServerLevel level : server.getAllLevels()) в GameLogicEvents.java
 
             long now = level.getGameTime();
@@ -1222,41 +1279,48 @@ public class GameLogicEvents {
     public static void leaveCurrentSquad(ServerPlayer player, AASWorldData data) {
         String pName = player.getScoreboardName();
 
-        data.squads.forEach(s -> {
+        // 1. Удаляем игрока из всех отрядов, где он может числиться
+        for (AASWorldData.Squad s : data.squads) {
             if (s.members.contains(pName)) {
                 s.members.remove(pName);
-
                 if (s.leader.equals(pName)) {
+                    // Если был лидером — удаляем рацию
                     PacketSquadAction.removeRadio(player);
-
                     if (!s.members.isEmpty()) {
                         s.leader = s.members.get(0);
                         ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(s.leader);
                         if (newLeader != null) {
                             PacketSquadAction.updatePlayerTags(newLeader, s.id, true);
-
-                            // === ПРОВЕРКА КОНФИГА: ВЫДАЕМ РАЦИЮ ТОЛЬКО ЕСЛИ ВКЛЮЧЕНО ===
-                            if (AASConfig.AUTO_GIVE_SL_RADIO.get()) {
-                                PacketSquadAction.giveRadio(newLeader);
-                            }
-
-                            newLeader.sendSystemMessage(Component.literal("The leader left. You are now the Squad Leader!").withStyle(ChatFormatting.GOLD));
+                            if (AASConfig.AUTO_GIVE_SL_RADIO.get()) PacketSquadAction.giveRadio(newLeader);
                         }
                     }
                 }
             }
-        });
-
+        }
         data.squads.removeIf(s -> s.members.isEmpty());
 
+        // 2. ПОЛНАЯ ОЧИСТКА КИТА (Теги и Инвентарь)
+        // Сбрасываем теги в состояние "по умолчанию"
         player.getPersistentData().putString("AAS_CurrentKit", "Unassigned");
-        player.getPersistentData().remove("AAS_PendingKit");
-        player.getInventory().clearContent();
-        player.inventoryMenu.broadcastChanges();
+        player.getPersistentData().putString("AAS_PendingKit", ""); // Очищаем бронь
 
+        // Очищаем инвентарь игрока полностью
+        player.getInventory().clearContent();
+
+        // Синхронизируем инвентарь (чтобы вещи исчезли у игрока)
+        player.inventoryMenu.broadcastChanges();
+        player.containerMenu.broadcastChanges();
+
+        // Убираем теги лидера/отряда
         PacketSquadAction.removePlayerTags(player);
 
-        player.displayClientMessage(Component.literal("You left the squad. Kit reset.").withStyle(ChatFormatting.YELLOW), true);
+        // 3. Уведомление
+        player.displayClientMessage(Component.literal("§eSquad left. Kit and reservations cleared."), true);
+
+        // 4. СИНХРОНИЗАЦИЯ ДАННЫХ МИРА
+        // Мы помечаем данные как "грязные" и ПРИНУДИТЕЛЬНО шлем пакет всем
+        data.setDirty();
+        PacketHandler.sendToAllClients(player.serverLevel(), data);
     }
 
     @SubscribeEvent

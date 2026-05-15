@@ -26,6 +26,11 @@ import net.minecraft.tags.BlockTags;
 import net.minecraftforge.common.Tags;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
 @Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class InteractionEvents {
@@ -99,6 +104,33 @@ public class InteractionEvents {
 
     // Вспомогательный метод для определения блоков, которые МОЖНО ломать во время игры
     private static boolean isBlockWhitelisted(BlockState state) {
+        // 1. ИСКЛЮЧЕНИЕ: ТРАВА, ЦВЕТЫ И КУСТЫ
+        // BlockTags.REPLACEABLE включает в себя траву, высокую траву, папоротники и т.д.
+        if (state.is(BlockTags.REPLACEABLE) || state.is(BlockTags.FLOWERS) || state.is(BlockTags.CROPS)) {
+            return true;
+        }
+
+        // 2. ИСКЛЮЧЕНИЕ: ГОСТ-БЛОКИ (Чертежи)
+        // Проверяем блоки, у которых есть стадия строительства
+        if (state.hasProperty(WallBlock.CONSTRUCTED) && !state.getValue(WallBlock.CONSTRUCTED)) {
+            return true; // Недостроенная стена
+        }
+        if (state.hasProperty(BarbedWireBlock.CONSTRUCTED) && !state.getValue(BarbedWireBlock.CONSTRUCTED)) {
+            return true; // Недостроенная колючка
+        }
+        if (state.hasProperty(HubBlock.CONSTRUCTED) && !state.getValue(HubBlock.CONSTRUCTED)) {
+            return true; // Недостроенный ФОБ (Хаб)
+        }
+
+        // Блоки строительства техники (они всегда госты, пока не спавнят энтити)
+        if (state.is(ModBlocks.M2_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.AGS_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get())) {
+            return true;
+        }
+
+        // 3. ВАШ СТАРЫЙ БЕЛЫЙ СПИСОК (Готовые постройки)
         boolean isDefense = state.is(ModBlocks.WALL_BLOCK.get()) || state.is(ModBlocks.BARBED_WIRE_BLOCK.get());
         boolean allowDefenses = com.example.aas.config.AASConfig.ALLOW_BREAKING_DEFENSES.get();
 
@@ -106,7 +138,7 @@ public class InteractionEvents {
                 state.is(ModBlocks.BLUE_RALLY_BLOCK.get()) ||
                 state.is(ModBlocks.RED_RALLY_BLOCK.get()) ||
                 state.is(ModBlocks.AMMO_BAG_BLOCK.get()) ||
-                (isDefense && allowDefenses) || // <--- ДОБАВЛЕНО ИСКЛЮЧЕНИЕ ЗАЩИТЫ
+                (isDefense && allowDefenses) ||
                 state.is(Tags.Blocks.GLASS) ||
                 state.is(Tags.Blocks.GLASS_PANES) ||
                 state.is(BlockTags.IMPERMEABLE);
@@ -252,6 +284,35 @@ public class InteractionEvents {
                     event.setCancellationResult(InteractionResult.SUCCESS);
                 }
             }
+        }
+    }
+    // Метод 1: Блокировка Shift + ПКМ снаружи
+    @SubscribeEvent
+    public static void onGlobalEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        Player player = event.getEntity();
+        if (!com.example.aas.config.AASConfig.PREVENT_VEHICLE_INVENTORY_ACCESS.get()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+
+        if (player.isShiftKeyDown()) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.FAIL);
+
+            if (event.getLevel().isClientSide) {
+                player.displayClientMessage(Component.literal("Inventory access is disabled!")
+                        .withStyle(ChatFormatting.RED), true);
+            }
+        }
+    }
+
+    // Метод 2: Блокировка открытия контейнера на сервере (если игрок внутри)
+    @SubscribeEvent
+    public static void onContainerOpen(net.minecraftforge.event.entity.player.PlayerContainerEvent.Open event) {
+        Player player = event.getEntity();
+        if (com.example.aas.config.AASConfig.PREVENT_VEHICLE_INVENTORY_ACCESS.get() &&
+                !player.isCreative() && player.getVehicle() != null) {
+
+            event.setCanceled(true);
+            player.closeContainer();
         }
     }
 }

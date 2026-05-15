@@ -296,6 +296,7 @@ public class AASWorldData extends SavedData {
         public List<String> members = new ArrayList<>();
         public SquadMarker marker = null; // Поле метки отряда
         public long rallyExpiryTick = -1;
+        public long slNoOfficerSince = -1; // -1 означает, что всё в порядке
         // Конструктор
         public Squad(int id, String name, String team, String leader, String dimension) {
             this.id = id;
@@ -320,6 +321,7 @@ public class AASWorldData extends SavedData {
             tag.putBoolean("IsLocked", isLocked);
             tag.putString("Dimension", dimension != null ? dimension : "minecraft:overworld");
             tag.putLong("RallyExpiry", rallyExpiryTick);
+            tag.putLong("SLNoOfficerSince", slNoOfficerSince);
 
             if (rallyPos != null) {
                 tag.putLong("RallyPos", rallyPos.asLong());
@@ -345,6 +347,7 @@ public class AASWorldData extends SavedData {
 
             Squad s = new Squad(tag.getInt("ID"), tag.getString("Name"), tag.getString("Team"), l, dim);
             s.rallyExpiryTick = tag.getLong("RallyExpiry");
+            s.slNoOfficerSince = tag.getLong("SLNoOfficerSince");
 
             if (tag.contains("IsLocked")) s.isLocked = tag.getBoolean("IsLocked");
 

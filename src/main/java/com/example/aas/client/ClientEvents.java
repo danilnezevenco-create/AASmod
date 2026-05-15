@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.ChatFormatting;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -225,6 +226,23 @@ public class ClientEvents {
             }
             else if (event.getAction() == GLFW.GLFW_RELEASE) {
                 ClientData.isMapOpen = false;
+            }
+        }
+    }
+    @SubscribeEvent
+    public static void onGuiOpen(net.minecraftforge.client.event.ScreenEvent.Opening event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+
+        if (com.example.aas.config.AASConfig.PREVENT_VEHICLE_INVENTORY_ACCESS.get() &&
+                !mc.player.isCreative() && mc.player.getVehicle() != null) {
+
+            if (event.getScreen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen ||
+                    event.getScreen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen) {
+
+                event.setCanceled(true);
+                mc.player.displayClientMessage(Component.literal("Inventory is disabled while inside a vehicle!")
+                        .withStyle(ChatFormatting.RED), true);
             }
         }
     }

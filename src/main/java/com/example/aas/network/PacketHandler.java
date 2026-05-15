@@ -72,13 +72,19 @@ public class PacketHandler {
 
     private static Map<String, String> getPlayerKitsMap() {
         Map<String, String> pKits = new HashMap<>();
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                 String current = p.getPersistentData().getString("AAS_CurrentKit");
                 String pending = p.getPersistentData().getString("AAS_PendingKit");
-                String displayKit = !pending.isEmpty() ? pending : current;
-                pKits.put(p.getScoreboardName(), displayKit.isEmpty() ? "Unassigned" : displayKit);
+
+                // ЕслиPendingKit пустой и CurrentKit "Unassigned" — значит кита нет
+                String displayKit = (!pending.isEmpty()) ? pending : current;
+                if (displayKit.isEmpty() || displayKit.equals("Unassigned")) {
+                    displayKit = "Unassigned";
+                }
+
+                pKits.put(p.getScoreboardName(), displayKit);
             }
         }
         return pKits;

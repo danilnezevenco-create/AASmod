@@ -221,29 +221,51 @@ public class PacketSquadAction {
 
     public static void leaveCurrentSquad(ServerPlayer player, AASWorldData data) {
         String pName = player.getScoreboardName();
-        data.squads.forEach(s -> {
-            if (s.members.remove(pName)) {
+
+        // 1. Удаляем из списков отрядов
+        for (AASWorldData.Squad s : data.squads) {
+            if (s.members.contains(pName)) {
+                s.members.remove(pName);
                 if (s.leader.equals(pName)) {
-                    removeRadio(player);
+                    removeRadio(player); // Забираем рацию
                     if (!s.members.isEmpty()) {
                         s.leader = s.members.get(0);
                         ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(s.leader);
                         if (newLeader != null) {
                             updatePlayerTags(newLeader, s.id, true);
-
-                            // ПРОВЕРКА КОНФИГА ПРИ ВЫХОДЕ ИЗ СКВАДА
-                            if (AASConfig.AUTO_GIVE_SL_RADIO.get()) {
-                                giveRadio(newLeader);
-                            }
-
-                            newLeader.sendSystemMessage(Component.literal("You are now the Squad Leader!").withStyle(ChatFormatting.GOLD));
+                            if (com.example.aas.config.AASConfig.AUTO_GIVE_SL_RADIO.get()) giveRadio(newLeader);
                         }
                     }
                 }
+                break;
             }
-        });
+        }
         data.squads.removeIf(s -> s.members.isEmpty());
+
+        // 2. СБРОС КИТА (Теги и Инвентарь)
+        // Пишем "Unassigned", чтобы сбросить текущий кит
+        player.getPersistentData().putString("AAS_CurrentKit", "Unassigned");
+        // Очищаем PendingKit (пустая строка), чтобы убрать "Бронирование"
+        player.getPersistentData().putString("AAS_PendingKit", "");
+
+        // Полная очистка инвентаря (включая броню и вторую руку)
+        player.getInventory().clearContent();
+        player.inventoryMenu.broadcastChanges();
+        player.containerMenu.broadcastChanges();
+
+        // Убираем теги отряда
         removePlayerTags(player);
+
+        // 3. Сообщение игроку
+        if (!data.isGameStarted) {
+            player.displayClientMessage(Component.literal("§eLeft squad. Pre-game kit cleared."), true);
+        } else {
+            player.displayClientMessage(Component.literal("§eLeft squad. Equipment reset."), true);
+        }
+
+        // 4. СИНХРОНИЗАЦИЯ (Чтобы иконка в меню пропала у всех сразу)
+        data.setDirty();
+        PacketHandler.sendToAllClients(player.serverLevel(), data);
     }
 
     public static void giveRadio(ServerPlayer player) {
