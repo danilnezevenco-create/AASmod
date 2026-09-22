@@ -43,6 +43,7 @@ public class PacketApplyMarker {
                 String team = "";
                 String type = "";
                 int penalty = 0;
+                int maxMats = 0; // <--- Добавили переменную
                 boolean isSupply = false;
 
                 // 1. ОПРЕДЕЛЯЕМ ПАРАМЕТРЫ ИЗ ПРЕДМЕТА
@@ -50,11 +51,12 @@ public class PacketApplyMarker {
                     team = markerItem.getTeam();
                     type = markerItem.getType();
                     penalty = markerItem.getPenalty();
-                }
-                else if (stack.getItem() instanceof SupplyTruckMarkerItem supplyItem) {
+                    maxMats = markerItem.getMaxMats(); // <--- Читаем из предмета
+                } else if (stack.getItem() instanceof SupplyTruckMarkerItem supplyItem) {
                     team = supplyItem.getTeam();
                     type = supplyItem.getVehicleType();
                     penalty = supplyItem.getPenalty();
+                    maxMats = supplyItem.getMaxMats(); // <--- Читаем из предмета
                     isSupply = true;
                 }
 
@@ -63,17 +65,22 @@ public class PacketApplyMarker {
                     target.getPersistentData().putString("AAS_VehicleTeam", team);
                     target.getPersistentData().putString("AAS_VehicleType", type);
                     target.getPersistentData().putInt("AAS_TicketPenalty", penalty);
+
                     if (isSupply) {
                         target.getPersistentData().putBoolean("AAS_IsSupplyTruck", true);
-                        // Даем 2 ящика сразу при клейме
                         target.getPersistentData().putInt("AAS_SupplyAmmo", com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get());
                     } else {
-                        // Если переклеймили в обычную технику - забираем возможность кидать ящики
                         target.getPersistentData().remove("AAS_IsSupplyTruck");
                         target.getPersistentData().remove("AAS_SupplyAmmo");
                     }
+
+                    // СОХРАНЯЕМ МАТЕРИАЛЫ
+                    if (maxMats > 0) {
+                        target.getPersistentData().putInt("AAS_VehicleMaxMats", maxMats);
+                        target.getPersistentData().putInt("AAS_VehicleMats", maxMats);
+                    }
+
                     // 2. Глобальные данные мира (для карты)
-                    // Удаляем старую запись по UUID, если она была (переклейм)
                     data.markedVehicles.removeIf(v -> v.uuid.equals(target.getUUID()));
 
                     BlockPos spawnerPos = null;
@@ -81,16 +88,8 @@ public class PacketApplyMarker {
                         spawnerPos = BlockPos.of(target.getPersistentData().getLong("AAS_SpawnerPos"));
                     }
 
-                    // Добавляем новую
                     data.markedVehicles.add(new AASWorldData.VehicleRecord(
-                            target.getUUID(),
-                            team,
-                            type,
-                            target.getX(),
-                            target.getY(),
-                            target.getZ(),
-                            target.getYRot(),
-                            spawnerPos
+                            target.getUUID(), team, type, target.getX(), target.getY(), target.getZ(), target.getYRot(), spawnerPos
                     ));
 
                     // 3. Синхронизация

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "aas:block/camo_net_model" },
+    "facing=south": { "model": "aas:block/camo_net_model", "y": 180 },
+    "facing=east":  { "model": "aas:block/camo_net_model", "y": 90 },
+    "facing=west":  { "model": "aas:block/camo_net_model", "y": 270 }
+  }
+}

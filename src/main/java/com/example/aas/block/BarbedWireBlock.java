@@ -1,3 +1,4 @@
+// PATH: src\main\java\com\example\aas\block\BarbedWireBlock.java
 package com.example.aas.block;
 
 import net.minecraft.core.BlockPos;
@@ -20,18 +21,22 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.material.FluidState;
 
 public class BarbedWireBlock extends BaseEntityBlock {
 
     public static final BooleanProperty CONSTRUCTED = BooleanProperty.create("constructed");
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty VALID = BooleanProperty.create("valid");
+    public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
 
     private static final VoxelShape SHAPE = Block.box(1.0D, 0.0D, 1.0D, 15.0D, 15.0D, 15.0D);
 
@@ -42,33 +47,55 @@ public class BarbedWireBlock extends BaseEntityBlock {
                 .noOcclusion());
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(CONSTRUCTED, false)
+                .setValue(BUILD_STAGE, 0)
                 .setValue(FACING, Direction.NORTH)
                 .setValue(VALID, true));
     }
 
-    // === ЛОГИКА УРОНА И ЗАМЕДЛЕНИЯ ===
     @Override
     public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
         if (state.getValue(CONSTRUCTED)) {
-            // 1. Замедление (как паутина)
             entity.makeStuckInBlock(state, new Vec3(0.25D, 0.05D, 0.25D));
-
-            // 2. Урон 0.5 HP в секунду
-            // Проверяем, что это живое существо и делаем урон раз в секунду (20 тиков)
             if (!level.isClientSide && entity instanceof LivingEntity) {
-                // Используем hashCode позиции, чтобы урон не "стакался" мгновенно от разных блоков,
-                // но срабатывал ритмично. Или просто проверяем время мира.
                 if (level.getGameTime() % 20 == 0) {
-                    // Источник урона "cactus" подходит для колючки, или "generic"
                     entity.hurt(level.damageSources().cactus(), 3F);
                 }
             }
         }
     }
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, FluidState fluid) {
+        if (!level.isClientSide) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof BarbedWireBlockEntity wire) {
+                boolean constructed = state.getValue(CONSTRUCTED);
+                int stage = wire.getDamageStage();
 
+                // Откат в 3 удара: достроенное -> 70% -> 30% -> удаление.
+                // Ни разу не достроенный чертёж (stage == 0) откатов не имеет: сразу удаляется.
+                if (constructed || stage == 1) {
+                    int newStage = constructed ? 1 : 2;
+                    int targetPercent = (newStage == 1) ? 70 : 30;
+                    int targetProgress = Math.round(BarbedWireBlockEntity.MAX_PROGRESS * (targetPercent / 100f));
+
+                    wire.setProgress(targetProgress);
+                    wire.setDamageStage(newStage);
+
+                    int newBuildStage = (targetPercent >= 50) ? 2 : 1;
+                    BlockState newState = state.setValue(CONSTRUCTED, false).setValue(BUILD_STAGE, newBuildStage);
+                    level.setBlock(pos, newState, 3);
+
+                    level.levelEvent(null, 2001, pos, Block.getId(state));
+
+                    return false;
+                }
+            }
+        }
+        return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
+    }
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Shapes.empty(); // Можно проходить сквозь
+        return Shapes.empty();
     }
 
     @Override
@@ -85,13 +112,23 @@ public class BarbedWireBlock extends BaseEntityBlock {
     }
 
     @Override
+    public boolean propagatesSkylightDown(BlockState state, BlockGetter reader, BlockPos pos) {
+        return true;
+    }
+
+    @Override
+    public float getShadeBrightness(BlockState state, BlockGetter worldIn, BlockPos pos) {
+        return 1.0F;
+    }
+
+    @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(CONSTRUCTED, FACING, VALID);
+        builder.add(CONSTRUCTED, BUILD_STAGE, FACING, VALID);
     }
 
     @Nullable

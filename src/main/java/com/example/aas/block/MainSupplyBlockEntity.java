@@ -74,10 +74,13 @@ public class MainSupplyBlockEntity extends BlockEntity {
 
             // Сброс таймеров при долгом отсутствии (если не обновлялись более 2 сек, значит выезжали)
             long lastSeenTime = vehicle.getPersistentData().getLong("AAS_LastSupplyTime");
-            if (currentTime - lastSeenTime > 40) { // > 2 секунд отсутствия
+            if (vehicle.getPersistentData().contains("AAS_VehicleMaxMats")) {
+                int maxMats = vehicle.getPersistentData().getInt("AAS_VehicleMaxMats");
+                vehicle.getPersistentData().putInt("AAS_VehicleMats", maxMats);
+            }
+            if (currentTime - lastSeenTime > 200) { // > 20 секунд отсутствия
                 vehicle.getPersistentData().putInt("AAS_RepairTimer", 0);
                 vehicle.getPersistentData().putInt("AAS_TruckReloadTimer", 0);
-                // Сообщение при въезде не обязательно, но можно оставить
             }
             vehicle.getPersistentData().putLong("AAS_LastSupplyTime", currentTime);
 
@@ -97,12 +100,12 @@ public class MainSupplyBlockEntity extends BlockEntity {
                         vehicle.getPersistentData().putInt("AAS_TruckReloadTimer", 0);
 
                         // Уведомление в ЧАТ (чтобы было выше и не перекрывалось)
-                        sendChatMessageToPassengers(vehicle, "[Supply] +1 Crate Loaded (" + (currentAmmo + 1) + "/" + maxCrates + ")", ChatFormatting.GOLD);
+                        sendChatMessageToPassengers(vehicle, Component.translatable("aas.msg.crate_loaded", (currentAmmo + 1), maxCrates).getString(), ChatFormatting.GOLD);
                         spawnEffects(level, vehicle);
                     } else {
                         vehicle.getPersistentData().putInt("AAS_TruckReloadTimer", supplyTimer);
                         // Добавляем в общий статус бар
-                        statusMessage.append(ChatFormatting.YELLOW).append("Loading Crate: ").append(15 - supplyTimer).append("s  ");
+                        statusMessage.append(ChatFormatting.YELLOW).append(Component.translatable("aas.msg.loading_crate", 15 - supplyTimer).getString()).append(" ");
                         showActionBar = true;
                     }
                 } else {
@@ -124,7 +127,7 @@ public class MainSupplyBlockEntity extends BlockEntity {
                     vehicle.getPersistentData().putInt("AAS_RepairTimer", 0); // Сбрасываем прогресс ремонта, если КД
 
                     // Добавляем инфо о КД в статус бар
-                    statusMessage.append(ChatFormatting.RED).append("Rearm Cooldown: ").append(secondsLeft).append("s");
+                    statusMessage.append(ChatFormatting.RED).append(Component.translatable("aas.msg.rearm_cooldown", secondsLeft).getString());
                     showActionBar = true;
                 }
                 else {
@@ -138,54 +141,79 @@ public class MainSupplyBlockEntity extends BlockEntity {
                             living.setHealth(living.getMaxHealth());
                         }
 
-                        // 2. Перезаряжаем (копирование инвентаря)
-                        long spawnerPosLong = vehicle.getPersistentData().getLong("AAS_SpawnerPos");
-                        BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
+                        // 2. Перезаряжаем
+                        java.util.concurrent.atomic.AtomicBoolean rearmSuccess = new java.util.concurrent.atomic.AtomicBoolean(false);
 
-                        if (level.isLoaded(spawnerPos)) {
-                            BlockEntity be = level.getBlockEntity(spawnerPos);
-                            if (be instanceof VehicleSpawnerBlockEntity spawner) {
-                                vehicle.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(vehInv -> {
-                                    if (vehInv instanceof IItemHandlerModifiable modifiable) {
-                                        for (int i = 0; i < vehInv.getSlots(); i++) {
-                                            modifiable.setStackInSlot(i, ItemStack.EMPTY);
-                                        }
+                        vehicle.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(vehInv -> {
+                            // НАДЕЖНАЯ ОЧИСТКА ИНВЕНТАРЯ
+                            if (vehInv instanceof IItemHandlerModifiable modifiable) {
+                                for (int i = 0; i < vehInv.getSlots(); i++) {
+                                    modifiable.setStackInSlot(i, ItemStack.EMPTY);
+                                }
+                            } else {
+                                for (int i = 0; i < vehInv.getSlots(); i++) vehInv.extractItem(i, 64, false);
+                            }
+
+                            // НОВЫЙ МЕТОД: Грузим из NBT машины (работает даже если чанк выгружен)
+                            if (vehicle.getPersistentData().contains("AAS_InitialLoadout")) {
+                                net.minecraft.nbt.ListTag loadoutTag = vehicle.getPersistentData().getList("AAS_InitialLoadout", 10);
+                                for (int i = 0; i < loadoutTag.size(); i++) {
+                                    net.minecraft.nbt.CompoundTag itemTag = loadoutTag.getCompound(i);
+                                    int slot = itemTag.getByte("Slot") & 255;
+                                    if (slot < vehInv.getSlots()) {
+                                        insertItem(vehInv, slot, ItemStack.of(itemTag));
                                     }
-                                    int slotsToCopy = 32;
-                                    for (int i = 0; i < slotsToCopy; i++) {
-                                        if (i >= vehInv.getSlots()) break;
-                                        ItemStack sourceStack = spawner.inventory.getStackInSlot(i + 1);
-                                        if (!sourceStack.isEmpty()) {
-                                            insertItem(vehInv, i, sourceStack.copy());
-                                        }
-                                    }
-                                    // Батарейка
-                                    Item batteryItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery"));
-                                    if (batteryItem != null) {
-                                        for (int i = 0; i < vehInv.getSlots(); i++) {
-                                            if (vehInv.getStackInSlot(i).isEmpty()) {
-                                                insertItem(vehInv, i, new ItemStack(batteryItem));
-                                                break;
+                                }
+                                rearmSuccess.set(true);
+                            }
+                            // СТАРЫЙ МЕТОД: Если машина была заспавнена до фикса (Резерв)
+                            else {
+                                long spawnerPosLong = vehicle.getPersistentData().getLong("AAS_SpawnerPos");
+                                BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
+
+                                if (level.isLoaded(spawnerPos)) {
+                                    BlockEntity be = level.getBlockEntity(spawnerPos);
+                                    if (be instanceof VehicleSpawnerBlockEntity spawner) {
+                                        for (int i = 0; i < 32; i++) {
+                                            if (i >= vehInv.getSlots()) break;
+                                            ItemStack sourceStack = spawner.inventory.getStackInSlot(i + 1);
+                                            if (!sourceStack.isEmpty()) {
+                                                insertItem(vehInv, i, sourceStack.copy());
                                             }
                                         }
+                                        rearmSuccess.set(true);
                                     }
-                                });
+                                }
                             }
-                        }
+
+                            // Батарейка
+                            if (rearmSuccess.get()) {
+                                Item batteryItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery"));
+                                if (batteryItem != null) {
+                                    for (int i = 0; i < vehInv.getSlots(); i++) {
+                                        if (vehInv.getStackInSlot(i).isEmpty()) {
+                                            insertItem(vehInv, i, new ItemStack(batteryItem));
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        });
 
                         vehicle.getPersistentData().putInt("AAS_RepairTimer", 0);
 
-                        // ВЕШАЕМ БАН ТОЛЬКО НА РЕАРМ (не влияет на ящики)
-                        vehicle.getPersistentData().putLong("AAS_NextSupplyTime", currentTime + 6000); // 5 минут
-
-                        // Уведомление в ЧАТ
-                        sendChatMessageToPassengers(vehicle, "[Base] Vehicle Fully Rearmed & Repaired!", ChatFormatting.GREEN);
-                        spawnEffects(level, vehicle);
-
+                        // ЕСЛИ ПЕРЕЗАРЯДКА РЕАЛЬНО СЛУЧИЛАСЬ
+                        if (rearmSuccess.get()) {
+                            // Исправлено: 600 тиков = 30 секунд
+                            vehicle.getPersistentData().putLong("AAS_NextSupplyTime", currentTime + 600);
+                            sendChatMessageToPassengers(vehicle, Component.translatable("aas.msg.vehicle_rearmed").getString(), ChatFormatting.GREEN);
+                            spawnEffects(level, vehicle);
+                        } else {
+                            sendChatMessageToPassengers(vehicle, Component.translatable("aas.msg.rearm_error_chunk").getString(), ChatFormatting.RED);
+                        }
                     } else {
                         vehicle.getPersistentData().putInt("AAS_RepairTimer", repairTimer);
-                        // Добавляем в общий статус бар
-                        statusMessage.append(ChatFormatting.AQUA).append("Rearming: ").append(30 - repairTimer).append("s");
+                        statusMessage.append(ChatFormatting.AQUA).append(Component.translatable("aas.msg.rearming", 30 - repairTimer).getString());
                         showActionBar = true;
                     }
                 }

@@ -18,7 +18,16 @@ public class PacketDropCrate {
             ServerPlayer player = ctx.get().getSender();
             if (player != null) {
                 Entity vehicle = player.getVehicle();
+
+                // Проверка 1: Игрок в машине и это грузовик снабжения
                 if (vehicle != null && vehicle.getPersistentData().getBoolean("AAS_IsSupplyTruck")) {
+
+                    // ПРОЛОЖЕННАЯ ПРОВЕРКА: Только первый пассажир (водитель)
+                    if (vehicle.getFirstPassenger() != player) {
+                        player.displayClientMessage(Component.translatable("aas.msg.only_driver_drop")
+                                .withStyle(ChatFormatting.RED), true);
+                        return;
+                    }
 
                     int ammo = vehicle.getPersistentData().getInt("AAS_SupplyAmmo");
                     if (ammo > 0) {
@@ -38,9 +47,9 @@ public class PacketDropCrate {
                         SupplyCrateEntity crate = new SupplyCrateEntity(player.level(), x, y, z, team, player.getUUID());
                         player.level().addFreshEntity(crate);
 
-                        player.displayClientMessage(Component.literal("Supply Crate Dropped!").withStyle(ChatFormatting.YELLOW), true);
+                        player.displayClientMessage(Component.translatable("aas.msg.crate_dropped").withStyle(ChatFormatting.YELLOW), true);
                     } else {
-                        player.displayClientMessage(Component.literal("No Supplies! Return to Main Base.").withStyle(ChatFormatting.RED), true);
+                        player.displayClientMessage(Component.translatable("aas.msg.no_supplies").withStyle(ChatFormatting.RED), true);
                     }
                 }
             }

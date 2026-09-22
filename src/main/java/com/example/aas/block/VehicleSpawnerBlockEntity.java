@@ -46,10 +46,25 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public int initialTimeSettings = 60;
     public String vehicleIdString = "";
 
-    public long spawnTimestamp = 0;
+    public long targetSpawnTick = 0;
     public boolean hasSpawnedOnce = false;
     private UUID lastVehicleUUID = null;
     private int loadTimer = 60;
+
+    // === АВТО-ВОЗВРАТ ТЕХНИКИ ===
+    // Если техника пуста (нет игроков) дольше autoReturnTimeSettings секунд и находится
+    // за пределами мейн-зоны своей команды — она телепортируется обратно на спавн,
+    // либо (если autoReturnDestroy == true) уничтожается. Сама проверка выполняется
+    // глобально в GameLogicEvents#handleVehicleAutoReturn, а не здесь, т.к. этот тик
+    // блок-энтити не выполняется в непрогруженных чанках.
+    public boolean autoReturnEnabled = false;
+    public int autoReturnTimeSettings = 60;
+    public boolean autoReturnDestroy = false;
+
+    // Один раз на первом тике после появления блока в мире сканируем ландшафт
+    // вокруг и подбираем камуфляж. После этого флаг сохраняется в NBT и повторного
+    // сканирования больше никогда не будет (даже после выгрузки/загрузки чанка).
+    private boolean camoScanned = false;
 
     public VehicleSpawnerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
@@ -64,6 +79,16 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
         if (level.isClientSide) return;
 
+        // === КАМУФЛЯЖ: единоразовое сканирование блоков вокруг ===
+        if (!be.camoScanned) {
+            be.camoScanned = true;
+            VehicleSpawnerBlock.CamoType camo = VehicleSpawnerBlock.computeCamoType(level, pos);
+            if (state.getValue(VehicleSpawnerBlock.CAMO) != camo) {
+                level.setBlock(pos, state.setValue(VehicleSpawnerBlock.CAMO, camo), 3);
+            }
+            be.setChanged();
+        }
+
         if (be.loadTimer > 0) {
             be.loadTimer--;
             return;
@@ -71,10 +96,11 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
 
         AASWorldData data = AASWorldData.get((ServerLevel) level);
 
+        // Если игра не начата — сбрасываем всё
         if (!data.isGameStarted) {
-            if (be.hasSpawnedOnce || be.spawnTimestamp != 0 || be.lastVehicleUUID != null) {
+            if (be.hasSpawnedOnce || be.targetSpawnTick != 0 || be.lastVehicleUUID != null) {
                 be.hasSpawnedOnce = false;
-                be.spawnTimestamp = 0;
+                be.targetSpawnTick = 0;
                 be.lastVehicleUUID = null;
                 be.setChanged();
                 be.syncToClient();
@@ -82,50 +108,59 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             return;
         }
 
-        long currentTime = System.currentTimeMillis();
+        long currentTick = level.getGameTime();
+        // --- ДОБАВИТЬ ЭТОТ БЛОК ---
+        String spawnerTeam = "NEUTRAL";
+        ItemStack modifier = be.inventory.getStackInSlot(0);
+        if (modifier.getItem() instanceof VehicleMarkerItem vm) spawnerTeam = vm.getTeam();
+        if (modifier.getItem() instanceof SupplyTruckMarkerItem stm) spawnerTeam = stm.getTeam();
 
-        // === ГЛОБАЛЬНАЯ ПРОВЕРКА (Защита от дубликатов при выгрузке чанков) ===
-        // Ищем в "бухгалтерии" мира запись о технике, которая привязана именно к этому спавнеру
+        // Замораживаем спавнер (таймер не начнет отсчет), пока идет подготовка в Invasion
+        if (data.gameMode.equalsIgnoreCase("INVASION") && data.invasionPrepTicks > 0) {
+            if (!spawnerTeam.equals(data.invasionDefender) && !spawnerTeam.equals("NEUTRAL")) {
+                return; // Прерываем тик! Таймер инициализируется только когда закончится prepTicks
+            }
+        }
+        // 1. Проверяем, жива ли техника этого спавнера в мире
         boolean vehicleExistsGlobally = data.markedVehicles.stream()
                 .anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
 
         if (vehicleExistsGlobally) {
-            // Техника где-то жива (даже если чанк с ней выгружен).
-            // Останавливаем таймер и ничего не спавним.
-            if (be.spawnTimestamp != 0) {
-                be.spawnTimestamp = 0;
+            // Техника жива — таймер должен быть сброшен в 0 (не отображаться)
+            if (be.targetSpawnTick != 0) {
+                be.targetSpawnTick = 0;
                 be.setChanged();
                 be.syncToClient();
             }
             return;
         }
 
-        // Если мы здесь, значит в глобальном списке техники этого спавнера НЕТ (она уничтожена)
+        // 2. Если техники нет, но UUID еще остался — значит её только что уничтожили
         if (be.lastVehicleUUID != null) {
-            // Техника была, но исчезла из списка -> запускаем таймер респавна
             be.lastVehicleUUID = null;
-            be.spawnTimestamp = currentTime + (be.respawnTimeSettings * 1000L);
+            int delay = be.respawnTimeSettings * 20; // Переводим секунды в тики
+            be.targetSpawnTick = currentTick + delay;
             be.setChanged();
             be.syncToClient();
         }
 
-        // Логика работы таймера
-        if (be.spawnTimestamp == 0) {
-            // Инициализируем таймер в первый раз (или после уничтожения)
-            int delaySeconds = be.hasSpawnedOnce ? be.respawnTimeSettings : be.initialTimeSettings;
-            be.spawnTimestamp = currentTime + (delaySeconds * 1000L);
+        // 3. Инициализация самого первого спавна
+        if (be.targetSpawnTick == 0 && !be.hasSpawnedOnce) {
+            int delay = be.initialTimeSettings * 20;
+            be.targetSpawnTick = currentTick + delay;
             be.setChanged();
             be.syncToClient();
         }
-
-        // Проверка завершения отсчета
-        if (currentTime >= be.spawnTimestamp) {
+        // 4. САМ СПАВН ТЕХНИКИ (Этого куска у вас сейчас нет)
+        if (be.targetSpawnTick != 0 && currentTick >= be.targetSpawnTick) {
             be.spawnVehicle();
-            be.spawnTimestamp = 0;
+            be.targetSpawnTick = 0; // Сбрасываем после спавна
             be.setChanged();
             be.syncToClient();
         }
     }
+
+    // PATH: src\main\java\com\example\aas\block\VehicleSpawnerBlockEntity.java
 
     private void spawnVehicle() {
         if (level == null || level.isClientSide) return;
@@ -139,7 +174,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
 
         Entity entity = type.create(level);
         if (entity != null) {
-            entity.setPos(worldPosition.getX() + 0.5, worldPosition.getY() + 1.5, worldPosition.getZ() + 0.5);
+            entity.setPos(worldPosition.getX() + 0.5, worldPosition.getY() + 2.5, worldPosition.getZ() + 0.5);
             entity.getPersistentData().putLong("AAS_SpawnerPos", worldPosition.asLong());
             entity.setYRot(this.vehicleYaw);
             entity.setYHeadRot(this.vehicleYaw);
@@ -147,6 +182,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             String vTeam = "NEUTRAL";
             String vType = "DEFAULT";
             int penalty = 0;
+            int maxMats = 0;
 
             ItemStack modifierStack = inventory.getStackInSlot(0);
             if (!modifierStack.isEmpty()) {
@@ -154,28 +190,48 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                     vTeam = marker.getTeam();
                     vType = marker.getType();
                     penalty = marker.getPenalty();
-                    entity.getPersistentData().putString("AAS_VehicleTeam", vTeam);
-                    entity.getPersistentData().putString("AAS_VehicleType", vType);
-                    entity.getPersistentData().putInt("AAS_TicketPenalty", penalty);
+                    maxMats = marker.getMaxMats();
                 }
                 else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
                     vTeam = supply.getTeam();
                     vType = supply.getVehicleType();
                     penalty = supply.getPenalty();
+                    maxMats = supply.getMaxMats();
+
+                    // ГАРАНТИРУЕМ, что тег ставится сразу при спавне
                     entity.getPersistentData().putBoolean("AAS_IsSupplyTruck", true);
-                    entity.getPersistentData().putInt("AAS_SupplyAmmo", com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get());
-                    entity.getPersistentData().putString("AAS_VehicleTeam", vTeam);
-                    entity.getPersistentData().putString("AAS_VehicleType", vType);
-                    entity.getPersistentData().putInt("AAS_TicketPenalty", penalty);
+                    // Берем максимальное число из конфига
+                    int maxCrates = com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get();
+                    entity.getPersistentData().putInt("AAS_SupplyAmmo", maxCrates);
                 }
             }
 
-            // === РЕГИСТРАЦИЯ ТЕХНИКИ С ПРИВЯЗКОЙ К ПОЗИЦИИ БЛОКА ===
-            AASWorldData worldData = AASWorldData.get((ServerLevel) level);
+            // === ВАЖНО: ВСЕГДА ВЕШАЕМ ТЕГ КОМАНДЫ (Даже если это NEUTRAL) ===
+            entity.getPersistentData().putString("AAS_VehicleTeam", vTeam);
+            entity.getPersistentData().putString("AAS_VehicleType", vType);
+            entity.getPersistentData().putInt("AAS_TicketPenalty", penalty);
 
-            // На всякий случай чистим старые записи этого спавнера
+            if (maxMats > 0) {
+                entity.getPersistentData().putInt("AAS_VehicleMaxMats", maxMats);
+                entity.getPersistentData().putInt("AAS_VehicleMats", maxMats);
+            }
+
+            net.minecraft.nbt.ListTag loadoutTag = new net.minecraft.nbt.ListTag();
+            for (int i = 0; i < 32; i++) {
+                ItemStack contentStack = inventory.getStackInSlot(i + 1);
+                if (!contentStack.isEmpty()) {
+                    net.minecraft.nbt.CompoundTag itemTag = new net.minecraft.nbt.CompoundTag();
+                    itemTag.putByte("Slot", (byte) i);
+                    contentStack.save(itemTag);
+                    loadoutTag.add(itemTag);
+                }
+            }
+            entity.getPersistentData().put("AAS_InitialLoadout", loadoutTag);
+
+            AASWorldData worldData = AASWorldData.get((ServerLevel) level);
             worldData.markedVehicles.removeIf(v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
 
+            // === Передаём настройки авто-возврата в запись техники ===
             worldData.markedVehicles.add(new AASWorldData.VehicleRecord(
                     entity.getUUID(),
                     vTeam,
@@ -184,12 +240,14 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                     entity.getY(),
                     entity.getZ(),
                     entity.getYRot(),
-                    this.worldPosition // Передаем BlockPos спавнера
+                    this.worldPosition,
+                    this.autoReturnEnabled,
+                    this.autoReturnTimeSettings,
+                    this.autoReturnDestroy
             ));
             worldData.setDirty();
             PacketHandler.sendToAllClients((ServerLevel)level, worldData);
 
-            // Заполнение инвентаря
             entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
                 for (int i = 0; i < 32; i++) {
                     ItemStack contentStack = inventory.getStackInSlot(i + 1);
@@ -205,13 +263,15 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                 living.setHealth(living.getMaxHealth());
             }
 
+            // === 5 СЕКУНД ИММУНИТЕТА К МЕЙН-ЗОНЕ ===
+            entity.getPersistentData().putLong("AAS_SpawnGraceTick", level.getGameTime());
+
             level.addFreshEntity(entity);
             this.lastVehicleUUID = entity.getUUID();
             this.hasSpawnedOnce = true;
             this.setChanged();
         }
     }
-
     private void insertItemIntoSlot(IItemHandler handler, int slot, ItemStack stack) {
         if (slot < handler.getSlots()) {
             if (handler instanceof net.minecraftforge.items.IItemHandlerModifiable modifiable) {
@@ -235,11 +295,17 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
         if (inventory.getSlots() < 33) inventory.setSize(33);
         respawnTimeSettings = tag.getInt("RespawnTime");
         initialTimeSettings = tag.getInt("InitialTime");
-        spawnTimestamp = tag.getLong("SpawnTimestamp");
+        targetSpawnTick = tag.getLong("TargetSpawnTick");
         hasSpawnedOnce = tag.getBoolean("HasSpawnedOnce");
         vehicleIdString = tag.getString("VehicleID");
         vehicleYaw = tag.getFloat("VehicleYaw");
+        camoScanned = tag.getBoolean("CamoScanned");
         if (tag.hasUUID("LastVehicle")) lastVehicleUUID = tag.getUUID("LastVehicle");
+
+        // === АВТО-ВОЗВРАТ ===
+        autoReturnEnabled = tag.getBoolean("AutoReturnEnabled");
+        autoReturnTimeSettings = tag.contains("AutoReturnTime") ? tag.getInt("AutoReturnTime") : 60;
+        autoReturnDestroy = tag.getBoolean("AutoReturnDestroy");
     }
 
     @Override
@@ -248,11 +314,17 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
         tag.put("Inventory", inventory.serializeNBT());
         tag.putInt("RespawnTime", respawnTimeSettings);
         tag.putInt("InitialTime", initialTimeSettings);
-        tag.putLong("SpawnTimestamp", spawnTimestamp);
+        tag.putLong("TargetSpawnTick", targetSpawnTick);
         tag.putBoolean("HasSpawnedOnce", hasSpawnedOnce);
         tag.putString("VehicleID", vehicleIdString);
         tag.putFloat("VehicleYaw", vehicleYaw);
+        tag.putBoolean("CamoScanned", camoScanned);
         if (lastVehicleUUID != null) tag.putUUID("LastVehicle", lastVehicleUUID);
+
+        // === АВТО-ВОЗВРАТ ===
+        tag.putBoolean("AutoReturnEnabled", autoReturnEnabled);
+        tag.putInt("AutoReturnTime", autoReturnTimeSettings);
+        tag.putBoolean("AutoReturnDestroy", autoReturnDestroy);
     }
 
     @Override

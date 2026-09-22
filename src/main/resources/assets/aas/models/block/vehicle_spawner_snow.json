@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "particle": "minecraft:block/snow",
+    "up": "minecraft:block/dropper_front_vertical",
+    "down": "minecraft:block/snow",
+    "north": "minecraft:block/snow",
+    "south": "minecraft:block/snow",
+    "east": "minecraft:block/snow",
+    "west": "minecraft:block/snow"
+  }
+}

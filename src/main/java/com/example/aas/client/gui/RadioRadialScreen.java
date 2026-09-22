@@ -71,13 +71,26 @@ public class RadioRadialScreen extends Screen {
 
         Player player = Minecraft.getInstance().player;
         if (player != null) {
-            ItemStack stack = player.getMainHandItem();
-            long cooldownEnd = stack.getOrCreateTag().getLong("RallyCooldownEnd");
-            long gameTime = player.level().getGameTime();
+            String pName = player.getScoreboardName();
+            com.example.aas.world.AASWorldData.Squad mySquad = null;
 
-            if (gameTime < cooldownEnd) {
-                rallyOnCooldown = true;
-                secondsLeft = (cooldownEnd - gameTime) / 20;
+            // Находим отряд игрока
+            for (com.example.aas.world.AASWorldData.Squad s : com.example.aas.client.ClientData.clientSquads) {
+                if (s.members.contains(pName)) {
+                    mySquad = s;
+                    break;
+                }
+            }
+
+            // Проверяем кулдаун отряда
+            if (mySquad != null) {
+                long cooldownEnd = mySquad.nextRallyAvailableTick;
+                long gameTime = player.level().getGameTime();
+
+                if (gameTime < cooldownEnd && !player.isCreative()) {
+                    rallyOnCooldown = true;
+                    secondsLeft = (cooldownEnd - gameTime) / 20;
+                }
             }
         }
 

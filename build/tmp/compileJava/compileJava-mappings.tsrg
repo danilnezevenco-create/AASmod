@@ -1,0 +1,4 @@
+com/example/aas/mixin/ChatPanelMixin trimmedMessages f_93761_
+com/example/aas/mixin/ChatPanelMixin chatScrollbarPos f_93763_
+com/example/aas/mixin/ChatPanelMixin getLinesPerPage ()I m_93816_
+com/example/aas/mixin/ChatPanelMixin getScale ()D m_93815_

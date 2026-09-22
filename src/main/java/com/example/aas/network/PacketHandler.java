@@ -4,6 +4,7 @@ import com.example.aas.config.AASConfig;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class PacketHandler {
     private static final String PROTOCOL_VERSION = "1";
@@ -61,6 +63,25 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketPlaceMapMarker.class, PacketPlaceMapMarker::encode, PacketPlaceMapMarker::decode, PacketPlaceMapMarker::handle);
         INSTANCE.registerMessage(id++, PacketRadioAction.class, PacketRadioAction::encode, PacketRadioAction::decode, PacketRadioAction::handle);
         INSTANCE.registerMessage(id++, PacketVoteAction.class, PacketVoteAction::encode, PacketVoteAction::decode, PacketVoteAction::handle);
+        INSTANCE.registerMessage(id++, PacketRequestVehicleAmmo.class, PacketRequestVehicleAmmo::encode, PacketRequestVehicleAmmo::decode, PacketRequestVehicleAmmo::handle);
+        INSTANCE.registerMessage(id++, PacketCaptureNotification.class, PacketCaptureNotification::encode, PacketCaptureNotification::decode, PacketCaptureNotification::handle);
+        INSTANCE.registerMessage(id++, PacketPlacePing.class, PacketPlacePing::encode, PacketPlacePing::decode, PacketPlacePing::handle);
+        INSTANCE.registerMessage(id++, PacketRequestCMD.class, PacketRequestCMD::encode, PacketRequestCMD::decode, PacketRequestCMD::handle);
+        INSTANCE.registerMessage(id++, PacketCMDVote.class, PacketCMDVote::encode, PacketCMDVote::decode, PacketCMDVote::handle);
+        INSTANCE.registerMessage(id++, PacketConfirmArtStrike.class, PacketConfirmArtStrike::encode, PacketConfirmArtStrike::decode, PacketConfirmArtStrike::handle);
+        INSTANCE.registerMessage(id++, PacketSyncMyKit.class, PacketSyncMyKit::encode, PacketSyncMyKit::decode, PacketSyncMyKit::handle);
+        INSTANCE.registerMessage(id++, PacketVoiceActivity.class, PacketVoiceActivity::encode, PacketVoiceActivity::decode, PacketVoiceActivity::handle);
+        INSTANCE.registerMessage(id++, PacketRadioVoiceActivity.class, PacketRadioVoiceActivity::encode, PacketRadioVoiceActivity::decode, PacketRadioVoiceActivity::handle); // РќРћР’РћР•
+        INSTANCE.registerMessage(id++, PacketOpenVictoryScreen.class, PacketOpenVictoryScreen::encode, PacketOpenVictoryScreen::decode, PacketOpenVictoryScreen::handle);
+        INSTANCE.registerMessage(id++, PacketSyncServerConfig.class, PacketSyncServerConfig::encode, PacketSyncServerConfig::decode, PacketSyncServerConfig::handle);
+        INSTANCE.registerMessage(id++, PacketOpenPointEditor.class, PacketOpenPointEditor::encode, PacketOpenPointEditor::decode, PacketOpenPointEditor::handle);
+        INSTANCE.registerMessage(id++, PacketSavePoint.class, PacketSavePoint::encode, PacketSavePoint::decode, PacketSavePoint::handle);
+        INSTANCE.registerMessage(id++, PacketSyncDragState.class, PacketSyncDragState::encode, PacketSyncDragState::decode, PacketSyncDragState::handle);
+        INSTANCE.registerMessage(id++, PacketSyncPlayerStats.class, PacketSyncPlayerStats::encode, PacketSyncPlayerStats::decode, PacketSyncPlayerStats::handle);
+        INSTANCE.registerMessage(id++, PacketReviveHold.class, PacketReviveHold::encode, PacketReviveHold::decode, PacketReviveHold::handle);
+        INSTANCE.registerMessage(id++, PacketReviveProgress.class, PacketReviveProgress::encode, PacketReviveProgress::decode, PacketReviveProgress::handle);
+        INSTANCE.registerMessage(id++, PacketSquadLeaderPlaytime.class, PacketSquadLeaderPlaytime::encode, PacketSquadLeaderPlaytime::decode, PacketSquadLeaderPlaytime::handle);
+        INSTANCE.registerMessage(id++, PacketDeleteMarker.class, PacketDeleteMarker::encode, PacketDeleteMarker::decode, PacketDeleteMarker::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
@@ -72,25 +93,18 @@ public class PacketHandler {
 
     private static Map<String, String> getPlayerKitsMap() {
         Map<String, String> pKits = new HashMap<>();
-        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                 String current = p.getPersistentData().getString("AAS_CurrentKit");
                 String pending = p.getPersistentData().getString("AAS_PendingKit");
-
-                // ЕслиPendingKit пустой и CurrentKit "Unassigned" — значит кита нет
                 String displayKit = (!pending.isEmpty()) ? pending : current;
-                if (displayKit.isEmpty() || displayKit.equals("Unassigned")) {
-                    displayKit = "Unassigned";
-                }
-
-                pKits.put(p.getScoreboardName(), displayKit);
+                pKits.put(p.getScoreboardName(), (displayKit == null || displayKit.isEmpty() || displayKit.equals("Unassigned")) ? "Unassigned" : displayKit);
             }
         }
         return pKits;
     }
 
-    // Исправленный старый метод (добавлены 0 для координат карты)
     public static void sendToAllClients(int blue, int red, boolean hasBlue, boolean hasRed,
                                         boolean blueBleed, boolean redBleed, int respawnTime,
                                         boolean blueBlocked, boolean redBlocked,
@@ -100,34 +114,32 @@ public class PacketHandler {
         String bName = getFactionName(bFac, true);
         String rName = getFactionName(rFac, false);
 
-        INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new PacketSyncGameData(blue, red, hasBlue, hasRed, blueBleed, redBleed,
-                        respawnTime, blueBlocked, redBlocked, hubs,
-                        bFac, rFac, bName, rName, false,
-                        0, 0, 2048,
-                        new ArrayList<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
-                        getPlayerKitsMap(),
-                        new ArrayList<>(),
-                        new ArrayList<>(),
-                        com.example.aas.config.AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(),
-                        com.example.aas.config.AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
-                        false,           // voteActive (НОВОЕ: по умолчанию выключено)
-                        0,               // voteTimer (НОВОЕ)
-                        new HashMap<>()  // votes (НОВОЕ: пустая мапа голосов)
-                ));
+        // РџР•Р Р•Р”Р•Р›Р«Р’РђР•Рњ РќРђ BUILDER
+        PacketSyncGameData packet = PacketSyncGameData.builder()
+                .tickets(blue, red)
+                .rally(hasBlue, hasRed)
+                .bleeding(blueBleed, redBleed)
+                .respawnTime(respawnTime)
+                .blocked(blueBlocked, redBlocked)
+                .hubs(new ArrayList<>(hubs))
+                .factions(bFac, rFac)
+                .customNames(bName, rName)
+                .playerKits(getPlayerKitsMap())
+                .gameMode("AAS")
+                .invasion("NONE", 0)
+                .build();
+
+        INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
     }
 
-    // Исправленная глобальная отправка
     public static void sendToAllClients(AASWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {
         INSTANCE.send(PacketDistributor.ALL.noArg(), createSyncPacket(data, blueBleed, redBleed, bBlocked, rBlocked));
     }
 
-    // Исправленная отправка для уровня
     public static void sendToAllClients(ServerLevel level, AASWorldData data) {
         INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), createSyncPacket(data, false, false, false, false));
     }
 
-    // Единый метод создания пакета (уже был правильным)
     private static PacketSyncGameData createSyncPacket(AASWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {
         boolean hasBlue = !data.blueRallies.isEmpty();
         boolean hasRed = !data.redRallies.isEmpty();
@@ -135,26 +147,41 @@ public class PacketHandler {
         String bName = getFactionName(data.blueFaction, true);
         String rName = getFactionName(data.redFaction, false);
 
-        return new PacketSyncGameData(
-                data.blueTickets, data.redTickets, hasBlue, hasRed, blueBleed, redBleed,
-                data.respawnTimer, bBlocked, rBlocked, data.hubs,
-                data.blueFaction, data.redFaction, bName, rName,
-                data.isGameStarted,
-                // --- ВОТ ЭТИ ТРИ СТРОКИ ВМЕСТО ЧЕТЫРЕХ СТАРЫХ ---
-                data.mapCenterX,
-                data.mapCenterZ,
-                data.mapSizeBlocks,
-                // -----------------------------------------------
-                data.capturePoints,
-                data.blueSpawns, data.redSpawns, data.neutralSpawns,
-                getPlayerKitsMap(),
-                data.markedVehicles, // Список техники (последний аргумент)
-                data.activeMarkers,
-                AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(), // Передаем настройку СЕРВЕРА
-                AASConfig.HUB_SPAWN_MATERIAL_COST.get(),
-                data.voteActive,
-                data.voteTimer,
-                data.votes
-        );
+        // РРЎРџРћР›Р¬Р—РЈР•Рњ BUILDER, РўРђРљ РљРђРљ РћР‘Р«Р§РќР«Р™ РљРћРќРЎРўР РЈРљРўРћР  РўР•РџР•Р Р¬ РџР РР’РђРўРќР«Р™
+        return PacketSyncGameData.builder()
+                .tickets(data.blueTickets, data.redTickets)
+                .rally(hasBlue, hasRed)
+                .bleeding(blueBleed, redBleed)
+                .respawnTime(data.respawnTimer)
+                .blocked(bBlocked, rBlocked)
+                .hubSpawnCost(AASConfig.HUB_SPAWN_COSTS_MATERIALS.get(), AASConfig.HUB_SPAWN_MATERIAL_COST.get())
+                .map(data.mapCenterX, data.mapCenterZ, data.mapSizeBlocks, data.currentMapImage)
+                .vehicles(new ArrayList<>(data.markedVehicles))
+                .hubs(new ArrayList<>(data.hubs))
+                .stations(new ArrayList<>(data.vehicleStations))
+                .factions(data.blueFaction, data.redFaction)
+                .customNames(bName, rName)
+                .gameStarted(data.isGameStarted)
+                .capturePoints(new ArrayList<>(data.capturePoints))
+                .spawns(new HashMap<>(data.blueSpawns), new HashMap<>(data.redSpawns), new HashMap<>(data.neutralSpawns))
+                .playerKits(getPlayerKitsMap())
+                .markers(new ArrayList<>(data.activeMarkers))
+                .startVote(data.voteActive, data.voteTimer, new HashMap<>(data.votes))
+                .commanderIds(data.blueCMDId, data.redCMDId)
+                .blueCommanderVote(data.blueCmdVoteActive, data.blueCmdCandidateName, data.blueCmdCandidateId, data.blueCmdVoteTimer, new HashMap<>(data.blueCmdVotes))
+                .redCommanderVote(data.redCmdVoteActive, data.redCmdCandidateName, data.redCmdCandidateId, data.redCmdVoteTimer, new HashMap<>(data.redCmdVotes))
+                .activeStrikes(new ArrayList<>(data.activeStrikes))
+                .artillery(
+                        data.blueArtRequest != null ? data.blueArtRequest.pos : BlockPos.ZERO,
+                        data.redArtRequest != null ? data.redArtRequest.pos : BlockPos.ZERO,
+                        data.blueArtRequest != null ? data.blueArtRequest.timer : 0,
+                        data.redArtRequest != null ? data.redArtRequest.timer : 0,
+                        data.blueArtRequest != null ? data.blueArtRequest.requesterName : "",
+                        data.redArtRequest != null ? data.redArtRequest.requesterName : ""
+                )
+                .ready(data.blueReady, data.redReady)
+                .gameMode(data.gameMode)
+                .invasion(data.invasionDefender, data.invasionPrepTicks)
+                .build();
     }
 }

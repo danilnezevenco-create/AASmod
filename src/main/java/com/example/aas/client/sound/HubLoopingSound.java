@@ -27,9 +27,10 @@ public class HubLoopingSound extends AbstractTickableSoundInstance {
 
         this.pitch = 1.0F;
 
-        this.x = hub.getBlockPos().getX() + 0.5;
-        this.y = hub.getBlockPos().getY() + 0.5;
-        this.z = hub.getBlockPos().getZ() + 0.5;
+        this.attenuation = SoundInstance.Attenuation.LINEAR;
+        this.x = (float)this.hub.getBlockPos().getX() + 0.5f;
+        this.y = (float)this.hub.getBlockPos().getY() + 0.5f;
+        this.z = (float)this.hub.getBlockPos().getZ() + 0.5f;
     }
 
     @Override

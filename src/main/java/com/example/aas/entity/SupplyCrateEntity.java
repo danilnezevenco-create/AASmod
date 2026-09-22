@@ -57,7 +57,6 @@ public class SupplyCrateEntity extends Entity {
         this(ModEntities.SUPPLY_CRATE.get(), level);
         this.setPos(x, y, z);
         this.setTeamOwner(team);
-        // Заменяем 50 на конфиг:
         this.setMaterials(com.example.aas.config.AASConfig.SUPPLY_CRATE_MATERIALS.get());
         this.ownerId = ownerId;
     }
@@ -93,22 +92,13 @@ public class SupplyCrateEntity extends Entity {
         this.discard();
     }
 
-    // === ОТКРЫТИЕ МЕНЮ ЯЩИКА ПО ПКМ ===
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
 
-        // Открываем меню только на клиенте
         if (this.level().isClientSide) {
-            // Проверка команды на клиенте для красоты (чтобы меню даже не открывалось)
-            String pTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
-            if (!this.getTeamOwner().equals("NEUTRAL") && !this.getTeamOwner().equalsIgnoreCase(pTeam)) {
-                player.displayClientMessage(Component.literal("Cannot open enemy crate!").withStyle(ChatFormatting.RED), true);
-                return InteractionResult.SUCCESS;
-            }
-
-            // Вызов хука для открытия окна
-            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> com.example.aas.client.ClientHooks.openCrateMenu(this.getId()));
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,
+                    () -> () -> com.example.aas.client.ClientHooks.openCrateMenu(this.getId()));
         }
 
         return InteractionResult.sidedSuccess(this.level().isClientSide);
@@ -118,7 +108,6 @@ public class SupplyCrateEntity extends Entity {
     public void tick() {
         super.tick();
 
-        // Проверка: если 0 материалов - удаляем ящик
         if (!this.level().isClientSide && this.getMaterials() <= 0) {
             this.destroyCrate();
             return;
@@ -166,7 +155,6 @@ public class SupplyCrateEntity extends Entity {
         AABB searchArea = this.getBoundingBox().inflate(10.0);
         List<Entity> vehicles = level.getEntities(this, searchArea, e -> e.isAlive() && e.getPersistentData().contains("AAS_VehicleTeam"));
 
-        // === ПРИОРИТЕТ Машины с игроком ===
         vehicles.sort((e1, e2) -> {
             boolean p1 = !e1.getPassengers().isEmpty();
             boolean p2 = !e2.getPassengers().isEmpty();
@@ -176,7 +164,6 @@ public class SupplyCrateEntity extends Entity {
         });
 
         for (Entity vehicle : vehicles) {
-            // Проверка команды
             String vTeam = vehicle.getPersistentData().getString("AAS_VehicleTeam");
             if (!this.getTeamOwner().equals("NEUTRAL") && !vTeam.isEmpty() && !vTeam.equalsIgnoreCase(this.getTeamOwner())) {
                 continue;
@@ -208,36 +195,63 @@ public class SupplyCrateEntity extends Entity {
             if (vehicle.getPersistentData().contains("AAS_SpawnerPos")) {
                 if (vehicle instanceof LivingEntity living) living.setHealth(living.getMaxHealth());
 
-                long spawnerPosLong = vehicle.getPersistentData().getLong("AAS_SpawnerPos");
-                BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
-                if (level().isLoaded(spawnerPos)) {
-                    BlockEntity be = level().getBlockEntity(spawnerPos);
-                    if (be instanceof VehicleSpawnerBlockEntity spawner) {
-                        vehicle.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(vehInv -> {
-                            if (vehInv instanceof IItemHandlerModifiable modifiable) {
-                                for (int i = 0; i < vehInv.getSlots(); i++) modifiable.setStackInSlot(i, ItemStack.EMPTY);
+                java.util.concurrent.atomic.AtomicBoolean rearmSuccess = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+                vehicle.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(vehInv -> {
+                    if (vehInv instanceof IItemHandlerModifiable modifiable) {
+                        for (int i = 0; i < vehInv.getSlots(); i++) modifiable.setStackInSlot(i, ItemStack.EMPTY);
+                    }
+
+                    // Читаем из кэша машины (НОВАЯ ЛОГИКА)
+                    if (vehicle.getPersistentData().contains("AAS_InitialLoadout")) {
+                        net.minecraft.nbt.ListTag loadoutTag = vehicle.getPersistentData().getList("AAS_InitialLoadout", 10);
+                        for (int i = 0; i < loadoutTag.size(); i++) {
+                            net.minecraft.nbt.CompoundTag itemTag = loadoutTag.getCompound(i);
+                            int slot = itemTag.getByte("Slot") & 255;
+                            if (slot < vehInv.getSlots()) {
+                                insertItem(vehInv, slot, ItemStack.of(itemTag));
                             }
-                            int slotsToCopy = 32;
-                            for (int i = 0; i < slotsToCopy; i++) {
-                                if (i >= vehInv.getSlots()) break;
-                                ItemStack sourceStack = spawner.inventory.getStackInSlot(i + 1);
-                                if (!sourceStack.isEmpty()) insertItem(vehInv, i, sourceStack.copy());
+                        }
+                        rearmSuccess.set(true);
+                    }
+                    // Старый способ (Резерв для уже заспавненных машин)
+                    else {
+                        long spawnerPosLong = vehicle.getPersistentData().getLong("AAS_SpawnerPos");
+                        BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
+                        if (level().isLoaded(spawnerPos)) {
+                            BlockEntity be = level().getBlockEntity(spawnerPos);
+                            if (be instanceof VehicleSpawnerBlockEntity spawner) {
+                                for (int i = 0; i < 32; i++) {
+                                    if (i >= vehInv.getSlots()) break;
+                                    ItemStack sourceStack = spawner.inventory.getStackInSlot(i + 1);
+                                    if (!sourceStack.isEmpty()) insertItem(vehInv, i, sourceStack.copy());
+                                }
+                                rearmSuccess.set(true);
                             }
-                            Item batteryItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery"));
-                            if (batteryItem != null) {
-                                for (int i = 0; i < vehInv.getSlots(); i++) {
-                                    if (vehInv.getStackInSlot(i).isEmpty()) {
-                                        insertItem(vehInv, i, new ItemStack(batteryItem));
-                                        break;
-                                    }
+                        }
+                    }
+
+                    if (rearmSuccess.get()) {
+                        Item batteryItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery"));
+                        if (batteryItem != null) {
+                            for (int i = 0; i < vehInv.getSlots(); i++) {
+                                if (vehInv.getStackInSlot(i).isEmpty()) {
+                                    insertItem(vehInv, i, new ItemStack(batteryItem));
+                                    break;
                                 }
                             }
-                        });
+                        }
                     }
+                });
+
+                if (rearmSuccess.get()) {
+                    vehicle.getPersistentData().putLong("AAS_NextSupplyTime", level().getGameTime() + 600);
+                    sendMessageToPassengers(vehicle, "Vehicle Repaired by Crate!", ChatFormatting.GREEN);
+                    actionDone = true;
+                } else {
+                    sendMessageToPassengers(vehicle, "[Error] Rearm failed! Spawner chunk is unloaded (Old Vehicle).", ChatFormatting.RED);
+                    actionDone = false;
                 }
-                vehicle.getPersistentData().putLong("AAS_NextSupplyTime", level().getGameTime() + 6000);
-                sendMessageToPassengers(vehicle, "Vehicle Repaired & Rearmed by Crate!", ChatFormatting.GREEN);
-                actionDone = true;
             }
 
             if (actionDone) {
@@ -298,7 +312,6 @@ public class SupplyCrateEntity extends Entity {
                                 data.setDirty();
                             }
 
-                            // Передаем в хаб все материалы, которые есть в ящике
                             hub.addMaterials(this.getMaterials());
                             this.hasResupplied = true;
 
@@ -307,6 +320,11 @@ public class SupplyCrateEntity extends Entity {
                                 if (player != null) {
                                     ChatFormatting color = this.getTeamOwner().equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
                                     player.displayClientMessage(Component.literal("FOB Resupplied! (+" + this.getMaterials() + " Mats)").withStyle(color), true);
+
+                                    // --- НОВОЕ: Очки логистики ---
+                                    if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                                        com.example.aas.events.StatsHandler.addStats(sp, 15, 0, "FOB Resupplied");
+                                    }
                                 }
                             }
 

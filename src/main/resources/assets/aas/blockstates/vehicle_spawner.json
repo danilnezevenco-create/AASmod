@@ -1,5 +1,10 @@
 {
   "variants": {
-    "": { "model": "aas:block/vehicle_spawner" }
+    "camo=none":  { "model": "aas:block/vehicle_spawner" },
+    "camo=sand":  { "model": "aas:block/vehicle_spawner_sand" },
+    "camo=dirt":  { "model": "aas:block/vehicle_spawner_dirt" },
+    "camo=grass": { "model": "aas:block/vehicle_spawner_grass" },
+    "camo=snow":  { "model": "aas:block/vehicle_spawner_snow" },
+    "camo=stone": { "model": "aas:block/vehicle_spawner_stone" }
   }
 }

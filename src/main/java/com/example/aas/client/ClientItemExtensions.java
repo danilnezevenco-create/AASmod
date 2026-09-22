@@ -24,4 +24,21 @@ public class ClientItemExtensions {
             return renderer;
         }
     };
+
+    public static final IClientItemExtensions OFFICER_PHONE = new IClientItemExtensions() {
+        private com.example.aas.client.renderer.OfficerPhoneRenderer renderer;
+        @Override
+        public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+            if (renderer == null) renderer = new com.example.aas.client.renderer.OfficerPhoneRenderer();
+            return renderer;
+        }
+    };
+    public static final IClientItemExtensions BINOCULARS = new IClientItemExtensions() {
+        private com.example.aas.client.renderer.BinocularsRenderer renderer;
+        @Override
+        public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+            if (renderer == null) renderer = new com.example.aas.client.renderer.BinocularsRenderer();
+            return renderer;
+        }
+    };
 }

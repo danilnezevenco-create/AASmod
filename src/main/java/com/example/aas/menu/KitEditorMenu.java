@@ -13,18 +13,26 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class KitEditorMenu extends AbstractContainerMenu {
-    // 1. Увеличиваем константу до 49 (41 стандартный + 8 дополнительных)
+    // Р РЎРЎРЎС‚Р°РІРёР» РєРѕРЅСЃС‚Р°РЅС‚Сѓ РґРѕ 49 (41 СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ + 8 РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹С…)
     public static final int MAX_KIT_SLOTS = 49;
+
+    // Р’С‹СЃРѕС‚Р° РІРµСЂС…РЅРµР№ РїР°РЅРµР»Рё СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё (РґРѕР»Р¶РЅР° СЃРѕРІРїР°РґР°С‚СЊ СЃ РіРµРѕРјРµС‚СЂРёРµР№ РІ KitEditorScreen)
+    private static final int SLOT_Y_OFFSET = 60;
 
     public final Container kitInventory;
     public final String team;
     public final String kitName;
+    public String displayName;
     public boolean isLeaderOnly;
     public int maxPerTeam;
     public int maxPerSquad;
     public int minSquadPlayers;
     public final boolean[] resupplyFlags;
     public final boolean[] saveNbtFlags;
+
+    // === РђР›Р¬РўР•Р РќРђРўРР’РќР«Р™ РљРРў ===
+    public final boolean isAlt;
+    public boolean hasAlt;
 
     private static final ResourceLocation[] ARMOR_SLOT_TEXTURES = new ResourceLocation[]{
             InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS,
@@ -33,16 +41,17 @@ public class KitEditorMenu extends AbstractContainerMenu {
             InventoryMenu.EMPTY_ARMOR_SLOT_HELMET
     };
 
-    // Чтение пакета клиентом
     public KitEditorMenu(int id, Inventory playerInv, FriendlyByteBuf data) {
-        // Здесь везде меняем 41 на 49
         this(id, playerInv, new SimpleContainer(MAX_KIT_SLOTS),
                 data.readUtf(),
                 data.readUtf(),
-                data.readBoolean(),
+                data.readBoolean(), // isAlt
+                data.readBoolean(), // hasAlt
+                data.readBoolean(), // isLeaderOnly
                 data.readInt(),
                 data.readInt(),
                 data.readInt(),
+                data.readUtf(),
                 new boolean[MAX_KIT_SLOTS],
                 new boolean[MAX_KIT_SLOTS]);
 
@@ -55,38 +64,43 @@ public class KitEditorMenu extends AbstractContainerMenu {
     }
 
     public KitEditorMenu(int id, Inventory playerInv, Container kitInv, String t, String k,
+                         boolean isAlt, boolean hasAlt,
                          boolean l, int mt, int ms, int minPlayers,
+                         String displayName,
                          boolean[] flags, boolean[] nbtFlags) {
         super(ModMenuTypes.KIT_EDITOR_MENU.get(), id);
         this.kitInventory = kitInv;
         this.team = t;
         this.kitName = k;
+        this.isAlt = isAlt;
+        this.hasAlt = hasAlt;
         this.isLeaderOnly = l;
         this.maxPerTeam = mt;
         this.maxPerSquad = ms;
         this.minSquadPlayers = minPlayers;
+        this.displayName = displayName != null ? displayName : "";
         this.resupplyFlags = flags;
         this.saveNbtFlags = nbtFlags;
 
-        // --- СТАНДАРТНЫЕ СЛОТЫ КИТА (0 - 40) ---
+        // --- РЎР›РћРўР« РљРРўРђ (0 - 40) ---
 
-        // 1. Основная сетка (9 - 35)
+        // 1. РћСЃРЅРѕРІРЅР°СЏ СЃРµС‚РєР° (9 - 35)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
-                this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, 66 + row * 18));
+                this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, SLOT_Y_OFFSET + 66 + row * 18));
             }
         }
 
-        // 2. Хотбар (0 - 8)
+        // 2. РҐРѕС‚Р±Р°СЂ (0 - 8)
         for (int col = 0; col < 9; ++col) {
-            this.addSlot(new Slot(kitInv, col, 8 + col * 18, 124));
+            this.addSlot(new Slot(kitInv, col, 8 + col * 18, SLOT_Y_OFFSET + 124));
         }
 
-        // 3. Броня (36 - 39)
+        // 3. Р‘СЂРѕРЅСЏ (36 - 39)
         for (int i = 0; i < 4; ++i) {
             final int armorIndex = i;
             int slotIndex = 36 + i;
-            this.addSlot(new Slot(kitInv, slotIndex, 8 + i * 18, 150) {
+            this.addSlot(new Slot(kitInv, slotIndex, 8 + i * 18, SLOT_Y_OFFSET + 150) {
                 @Override
                 public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
                     return Pair.of(InventoryMenu.BLOCK_ATLAS, ARMOR_SLOT_TEXTURES[armorIndex]);
@@ -94,33 +108,31 @@ public class KitEditorMenu extends AbstractContainerMenu {
             });
         }
 
-        // 4. Вторая рука (40)
-        this.addSlot(new Slot(kitInv, 40, 84, 150) {
+        // 4. Р’С‚РѕСЂР°СЏ СЂСѓРєР° (40)
+        this.addSlot(new Slot(kitInv, 40, 84, SLOT_Y_OFFSET + 150) {
             @Override
             public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
                 return Pair.of(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
             }
         });
 
-        // --- 5. НОВЫЕ "CURSE" СЛОТЫ (41 - 48) ---
-        // Размещаем их в два столбика слева от основного инвентаря
-        // Координата X: -36 и -18 (относительно левого края основного окна)
+        // --- 5. РќРћР’Р«Р• "CURSE" РЎР›РћРўР« (41 - 48) ---
+        // РЎР»РµРІР° РѕС‚ РѕСЃРЅРѕРІРЅРѕРіРѕ РёРЅРІРµРЅС‚Р°СЂСЏ. РљРѕРѕСЂРґРёРЅР°С‚Р° X: -36 Рё -18 (РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ Р»РµРІРѕРіРѕ РєСЂР°СЏ РѕСЃРЅРѕРІРЅРѕРіРѕ РѕРєРЅР°)
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 2; col++) {
                 int slotIndex = 41 + (row * 2 + col);
-                // X = -36 для первого столбца, -18 для второго. Y начинается с 66.
-                this.addSlot(new Slot(kitInv, slotIndex, -36 + col * 18, 66 + row * 18));
+                this.addSlot(new Slot(kitInv, slotIndex, -36 + col * 18, SLOT_Y_OFFSET + 66 + row * 18));
             }
         }
 
-        // --- СЛОТЫ ИНВЕНТАРЯ ИГРОКА ---
+        // --- РЎР›РћРўР« РРќР’Р•РќРўРђР РЇ РР“Р РћРљРђ ---
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
-                this.addSlot(new Slot(playerInv, j + i * 9 + 9, 8 + j * 18, 180 + i * 18));
+                this.addSlot(new Slot(playerInv, j + i * 9 + 9, 8 + j * 18, SLOT_Y_OFFSET + 180 + i * 18));
             }
         }
         for (int i = 0; i < 9; ++i) {
-            this.addSlot(new Slot(playerInv, i, 8 + i * 18, 238));
+            this.addSlot(new Slot(playerInv, i, 8 + i * 18, SLOT_Y_OFFSET + 238));
         }
     }
 

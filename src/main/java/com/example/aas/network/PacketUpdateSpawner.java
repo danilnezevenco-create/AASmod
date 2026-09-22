@@ -15,14 +15,20 @@ public class PacketUpdateSpawner {
     private final int initialTime;
     private final String vehicleId;
     private final float vehicleYaw;
+    private final boolean autoReturnEnabled;
+    private final int autoReturnTime;
+    private final boolean autoReturnDestroy;
 
-    // Оставляем только ОДИН конструктор со всеми параметрами
-    public PacketUpdateSpawner(BlockPos pos, int respawn, int init, String id, float yaw) {
+    public PacketUpdateSpawner(BlockPos pos, int respawn, int init, String id, float yaw,
+                               boolean autoReturnEnabled, int autoReturnTime, boolean autoReturnDestroy) {
         this.pos = pos;
         this.respawnTime = respawn;
         this.initialTime = init;
         this.vehicleId = id;
         this.vehicleYaw = yaw;
+        this.autoReturnEnabled = autoReturnEnabled;
+        this.autoReturnTime = autoReturnTime;
+        this.autoReturnDestroy = autoReturnDestroy;
     }
 
     public static void encode(PacketUpdateSpawner msg, FriendlyByteBuf buf) {
@@ -31,6 +37,9 @@ public class PacketUpdateSpawner {
         buf.writeInt(msg.initialTime);
         buf.writeUtf(msg.vehicleId);
         buf.writeFloat(msg.vehicleYaw);
+        buf.writeBoolean(msg.autoReturnEnabled);
+        buf.writeInt(msg.autoReturnTime);
+        buf.writeBoolean(msg.autoReturnDestroy);
     }
 
     public static PacketUpdateSpawner decode(FriendlyByteBuf buf) {
@@ -39,7 +48,10 @@ public class PacketUpdateSpawner {
                 buf.readInt(),
                 buf.readInt(),
                 buf.readUtf(),
-                buf.readFloat()
+                buf.readFloat(),
+                buf.readBoolean(),
+                buf.readInt(),
+                buf.readBoolean()
         );
     }
 
@@ -52,7 +64,10 @@ public class PacketUpdateSpawner {
                     spawner.respawnTimeSettings = msg.respawnTime;
                     spawner.initialTimeSettings = msg.initialTime;
                     spawner.vehicleIdString = msg.vehicleId;
-                    spawner.vehicleYaw = msg.vehicleYaw; // Сохраняем на сервере
+                    spawner.vehicleYaw = msg.vehicleYaw;
+                    spawner.autoReturnEnabled = msg.autoReturnEnabled;
+                    spawner.autoReturnTimeSettings = msg.autoReturnTime;
+                    spawner.autoReturnDestroy = msg.autoReturnDestroy;
                     spawner.setChanged();
                     player.level().sendBlockUpdated(msg.pos, spawner.getBlockState(), spawner.getBlockState(), 3);
                 }

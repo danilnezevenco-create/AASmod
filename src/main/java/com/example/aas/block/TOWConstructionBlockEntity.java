@@ -13,6 +13,7 @@ public class TOWConstructionBlockEntity extends BlockEntity {
     public static final int MAX_PROGRESS = 2400;
     private int currentProgress = 0;
     private int activeDiggers = 0;
+    private boolean sapperBoost = false;
     private String teamOwner = "NEUTRAL";
 
     public TOWConstructionBlockEntity(BlockPos pos, BlockState state) {
@@ -23,9 +24,12 @@ public class TOWConstructionBlockEntity extends BlockEntity {
     public String getTeam() { return teamOwner; }
     public float getPercentage() { return (float) currentProgress / MAX_PROGRESS; }
 
-    public void addProgress() {
+    public void addProgress() { addProgress(false); }
+
+    public void addProgress(boolean isSapper) {
         if (currentProgress < MAX_PROGRESS) {
             this.activeDiggers++;
+            if (isSapper) this.sapperBoost = true;
             setChanged();
         }
     }
@@ -35,22 +39,24 @@ public class TOWConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, TOWConstructionBlockEntity entity) {
+    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, TOWConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
-
-                // === ПУНКТ 4: КОНФИГ ===
-                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                if (entity.sapperBoost) speed *= 2.0f;
+                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
-
                 entity.currentProgress += (int) Math.ceil(speed);
             }
 
             if (entity.currentProgress >= MAX_PROGRESS) {
                 if (state.getBlock() instanceof TOWConstructionBlock block) {
+                    // === ПЫЛЬ ДЛЯ TOW ===
+                    ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                            30, 0.7, 0.4, 0.7, 0.05);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }
@@ -60,6 +66,7 @@ public class TOWConstructionBlockEntity extends BlockEntity {
             }
         }
         entity.activeDiggers = 0;
+        entity.sapperBoost = false;
     }
 
     // ... (save/load) ...

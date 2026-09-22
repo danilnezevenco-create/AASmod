@@ -40,7 +40,21 @@ public class ModCommands {
                 .then(Commands.literal("gamestart")
                         .then(Commands.argument("active", BoolArgumentType.bool())
                                 .executes(ctx -> setGameStart(ctx.getSource(), BoolArgumentType.getBool(ctx, "active")))))
-
+                .then(Commands.literal("gamemode")
+                        .then(Commands.argument("mode", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("aas", "invasion"), builder))
+                                .executes(ctx -> setGameMode(
+                                        ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "mode")
+                                ))
+                        )
+                )
+                .then(Commands.literal("invasiondefend")
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                .executes(ctx -> setInvasionDefender(ctx.getSource(), StringArgumentType.getString(ctx, "team")))
+                        )
+                )
                 .then(Commands.literal("deathtimer")
                         .then(Commands.argument("seconds", IntegerArgumentType.integer(0))
                                 .executes(ctx -> setRespawnTime(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "seconds")))))
@@ -48,6 +62,24 @@ public class ModCommands {
                 .then(Commands.literal("deathtickets")
                         .then(Commands.argument("amount", IntegerArgumentType.integer(0))
                                 .executes(ctx -> setDeathTickets(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "amount")))))
+                // === ЛИМИТ ХАБОВ ===
+                .then(Commands.literal("maxhub")
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                                        .executes(ctx -> setMaxHubs(ctx.getSource(), StringArgumentType.getString(ctx, "team"), IntegerArgumentType.getInteger(ctx, "amount")))
+                                )
+                        )
+                )
+                // === PVP TOGGLE ===
+                .then(Commands.literal("pvp")
+                        .then(Commands.literal("on")
+                                .executes(ctx -> setPvPState(ctx.getSource(), true))
+                        )
+                        .then(Commands.literal("off")
+                                .executes(ctx -> setPvPState(ctx.getSource(), false))
+                        )
+                )
                 // === ВСТАВИТЬ В МЕТОД register ===
                 .then(Commands.literal("clearsquad")
                         .then(Commands.argument("team", StringArgumentType.word())
@@ -68,12 +100,71 @@ public class ModCommands {
                                 )
                         )
                 )
-
+                .then(Commands.literal("mainzone")
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                .then(Commands.argument("shape", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("cube", "cylinder"), builder))
+                                        .then(Commands.argument("pos1", BlockPosArgument.blockPos())
+                                                .then(Commands.argument("pos2", BlockPosArgument.blockPos())
+                                                        .executes(ctx -> addMainZone(ctx.getSource(),
+                                                                StringArgumentType.getString(ctx, "team"),
+                                                                StringArgumentType.getString(ctx, "shape"),
+                                                                // ИЗМЕНЕНО ТУТ: getSpawnablePos вместо getLoadedBlockPos
+                                                                BlockPosArgument.getSpawnablePos(ctx, "pos1"),
+                                                                BlockPosArgument.getSpawnablePos(ctx, "pos2")
+                                                        ))
+                                                )
+                                        )
+                                )
+                        )
+                )
+                .then(Commands.literal("addcenterlobbyzone")
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(ctx -> addCenterLobbyZone(ctx.getSource(), BlockPosArgument.getSpawnablePos(ctx, "pos")))
+                        )
+                )
+                .then(Commands.literal("addlobbyzone")
+                        .then(Commands.argument("shape", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("cube", "cylinder"), builder))
+                                .then(Commands.argument("pos1", BlockPosArgument.blockPos())
+                                        .then(Commands.argument("pos2", BlockPosArgument.blockPos())
+                                                .executes(ctx -> addLobbyZone(ctx.getSource(),
+                                                        StringArgumentType.getString(ctx, "shape"),
+                                                        BlockPosArgument.getSpawnablePos(ctx, "pos1"),
+                                                        BlockPosArgument.getSpawnablePos(ctx, "pos2")
+                                                ))
+                                        )
+                                )
+                        )
+                )
+                .then(Commands.literal("removelobbyzone")
+                        .executes(ctx -> removeLobbyZone(ctx.getSource()))
+                )
+                .then(Commands.literal("removemainzone")
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                .executes(ctx -> removeMainZone(ctx.getSource(), StringArgumentType.getString(ctx, "team")))
+                        )
+                )
+                .then(Commands.literal("removemainzone")
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                .executes(ctx -> removeMainZone(ctx.getSource(), StringArgumentType.getString(ctx, "team")))
+                        )
+                )
                 .then(Commands.literal("teamjoin")
                         .then(Commands.argument("team", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .executes(ctx -> joinTeam(ctx.getSource(), StringArgumentType.getString(ctx, "team"), EntityArgument.getPlayer(ctx, "player"))))))
+
+                .then(Commands.literal("editpoint")
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .suggests((ctx, builder) -> suggestLocalPoints(ctx, builder)) // Автоподстановка
+                                .executes(ctx -> openEditPointGui(ctx.getSource(), StringArgumentType.getString(ctx, "name")))
+                        )
+                )
 
                 .then(Commands.literal("addpoint")
                         .then(Commands.argument("shape", StringArgumentType.word())
@@ -87,18 +178,24 @@ public class ModCommands {
                                                                                 .then(Commands.argument("penalty", IntegerArgumentType.integer(0))
                                                                                         .then(Commands.argument("captureDeduct", IntegerArgumentType.integer(0))
                                                                                                 .then(Commands.argument("lockMinutes", IntegerArgumentType.integer(0))
-                                                                                                        .executes(ctx -> addPoint(ctx.getSource(),
-                                                                                                                StringArgumentType.getString(ctx, "shape"),
-                                                                                                                BlockPosArgument.getLoadedBlockPos(ctx, "pos1"),
-                                                                                                                BlockPosArgument.getLoadedBlockPos(ctx, "pos2"),
-                                                                                                                StringArgumentType.getString(ctx, "name"),
-                                                                                                                IntegerArgumentType.getInteger(ctx, "bluePriority"),
-                                                                                                                IntegerArgumentType.getInteger(ctx, "redPriority"),
-                                                                                                                IntegerArgumentType.getInteger(ctx, "timeMin"),
-                                                                                                                IntegerArgumentType.getInteger(ctx, "penalty"),
-                                                                                                                IntegerArgumentType.getInteger(ctx, "captureDeduct"),
-                                                                                                                IntegerArgumentType.getInteger(ctx, "lockMinutes")
-                                                                                                        ))
+                                                                                                        .then(Commands.argument("gainNeut", IntegerArgumentType.integer(0))
+                                                                                                                .then(Commands.argument("gainCap", IntegerArgumentType.integer(0))
+                                                                                                                        .executes(ctx -> addPoint(ctx.getSource(),
+                                                                                                                                StringArgumentType.getString(ctx, "shape"),
+                                                                                                                                BlockPosArgument.getSpawnablePos(ctx, "pos1"),
+                                                                                                                                BlockPosArgument.getSpawnablePos(ctx, "pos2"),
+                                                                                                                                StringArgumentType.getString(ctx, "name"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "bluePriority"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "redPriority"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "timeMin"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "penalty"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "captureDeduct"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "lockMinutes"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "gainNeut"),
+                                                                                                                                IntegerArgumentType.getInteger(ctx, "gainCap")
+                                                                                                                        ))
+                                                                                                                )
+                                                                                                        )
                                                                                                 )
                                                                                         )
                                                                                 )
@@ -110,7 +207,17 @@ public class ModCommands {
                                 )
                         )
                 )
-
+                .then(Commands.literal("warn")
+                        .then(Commands.argument("target", EntityArgument.player()) // Авто-подсказка онлайна
+                                .then(Commands.argument("message", StringArgumentType.greedyString()) // Читает весь остальной текст
+                                        .executes(ctx -> issueWarning(
+                                                ctx.getSource(),
+                                                EntityArgument.getPlayer(ctx, "target"),
+                                                StringArgumentType.getString(ctx, "message")
+                                        ))
+                                )
+                        )
+                )
                 // === УДАЛЕНИЕ ТОЧКИ (Только текущий мир) ===
                 .then(Commands.literal("removepoint")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -118,7 +225,26 @@ public class ModCommands {
                                 .executes(ctx -> removePoint(ctx.getSource(), StringArgumentType.getString(ctx, "name")))
                         )
                 )
-
+                // === СИСТЕМА ОЧКОВ ===
+                .then(Commands.literal("stats")
+                        // Просмотр своей статы (уже было)
+                        .executes(ctx -> showStats(ctx.getSource(), ctx.getSource().getPlayerOrException()))
+                        // Просмотр топа
+                        .then(Commands.literal("top")
+                                .then(Commands.literal("all")
+                                        .executes(ctx -> showTopStats(ctx.getSource(), "ALL")))
+                                .then(Commands.literal("team")
+                                        .then(Commands.argument("teamName", StringArgumentType.word())
+                                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
+                                                .executes(ctx -> showTopStats(ctx.getSource(), StringArgumentType.getString(ctx, "teamName").toUpperCase()))
+                                        )
+                                )
+                        )
+                        // Просмотр статы конкретного игрока (уже было)
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(ctx -> showStats(ctx.getSource(), EntityArgument.getPlayer(ctx, "target")))
+                        )
+                )
                 // === СБРОС ТОЧКИ (Только текущий мир) ===
                 .then(Commands.literal("pointclear")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -143,11 +269,31 @@ public class ModCommands {
                         .then(Commands.argument("team", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red", "none"), builder))
                                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
-                                        .executes(ctx -> setTeamSpawn(ctx.getSource(), StringArgumentType.getString(ctx, "team"), BlockPosArgument.getLoadedBlockPos(ctx, "pos")))
+                                        // ИЗМЕНЕНО ТУТ: getSpawnablePos
+                                        .executes(ctx -> setTeamSpawn(ctx.getSource(), StringArgumentType.getString(ctx, "team"), BlockPosArgument.getSpawnablePos(ctx, "pos")))
                                 )
                         )
                 )
                 .then(Commands.literal("map")
+                        .then(Commands.literal("setimage")
+                                .then(Commands.argument("imagename", StringArgumentType.word())
+                                        // Подсказки от map1 до map12
+                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                                List.of("map1", "map2", "map3", "map4", "map5", "map6", "map7", "map8", "map9", "map10", "map11", "map12"), builder))
+                                        .executes(ctx -> {
+                                            String imgName = StringArgumentType.getString(ctx, "imagename");
+                                            ServerLevel level = ctx.getSource().getLevel();
+                                            AASWorldData data = AASWorldData.get(level);
+
+                                            data.currentMapImage = imgName;
+                                            data.setDirty();
+                                            PacketHandler.sendToAllClients(level, data);
+
+                                            ctx.getSource().sendSuccess(() -> Component.literal("Map image set to: " + imgName + ".png"), true);
+                                            return 1;
+                                        })
+                                )
+                        )
                         .then(Commands.literal("setcenter")
                                 // Добавляем аргументы для X и Z
                                 .then(Commands.argument("x", IntegerArgumentType.integer())
@@ -192,7 +338,7 @@ public class ModCommands {
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder))
                                 .then(Commands.argument("faction", StringArgumentType.word())
                                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of(
-                                                "ukraine", "russia", "usa", "nato", "bluefor", "redfor", "clear"
+                                                "ukraine", "russia", "usa", "nato", "bluefor", "redfor", "insurgency", "pmc", "germany", "militia", "clear"
                                         ), builder))
                                         .executes(ctx -> setFaction(
                                                 ctx.getSource(),
@@ -256,6 +402,12 @@ public class ModCommands {
             data.playedRedSiren = false;
             GameLogicEvents.startGameCountdown(level);
             source.sendSuccess(() -> Component.literal("Countdown started in this world!").withStyle(ChatFormatting.GREEN), true);
+            for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
+                p.getPersistentData().putInt("AAS_Stats_TeamPoints", 0);
+                p.getPersistentData().putInt("AAS_Stats_SquadPoints", 0);
+                p.getPersistentData().putInt("AAS_Stats_Kills", 0);   // НОВОЕ
+                p.getPersistentData().putInt("AAS_Stats_Deaths", 0);  // НОВОЕ
+            }
         } else {
             data.isGameStarted = false;
             GameLogicEvents.cancelCountdown(level);
@@ -325,17 +477,15 @@ public class ModCommands {
         return 1;
     }
 
-    private static int addPoint(CommandSourceStack source, String shape, BlockPos pos1, BlockPos pos2, String name, int bp, int rp, int time, int penalty, int captureDeduct, int lockMinutes) {
+    private static int addPoint(CommandSourceStack source, String shape, BlockPos pos1, BlockPos pos2, String name, int bp, int rp, int time, int penalty, int captureDeduct, int lockMinutes, int gainNeut, int gainCap) {
         ServerLevel level = source.getLevel();
         AASWorldData data = AASWorldData.get(level);
 
         AABB area;
         if (shape.equalsIgnoreCase("cylinder")) {
-            // Для цилиндра: pos1 - центр основания, pos2 определяет радиус и высоту
             double radius = Math.sqrt(pos1.distSqr(new BlockPos(pos2.getX(), pos1.getY(), pos2.getZ())));
             double minY = Math.min(pos1.getY(), pos2.getY());
             double maxY = Math.max(pos1.getY(), pos2.getY()) + 1;
-            // Мы сохраняем в AABB границы цилиндра для оптимизации поиска сущностей
             area = new AABB(pos1.getX() - radius, minY, pos1.getZ() - radius, pos1.getX() + radius, maxY, pos1.getZ() + radius);
         } else {
             double minX = Math.min(pos1.getX(), pos2.getX());
@@ -347,7 +497,28 @@ public class ModCommands {
             area = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
         }
 
-        data.capturePoints.add(new AASWorldData.CapturePoint(name, area, bp, rp, time, penalty, captureDeduct, shape.toUpperCase(), lockMinutes));
+        String upperShape = shape.toUpperCase();
+
+        // НОВОЕ: если точка с таким именем уже есть и характеристики совпадают —
+        // не создаём новую точку, а добавляем эту зону как ещё одну зону существующей точки.
+        // Так можно делать сколько угодно раз подряд.
+        for (AASWorldData.CapturePoint existing : data.capturePoints) {
+            if (existing.name.equalsIgnoreCase(name)) {
+                if (existing.sameCharacteristics(bp, rp, time, penalty, captureDeduct, upperShape, lockMinutes, gainNeut, gainCap)) {
+                    existing.addLinkedArea(area);
+                    data.setDirty();
+                    int totalZones = existing.getAllAreas().size();
+                    source.sendSuccess(() -> Component.literal("Zone added to point '" + name + "'! It now has " + totalZones + " linked zone(s).").withStyle(ChatFormatting.GREEN), true);
+                    PacketHandler.sendToAllClients(level, data);
+                    return 1;
+                } else {
+                    source.sendFailure(Component.literal("Point '" + name + "' already exists with different settings. Use identical settings to link a new zone to it, or choose another name."));
+                    return 0;
+                }
+            }
+        }
+
+        data.capturePoints.add(new AASWorldData.CapturePoint(name, area, bp, rp, time, penalty, captureDeduct, upperShape, lockMinutes, gainNeut, gainCap));
         data.setDirty();
         source.sendSuccess(() -> Component.literal("Point '" + name + "' (" + shape + ") added! Lock: " + lockMinutes + " min."), true);
         PacketHandler.sendToAllClients(level, data);
@@ -444,24 +615,86 @@ public class ModCommands {
         data.setDirty(); syncDataToAll(level, data);
         source.sendSuccess(() -> Component.literal("Spawn set for this dimension.").withStyle(ChatFormatting.GREEN), true); return 1;
     }
+    private static int issueWarning(CommandSourceStack source, ServerPlayer target, String message) {
+        // 1. Настройка таймингов: 10 тиков (0.5с) появление, 140 тиков (7с) на экране, 20 тиков (1с) затухание
+        target.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket(10, 140, 20));
 
+        // 2. Сначала отправляем подзаголовок (Сам текст сообщения - желтым цветом)
+        target.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(
+                Component.literal(message).withStyle(ChatFormatting.YELLOW)
+        ));
+
+        // 3. Отправляем главный заголовок (Красный, жирный)
+        target.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(
+                Component.literal("!WARNING!").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)
+        ));
+
+        // 4. Проигрываем неприятный звук удара наковальни (чтобы игрок точно обратил внимание)
+        target.playNotifySound(net.minecraft.sounds.SoundEvents.ANVIL_LAND, net.minecraft.sounds.SoundSource.MASTER, 1.0f, 0.8f);
+
+        // 5. Дублируем сообщение в чат игрока, чтобы оно осталось в истории (если текст длинный и он не успел дочитать)
+        target.sendSystemMessage(Component.literal("[ADMIN WARN] " + message).withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+
+        // 6. Подтверждаем админу, что предупреждение отправлено
+        source.sendSuccess(() -> Component.literal("Successfully warned " + target.getScoreboardName() + "!")
+                .withStyle(ChatFormatting.GREEN), true);
+
+        return 1;
+    }
     private static void syncDataToAll(ServerLevel level, AASWorldData data) {
         PacketHandler.sendToAllClients(level, data);
+    }
+    private static int addMainZone(CommandSourceStack source, String team, String shape, BlockPos pos1, BlockPos pos2) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        AABB area;
+        if (shape.equalsIgnoreCase("cylinder")) {
+            double radius = Math.sqrt(pos1.distSqr(new BlockPos(pos2.getX(), pos1.getY(), pos2.getZ())));
+            double minY = Math.min(pos1.getY(), pos2.getY());
+            double maxY = Math.max(pos1.getY(), pos2.getY()) + 1;
+            area = new AABB(pos1.getX() - radius, minY, pos1.getZ() - radius, pos1.getX() + radius, maxY, pos1.getZ() + radius);
+        } else {
+            area = new AABB(Math.min(pos1.getX(), pos2.getX()), Math.min(pos1.getY(), pos2.getY()), Math.min(pos1.getZ(), pos2.getZ()),
+                    Math.max(pos1.getX(), pos2.getX()) + 1, Math.max(pos1.getY(), pos2.getY()) + 1, Math.max(pos1.getZ(), pos2.getZ()) + 1);
+        }
+
+        // Удаляем старую зону этой команды (если была)
+        data.mainZones.removeIf(z -> z.team.equalsIgnoreCase(team));
+
+        data.mainZones.add(new AASWorldData.MainProtectionZone(team.toUpperCase(), shape.toUpperCase(), area));
+        data.setDirty();
+
+        source.sendSuccess(() -> Component.literal(team.toUpperCase() + " Main Protection Zone successfully added!").withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
+    private static int removeMainZone(CommandSourceStack source, String team) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        // Пытаемся удалить зону команды
+        boolean removed = data.mainZones.removeIf(z -> z.team.equalsIgnoreCase(team));
+
+        if (removed) {
+            data.setDirty(); // Сохраняем мир
+            source.sendSuccess(() -> Component.literal(team.toUpperCase() + " Main Protection Zone removed!").withStyle(ChatFormatting.GREEN), true);
+        } else {
+            source.sendFailure(Component.literal("No protection zone found for team: " + team.toUpperCase()));
+        }
+        return 1;
     }
     // === МЕТОД ДЛЯ ОЧИСТКИ ОТРЯДОВ (Clear Squads) ===
     private static int clearSquads(CommandSourceStack source, String teamName) {
         ServerLevel level = source.getLevel();
         AASWorldData data = AASWorldData.get(level);
-        String targetTeam = teamName.toUpperCase(); // "BLUE" или "RED"
+        String targetTeam = teamName.toUpperCase();
 
-        // 1. Находим и удаляем теги у игроков, которые сейчас в этих отрядах
+        // 1. Сбрасываем теги у игроков
         for (ServerPlayer player : source.getServer().getPlayerList().getPlayers()) {
             if (player.getPersistentData().contains("AAS_SquadID")) {
-                int pSquadId = player.getPersistentData().getInt("AAS_SquadID");
-
-                // Проверяем, принадлежит ли этот ID отряду целевой команды
                 boolean belongsToTeam = data.squads.stream()
-                        .anyMatch(s -> s.id == pSquadId && s.team.equalsIgnoreCase(targetTeam));
+                        .anyMatch(s -> s.id == player.getPersistentData().getInt("AAS_SquadID") && s.team.equalsIgnoreCase(targetTeam));
 
                 if (belongsToTeam) {
                     player.getPersistentData().remove("AAS_SquadID");
@@ -470,21 +703,282 @@ public class ModCommands {
             }
         }
 
-        // 2. Удаляем сами отряды из списка данных мира
-        boolean removed = data.squads.removeIf(squad -> squad.team.equalsIgnoreCase(targetTeam));
+        // 2. Удаляем отряды
+        data.squads.removeIf(squad -> squad.team.equalsIgnoreCase(targetTeam));
+
+        // === 3. СБРАСЫВАЕМ CMD (Добавь эти строки) ===
+        if (targetTeam.equals("BLUE")) {
+            data.blueCMDId = -1;
+        } else if (targetTeam.equals("RED")) {
+            data.redCMDId = -1;
+        }
+        // ============================================
+
+        data.setDirty();
+        PacketHandler.sendToAllClients(level, data);
+        // НОВОЕ: обновляем список отрядов у ВСЕХ игроков
+        PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(),
+                new com.example.aas.network.PacketSyncSquads(data.squads));
+
+        source.sendSuccess(() -> Component.literal("Cleared squads and CMD for " + targetTeam).withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+    private static int openEditPointGui(CommandSourceStack source, String name) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) return 0;
+
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        for (AASWorldData.CapturePoint p : data.capturePoints) {
+            if (p.name.equals(name)) {
+
+                // Восстанавливаем оригинальные координаты pos1 и pos2 из готового хитбокса AABB
+                int p1x, p1y, p1z, p2x, p2y, p2z;
+                if (p.shapeType.equals("CYLINDER")) {
+                    p1x = (int) ((p.area.minX + p.area.maxX) / 2);
+                    p1y = (int) p.area.minY;
+                    p1z = (int) ((p.area.minZ + p.area.maxZ) / 2);
+                    p2x = (int) p.area.maxX;
+                    p2y = (int) p.area.maxY - 1;
+                    p2z = p1z;
+                } else {
+                    p1x = (int) p.area.minX;
+                    p1y = (int) p.area.minY;
+                    p1z = (int) p.area.minZ;
+                    p2x = (int) p.area.maxX - 1;
+                    p2y = (int) p.area.maxY - 1;
+                    p2z = (int) p.area.maxZ - 1;
+                }
+
+                PacketHandler.INSTANCE.send(
+                        net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                        new com.example.aas.network.PacketOpenPointEditor(
+                                p.name, p.shapeType,
+                                p1x, p1y, p1z, p2x, p2y, p2z,
+                                p.bluePriority, p.redPriority,
+                                p.captureTimeMinutes, p.ticketPenalty,
+                                p.captureDeduction, p.lockDurationMinutes,
+                                p.ticketGainNeutralize, p.ticketGainCapture
+                        )
+                );
+                return 1;
+            }
+        }
+        source.sendFailure(Component.literal("Point '" + name + "' not found!"));
+        return 0;
+    }
+    private static int setMaxHubs(CommandSourceStack source, String team, int amount) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        if (team.equalsIgnoreCase("blue")) {
+            data.maxBlueHubs = amount;
+        } else if (team.equalsIgnoreCase("red")) {
+            data.maxRedHubs = amount;
+        } else {
+            source.sendFailure(Component.literal("Invalid team! Please use 'blue' or 'red'."));
+            return 0;
+        }
+
+        data.setDirty();
+        // ВАЖНО: Синхронизировать с клиентом не обязательно, так как установка Хаба проверяется только на сервере
+        source.sendSuccess(() -> Component.literal("Max FOBs for " + team.toUpperCase() + " set to " + amount).withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+    private static int setPvPState(CommandSourceStack source, boolean state) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        data.pvpEnabled = state;
+        data.setDirty(); // Сохраняем изменения в мир
+
+        String status = state ? "ENABLED" : "DISABLED";
+        ChatFormatting color = state ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
+        Component msg = Component.literal("[AAS] PvP between players is now " + status + " in this world.")
+                .withStyle(color);
+
+        // Отправляем сообщение ТОЛЬКО модераторам (уровень прав 2+)
+        for (ServerPlayer player : source.getServer().getPlayerList().getPlayers()) {
+            if (player.hasPermissions(2)) {
+                player.sendSystemMessage(msg);
+            }
+        }
+
+        // Если команду ввела консоль сервера, нужно отправить ответ и ей
+        if (!(source.getEntity() instanceof ServerPlayer)) {
+            source.sendSuccess(() -> msg, true);
+        }
+
+        return 1;
+    }
+    // === СМЕНА ИГРОВОГО РЕЖИМА ===
+    private static int setGameMode(CommandSourceStack source, String mode) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        String newMode = mode.toUpperCase();
+
+        if (!newMode.equals("AAS") && !newMode.equals("INVASION")) {
+            source.sendFailure(Component.literal("Invalid game mode! Use 'aas' or 'invasion'."));
+            return 0;
+        }
+
+        data.gameMode = newMode;
+        data.setDirty();
+        syncDataToAll(level, data); // Синхронизируем изменения с игроками
+
+        source.sendSuccess(() -> Component.literal("Game Mode successfully set to: " + newMode).withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+    private static int setInvasionDefender(CommandSourceStack source, String teamInput) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+        String team = teamInput.toUpperCase();
+
+        if (!team.equals("BLUE") && !team.equals("RED")) {
+            source.sendFailure(Component.literal("Use 'blue' or 'red'!"));
+            return 0;
+        }
+
+        data.invasionDefender = team;
+        data.setDirty();
+
+        // Синхронизируем со всеми
+        PacketHandler.sendToAllClients(level, data);
+
+        String attacker = team.equals("BLUE") ? "RED" : "BLUE";
+        source.sendSuccess(() -> Component.literal("Invasion Setup: ")
+                .append(Component.literal(team).withStyle(team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED))
+                .append(" is DEFENDING, ")
+                .append(Component.literal(attacker).withStyle(attacker.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED))
+                .append(" is ATTACKING."), true);
+
+        return 1;
+    }
+    private static int showStats(CommandSourceStack source, ServerPlayer target) {
+        int tp = target.getPersistentData().getInt("AAS_Stats_TeamPoints");
+        int sp = target.getPersistentData().getInt("AAS_Stats_SquadPoints");
+        int total = tp + sp;
+
+        source.sendSuccess(() -> Component.literal("=== STATS: " + target.getScoreboardName() + " ===").withStyle(ChatFormatting.GOLD), false);
+        source.sendSuccess(() -> Component.literal("Team Points (TP): ").withStyle(ChatFormatting.AQUA).append(Component.literal(String.valueOf(tp)).withStyle(ChatFormatting.WHITE)), false);
+        source.sendSuccess(() -> Component.literal("Squad Points (SP): ").withStyle(ChatFormatting.GREEN).append(Component.literal(String.valueOf(sp)).withStyle(ChatFormatting.WHITE)), false);
+        source.sendSuccess(() -> Component.literal("Total Score: ").withStyle(ChatFormatting.YELLOW).append(Component.literal(String.valueOf(total)).withStyle(ChatFormatting.WHITE)), false);
+
+        return 1;
+    }
+    private static int showTopStats(CommandSourceStack source, String scope) {
+        // Получаем всех игроков на сервере
+        List<ServerPlayer> players = source.getServer().getPlayerList().getPlayers();
+
+        // Вспомогательный класс для сортировки
+        class PlayerScore {
+            final String name;
+            final int totalPoints;
+            final String team;
+
+            PlayerScore(ServerPlayer p) {
+                this.name = p.getScoreboardName();
+                int tp = p.getPersistentData().getInt("AAS_Stats_TeamPoints");
+                int sp = p.getPersistentData().getInt("AAS_Stats_SquadPoints");
+                this.totalPoints = tp + sp;
+                this.team = (p.getTeam() != null) ? p.getTeam().getName().toUpperCase() : "NEUTRAL";
+            }
+        }
+
+        // Собираем список подходящих игроков
+        List<PlayerScore> scores = new ArrayList<>();
+        for (ServerPlayer p : players) {
+            PlayerScore ps = new PlayerScore(p);
+
+            // Фильтр 1: Очков больше 0
+            if (ps.totalPoints <= 0) continue;
+
+            // Фильтр 2: По команде (если не ALL)
+            if (!scope.equals("ALL")) {
+                if (!ps.team.contains(scope)) continue; // Проверяем вхождение строки (BLUE/RED)
+            }
+
+            scores.add(ps);
+        }
+
+        // Сортировка от большего к меньшему
+        scores.sort((a, b) -> Integer.compare(b.totalPoints, a.totalPoints));
+
+        // Вывод заголовка
+        String header = scope.equals("ALL") ? "--- GLOBAL TOP PLAYERS ---" : "--- TOP PLAYERS: " + scope + " ---";
+        source.sendSuccess(() -> Component.literal(header).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+
+        if (scores.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("No players with points found in this category.").withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+
+        // Вывод списка
+        for (int i = 0; i < scores.size(); i++) {
+            PlayerScore ps = scores.get(i);
+            int rank = i + 1;
+
+            ChatFormatting teamColor = ps.team.contains("BLUE") ? ChatFormatting.BLUE :
+                    (ps.team.contains("RED") ? ChatFormatting.RED : ChatFormatting.GRAY);
+
+            // Формат: "1. NickName - 150 pts"
+            source.sendSuccess(() -> Component.literal(rank + ". ")
+                    .withStyle(ChatFormatting.YELLOW)
+                    .append(Component.literal(ps.name).withStyle(teamColor))
+                    .append(Component.literal(" - " + ps.totalPoints + " pts").withStyle(ChatFormatting.WHITE)), false);
+        }
+
+        return 1;
+    }
+    private static int addCenterLobbyZone(CommandSourceStack source, BlockPos pos) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        data.lobbyCenter = pos;
+        data.setDirty();
+
+        source.sendSuccess(() -> Component.literal("Lobby teleport point set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ())
+                .withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
+    private static int addLobbyZone(CommandSourceStack source, String shape, BlockPos pos1, BlockPos pos2) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        AABB area;
+        if (shape.equalsIgnoreCase("cylinder")) {
+            double radius = Math.sqrt(pos1.distSqr(new BlockPos(pos2.getX(), pos1.getY(), pos2.getZ())));
+            double minY = Math.min(pos1.getY(), pos2.getY());
+            double maxY = Math.max(pos1.getY(), pos2.getY()) + 1;
+            area = new AABB(pos1.getX() - radius, minY, pos1.getZ() - radius, pos1.getX() + radius, maxY, pos1.getZ() + radius);
+        } else {
+            area = new AABB(Math.min(pos1.getX(), pos2.getX()), Math.min(pos1.getY(), pos2.getY()), Math.min(pos1.getZ(), pos2.getZ()),
+                    Math.max(pos1.getX(), pos2.getX()) + 1, Math.max(pos1.getY(), pos2.getY()) + 1, Math.max(pos1.getZ(), pos2.getZ()) + 1);
+        }
+
+        data.lobbyZones.add(new AASWorldData.LobbyZone(shape.toUpperCase(), area));
+        data.setDirty();
+
+        source.sendSuccess(() -> Component.literal("Lobby zone added! (" + data.lobbyZones.size() + " total)")
+                .withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
+    private static int removeLobbyZone(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        AASWorldData data = AASWorldData.get(level);
+
+        boolean removed = !data.lobbyZones.isEmpty();
+        data.lobbyZones.clear();
 
         if (removed) {
             data.setDirty();
-
-            // 3. Синхронизируем изменения клиентам (чтобы обновилось GUI)
-            PacketHandler.INSTANCE.send(
-                    net.minecraftforge.network.PacketDistributor.DIMENSION.with(level::dimension),
-                    new com.example.aas.network.PacketSyncSquads(data.squads)
-            );
-
-            source.sendSuccess(() -> Component.literal("Cleared all " + targetTeam + " squads.").withStyle(ChatFormatting.GREEN), true);
+            source.sendSuccess(() -> Component.literal("Lobby zone(s) removed!").withStyle(ChatFormatting.GREEN), true);
         } else {
-            source.sendFailure(Component.literal("No squads found for team " + targetTeam));
+            source.sendFailure(Component.literal("No lobby zone found."));
         }
         return 1;
     }

@@ -1,0 +1,138 @@
+
+["Gameplay Settings"]
+	#Grenade destruction
+	agsProjectileDestruction = true
+	#Ammo explosion destruction
+	ammoStackDestruction = true
+	#Digging speed multiplier
+	#Range: 0.1 ~ 10.0
+	diggingSpeedMultiplier = 2.5
+	#If true, in Survival/Adventure mode players CANNOT interact with storage/loot blocks: chests, trapped chests, ender chests, barrels, shulker boxes, furnaces/blast furnaces/smokers, hoppers, dispensers/droppers, brewing stands, trapdoors and anvils. Everything else (doors, fence gates, buttons, levers, crafting table, etc.) is now allowed.
+	restrictInteractionsToDoorsAndGates = false
+	#Prevent players from breaking blocks
+	preventBlockBreaking = false
+	#Allow players to break walls and barbed wire even if PREVENT_BLOCK_BREAKING is true
+	allowBreakingDefenses = true
+	#Prevent item dropping in survival when game is started
+	preventAllItemDrops = false
+	#Cost for kit resupply
+	#Range: 0 ~ 1000
+	hubResupplyCost = 10
+	#Materials cost for 'Drone Operator' kit resupply from a Supply Crate (instead of the normal hubResupplyCost). If the crate has less than this amount, resupply is refused entirely.
+	#Range: 0 ~ 1000
+	droneOperatorCrateResupplyCost = 50
+	#Multiplier applied to hubResupplyCost when the 'Drone Operator' kit resupplies from a Hub/FOB.
+	#Range: 1.0 ~ 10.0
+	droneOperatorHubCostMultiplier = 3.0
+	#Materials cost for 'Drone Operator' kit resupply from a Vehicle (instead of the normal hubResupplyCost). If the vehicle has less than this amount, resupply is refused entirely.
+	#Range: 0 ~ 1000
+	droneOperatorVehicleResupplyCost = 50
+	#Materials cost for 'Rifleman' kit resupply from a Supply Crate/vehicle (instead of the normal hubResupplyCost). If the crate has less than this amount, resupply is refused entirely.
+	#Range: 0 ~ 1000
+	riflemanCrateResupplyCost = 30
+	#Multiplier applied to hubResupplyCost when the 'Rifleman' kit resupplies from a Hub/FOB.
+	#Range: 1.0 ~ 10.0
+	riflemanHubCostMultiplier = 2.0
+	#Materials cost for 'Sapper' kit resupply from a Supply Crate (instead of the normal hubResupplyCost). If the crate has less than this amount, resupply is refused entirely.
+	#Range: 0 ~ 1000
+	sapperCrateResupplyCost = 30
+	#Materials cost for 'Sapper' kit resupply from a Vehicle (instead of the normal hubResupplyCost). If the vehicle has less than this amount, resupply is refused entirely.
+	#Range: 0 ~ 1000
+	sapperVehicleResupplyCost = 30
+	#Multiplier applied to hubResupplyCost when the 'Sapper' kit resupplies from a Hub/FOB.
+	#Range: 1.0 ~ 10.0
+	sapperHubCostMultiplier = 2.0
+	#Does placing a FOB require a Supply Crate nearby? (Consumes the crate, crate gives 0 mats to FOB)
+	hubPlacementRequiresCrate = false
+	#Does spawning at FOB cost materials?
+	hubSpawnCostsMaterials = false
+	#Material cost to spawn at FOB
+	#Range: 0 ~ 1000
+	hubSpawnMaterialCost = 10
+	#Give regeneration near Main Base?
+	mainSupplyHealing = true
+	#Radius for Main Base healing
+	#Range: 1 ~ 50
+	mainSupplyHealRadius = 5
+	#Automatically give radio to new Squad Leaders
+	autoGiveSlRadio = false
+	#Play siren at 50 tickets
+	lowTicketsSiren = true
+	#Time in minutes until game starts automatically during voting
+	#Range: 1 ~ 60
+	voteAutoStartTime = 10
+	#Percentage of team members needed to be 'Ready'
+	#Range: 1 ~ 100
+	voteRequiredPercentage = 100
+	#Enable knockout mechanic
+	enableKnockout = true
+	#Registry name of the item used to revive (e.g. 'minecraft:paper')
+	reviveItem = "minecraft:paper"
+	#Time in seconds where dying again results in instant death
+	#Range: 0 ~ 600
+	reviveCooldownSeconds = 120
+	#Seconds a non-medic must hold the revive key to revive a downed player
+	#Range: 1 ~ 60
+	reviveHoldSeconds = 8
+	#Seconds a player with the 'Medic' kit must hold the revive key to revive a downed player
+	#Range: 1 ~ 60
+	medicReviveHoldSeconds = 3
+	#Max time in downed state before bleeding out (seconds)
+	#Range: 5 ~ 3600
+	maxDownedTimeSeconds = 180
+	#Completely block access to the vehicle inventory (from the outside via Shift+RMB and from the inside by pressing E)
+	preventVehicleInventoryAccess = true
+	#If the squad leader does not have the "Officer" kit, the squad will disband after 120 seconds.
+	requireOfficerForSL = false
+	#Prevent players from entering vehicles claimed by the enemy team
+	preventEnemyVehicleEntry = true
+	#If true, only Pilots can fly and only Mechanics can drive heavy vehicles. Others are kicked from driver seat after 5 seconds.
+	requireSpecialistToDrive = true
+	#Force auto-balance. Player cannot join a team if it has more players than the other.
+	autoBalanceTeams = false
+	#Preparation time for defenders in Invasion mode (minutes)
+	#Range: 1 ~ 30
+	invasionPrepTimeMinutes = 1
+	#Prevent players from carrying more than 1 Ammo Bag at a time.
+	oneAmmoBagPerPlayer = true
+	#If true, chat messages about a destroyed/dismantled HUB, Rally Point or Vehicle are only sent to the team that owns/lost it - the opposing team will no longer see these messages. Players who are not on the BLUE or RED team (spectators, no team, etc.) still see both teams' messages. If false (default), everyone sees every destruction message like before.
+	separateTeamDestructionMessages = true
+	#If true, only players with the 'Rifleman' kit can pick up an Ammo Bag (even their own). Creative mode ignores this.
+	requireRiflemanForAmmoBag = true
+
+["Balance Settings"]
+	#Range: 0 ~ 10000
+	minHubDistance = 150
+	#Range: 0 ~ 10000
+	minRallyPointDistance = 150
+	#Range: 5 ~ 200
+	hubBlockRadius = 40
+	#Range: 5 ~ 200
+	rallyBlockRadius = 40
+	#Range: 1 ~ 128
+	hubSoundRadius = 15
+	#Range: 10 ~ 200
+	hubBuildRadius = 50
+	#Range: 5 ~ 200
+	crateBuildRadius = 50
+	#Range: 1 ~ 20
+	hubBlockEnemyCount = 3
+	#Range: 1 ~ 20
+	rallyBlockEnemyCount = 1
+	#Max supply crates in a truck
+	#Range: 1 ~ 20
+	supplyTruckCrates = 2
+	#Materials per dropped supply crate
+	#Range: 10 ~ 1000
+	supplyCrateMaterials = 50
+	#Cooldown for Artillery Strike in minutes
+	#Range: 1 ~ 120
+	artStrikeCooldownMinutes = 30
+	#Artillery strike impact radius
+	#Range: 5 ~ 100
+	artStrikeRadius = 20
+
+["Faction Settings"]
+	blueTeamCustomName = "BLUEFOR"
+	redTeamCustomName = "REDFOR"
+

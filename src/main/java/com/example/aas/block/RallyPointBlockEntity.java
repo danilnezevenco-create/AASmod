@@ -14,7 +14,9 @@ import net.minecraftforge.api.distmarker.Dist;
 
 public class RallyPointBlockEntity extends BlockEntity {
     public boolean isDecay = false;
+    public boolean wasDismantled = false;
     private int squadId = -1;
+    private long expiryTick = -1;
     private Object clientSoundRef = null; // Используем Object, это безопасно для сервера
 
     public RallyPointBlockEntity(BlockPos pos, BlockState state) {
@@ -23,6 +25,8 @@ public class RallyPointBlockEntity extends BlockEntity {
 
     public void setSquadId(int id) { this.squadId = id; setChanged(); }
     public int getSquadId() { return squadId; }
+
+    public void setExpiryTick(long tick) { this.expiryTick = tick; setChanged(); }
 
     public void cleanupData(ServerLevel level) {
         if (squadId == -1) return;
@@ -43,7 +47,13 @@ public class RallyPointBlockEntity extends BlockEntity {
             PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
         }
     }
-
+    public void checkExpiry(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (expiryTick == -1) return;
+        if (level.getGameTime() >= expiryTick) {
+            this.isDecay = true; // естественное истечение, без штрафа тикетов
+            level.removeBlock(pos, false);
+        }
+    }
     // ВАЖНО: Весь клиентский код вынесен в ClientHooks
     public void handleSoundClient() {
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {

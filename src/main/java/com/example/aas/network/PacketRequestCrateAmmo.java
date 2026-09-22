@@ -47,7 +47,7 @@ public class PacketRequestCrateAmmo {
             Entity target = player.level().getEntity(msg.entityId);
             if (!(target instanceof SupplyCrateEntity crate)) return;
 
-            // Защита дистанции
+            // Р”РёСЃС‚Р°РЅС†РёСЏ РґРѕ СЏС‰РёРєР°
             if (player.distanceToSqr(crate) > 64.0) return;
 
             int cost = 0;
@@ -59,7 +59,7 @@ public class PacketRequestCrateAmmo {
                 case 4: cost = 50; break; // TOW
             }
 
-            // === Логика Китов (Оставляет ящик, если есть еще материалы) ===
+            // === Р›РѕРіРёРєР° РљРРўРђ (СѓС‡РёС‚С‹РІР°РµС‚ СЃС‚РѕРёРјРѕСЃС‚СЊ, РµСЃР»Рё РµСЃС‚СЊ СЃРїРµС†. РјР°С‚РµСЂРёР°Р») ===
             if (msg.type == 0) {
                 String kitName = player.getPersistentData().getString("AAS_CurrentKit");
                 if (kitName.isEmpty()) {
@@ -74,14 +74,32 @@ public class PacketRequestCrateAmmo {
                     return;
                 }
 
+                // === РћРЎРћР‘РћР• РџР РђР’РР›Рћ: РєРёС‚ "Drone Operator" РїРѕРїРѕР»РЅСЏРµС‚СЃСЏ СЃ СЏС‰РёРєР° (Crate) РїРѕ РґСЂСѓРіРѕР№ С†РµРЅРµ ===
+                boolean isDroneOperator = "Drone Operator".equalsIgnoreCase(kitName);
+                if (isDroneOperator) {
+                    cost = AASConfig.DRONE_OPERATOR_CRATE_RESUPPLY_COST.get();
+                }
+                // === Rifleman kit resupplies from a Crate/vehicle at a fixed cost ===
+                boolean isRifleman = "Rifleman".equalsIgnoreCase(kitName);
+                if (isRifleman) {
+                    cost = AASConfig.RIFLEMAN_CRATE_RESUPPLY_COST.get();
+                }
+                // === Sapper kit resupplies from a Crate at a fixed cost (same rule as Drone Operator) ===
+                boolean isSapper = "Sapper".equalsIgnoreCase(kitName);
+                if (isSapper) {
+                    cost = AASConfig.SAPPER_CRATE_RESUPPLY_COST.get();
+                }
+
                 if (!player.isCreative() && crate.getMaterials() < cost) {
+                    // Р•СЃР»Рё РјР°С‚РµСЂРёР°Р»РѕРІ РјРµРЅСЊС€Рµ С‚СЂРµР±СѓРµРјРѕРіРѕ вЂ” РєРёС‚ РќР• РїРѕРїРѕР»РЅСЏРµС‚СЃСЏ РІРѕРѕР±С‰Рµ (Р±РµР· С‡Р°СЃС‚РёС‡РЅРѕР№ РІС‹РґР°С‡Рё)
                     player.sendSystemMessage(Component.literal("Not enough Materials in Crate! Need: " + cost).withStyle(ChatFormatting.RED));
                     return;
                 }
 
                 AASWorldData data = AASWorldData.get(player.serverLevel());
                 String t = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-                AASWorldData.KitInfo kit = t.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
+                boolean isAltVariant = player.getPersistentData().getBoolean("AAS_CurrentKitAlt");
+                AASWorldData.KitInfo kit = data.getKitVariant(t, kitName, isAltVariant);
 
                 if (kit != null) {
                     if (ResupplyHandler.resupplyPlayer(player, kit, false)) {
@@ -91,13 +109,13 @@ public class PacketRequestCrateAmmo {
                         }
                         player.sendSystemMessage(Component.literal("Kit Resupplied! (-" + cost + " Mats)").withStyle(ChatFormatting.GREEN));
                     } else {
-                        player.sendSystemMessage(Component.literal("Ammo already full!").withStyle(ChatFormatting.YELLOW));
+                        player.sendSystemMessage(Component.translatable("aas.msg.kit_full").withStyle(ChatFormatting.YELLOW));
                     }
                 }
                 return;
             }
 
-            // === Логика Тяжелых патронов (AGS, M2 и т.д. - УНИЧТОЖАЕТ ЯЩИК) ===
+            // === Р›РѕРіРёРєР° С‚СЏР¶РµР»С‹С… РїР°С‚СЂРѕРЅРѕРІ (AGS, M2 Рё С‚.Рґ. - Р±РµР· РёР·РјРµРЅРµРЅРёР№) ===
             if (!player.isCreative() && crate.getMaterials() < cost) {
                 player.sendSystemMessage(Component.literal("Not enough Materials in Crate! Need: " + cost).withStyle(ChatFormatting.RED));
                 return;
@@ -135,8 +153,8 @@ public class PacketRequestCrateAmmo {
 
             if (success) {
                 if (!player.isCreative()) {
-                    // ИЗМЕНЕНИЕ: Обнуляем материалы (crate.setMaterials(0)),
-                    // что заставит ящик мгновенно исчезнуть в его методе tick()
+                    // РЈРЅРёС‡С‚РѕР¶Р°РµРј СЏС‰РёРє РїРѕР»РЅРѕСЃС‚СЊСЋ (crate.setMaterials(0)),
+                    // С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ РґРІРѕР№РЅРѕР№ РІС‹РґР°С‡Рё РјР°С‚РµСЂРёР°Р»РѕРІ РІ РµРіРѕ tick()
                     crate.setMaterials(0);
                 }
                 player.sendSystemMessage(Component.literal("Heavy Ammo Resupplied! Crate consumed.").withStyle(ChatFormatting.GREEN));

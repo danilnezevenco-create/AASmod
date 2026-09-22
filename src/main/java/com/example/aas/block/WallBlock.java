@@ -18,57 +18,92 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.material.FluidState;
 
 public class WallBlock extends BaseEntityBlock {
 
     public static final BooleanProperty CONSTRUCTED = BooleanProperty.create("constructed");
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty VALID = BooleanProperty.create("valid");
+    public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
 
     private static final VoxelShape SHAPE = Shapes.block();
 
     public WallBlock() {
         super(BlockBehaviour.Properties.of()
                 .mapColor(MapColor.METAL)
-                // ИЗМЕНЕНО: 12.0f - это предел, при котором TNT (сила 4) еще может сломать блок прямым попаданием.
-                // Если поставить больше 13, обычный TNT перестанет ломать стену.
                 .strength(3.0f, 20.0f)
                 .requiresCorrectToolForDrops()
                 .noOcclusion());
 
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(CONSTRUCTED, false)
+                .setValue(BUILD_STAGE, 0)
                 .setValue(FACING, Direction.NORTH)
                 .setValue(VALID, true));
     }
 
-    // === БЕЗ @OVERRIDE ===
-
+    // Убран @Override, так как в некоторых маппингах 1.20.1 Forge метод
+    // считается "внедренным" (patched), а не стандартным
     public float getDestroySpeed(BlockState state, BlockGetter level, BlockPos pos) {
         return state.getValue(CONSTRUCTED) ? 3.0f : 0.3f;
     }
 
+    // Убран @Override по той же причине
     public float getExplosionResistance(BlockState state, BlockGetter level, BlockPos pos, Explosion explosion) {
-        // ИЗМЕНЕНО: Возвращаем 12.0f (было 9.0f, потом ошибочно 18.0f)
         return 20.0f;
     }
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, FluidState fluid) {
+        if (!level.isClientSide) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof WallBlockEntity wall) {
+                boolean constructed = state.getValue(CONSTRUCTED);
+                int stage = wall.getDamageStage();
 
-    // =====================
+                // Откат в 3 удара: достроенное -> 70% -> 30% -> удаление.
+                // Ни разу не достроенный чертёж (stage == 0) откатов не имеет: сразу удаляется.
+                if (constructed || stage == 1) {
+                    int newStage = constructed ? 1 : 2;
+                    int targetPercent = (newStage == 1) ? 70 : 30;
+                    int max = wall.getMaxProgress();
+                    int targetProgress = Math.round(max * (targetPercent / 100f));
 
+                    wall.setProgress(targetProgress);
+                    wall.setDamageStage(newStage);
+
+                    int newBuildStage = (targetPercent >= 50) ? 2 : 1;
+                    BlockState newState = state.setValue(CONSTRUCTED, false).setValue(BUILD_STAGE, newBuildStage);
+                    level.setBlock(pos, newState, 3);
+
+                    // Звук/частицы поломки без реального удаления блока
+                    level.levelEvent(null, 2001, pos, Block.getId(state));
+
+                    return false; // блок не удаляется, только откатывается на стадию назад
+                }
+            }
+        }
+        return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
+    }
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(CONSTRUCTED, FACING, VALID);
+        builder.add(CONSTRUCTED, BUILD_STAGE, FACING, VALID);
     }
 
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        return this.defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite())
+                .setValue(CONSTRUCTED, false)
+                .setValue(BUILD_STAGE, 0);
     }
 
     @Override

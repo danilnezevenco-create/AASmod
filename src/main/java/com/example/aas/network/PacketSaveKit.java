@@ -11,84 +11,94 @@ import java.util.function.Supplier;
 public class PacketSaveKit {
     private final String team;
     private final String kitName;
+    private final boolean isAlt;
+    private final boolean hasAlt;
     private final boolean isLeader;
     private final int maxTeam;
     private final int maxSquad;
     private final int minSquadPlayers;
-    private final boolean[] resupplyFlags; // Переименовал для ясности
-    private final boolean[] nbtFlags;      // <--- 1. ДОБАВЛЕНО ПОЛЕ
+    private final String displayName;           // <-- НОВОЕ
+    private final boolean[] resupplyFlags;
+    private final boolean[] nbtFlags;
 
-    // 2. ОБНОВЛЕН КОНСТРУКТОР
-    public PacketSaveKit(String team, String kitName, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers, boolean[] resupplyFlags, boolean[] nbtFlags) {
+    public PacketSaveKit(String team, String kitName, boolean isAlt, boolean hasAlt, boolean isLeader,
+                         int maxTeam, int maxSquad, int minSquadPlayers,
+                         String displayName,                              // <-- НОВОЕ
+                         boolean[] resupplyFlags, boolean[] nbtFlags) {
         this.team = team;
         this.kitName = kitName;
+        this.isAlt = isAlt;
+        this.hasAlt = hasAlt;
         this.isLeader = isLeader;
         this.maxTeam = maxTeam;
         this.maxSquad = maxSquad;
         this.minSquadPlayers = minSquadPlayers;
+        this.displayName = displayName != null ? displayName : "";        // <-- НОВОЕ
         this.resupplyFlags = resupplyFlags;
-        this.nbtFlags = nbtFlags; // <--- ПРИСВАИВАЕМ
+        this.nbtFlags = nbtFlags;
     }
 
     public static void encode(PacketSaveKit msg, FriendlyByteBuf buf) {
         buf.writeUtf(msg.team);
         buf.writeUtf(msg.kitName);
+        buf.writeBoolean(msg.isAlt);
+        buf.writeBoolean(msg.hasAlt);
         buf.writeBoolean(msg.isLeader);
         buf.writeInt(msg.maxTeam);
         buf.writeInt(msg.maxSquad);
         buf.writeInt(msg.minSquadPlayers);
+        buf.writeUtf(msg.displayName);           // <-- НОВОЕ
 
-        // 3. ПИШЕМ ПЕРВЫЙ МАССИВ (Ресаплай)
         for(int i=0; i<49; i++) buf.writeBoolean(msg.resupplyFlags[i]);
-
-        // 4. ПИШЕМ ВТОРОЙ МАССИВ (NBT)
         for(int i=0; i<49; i++) buf.writeBoolean(msg.nbtFlags[i]);
     }
 
     public static PacketSaveKit decode(FriendlyByteBuf buf) {
         String t = buf.readUtf();
         String k = buf.readUtf();
+        boolean isAlt = buf.readBoolean();
+        boolean hasAlt = buf.readBoolean();
         boolean l = buf.readBoolean();
         int mt = buf.readInt();
         int ms = buf.readInt();
         int minP = buf.readInt();
+        String displayName = buf.readUtf();      // <-- НОВОЕ
 
-        // 5. ЧИТАЕМ ПЕРВЫЙ МАССИВ
         boolean[] f1 = new boolean[49];
         for(int i=0; i<49; i++) f1[i] = buf.readBoolean();
-
-        // 6. ЧИТАЕМ ВТОРОЙ МАССИВ
         boolean[] f2 = new boolean[49];
         for(int i=0; i<49; i++) f2[i] = buf.readBoolean();
 
-        return new PacketSaveKit(t, k, l, mt, ms, minP, f1, f2);
+        return new PacketSaveKit(t, k, isAlt, hasAlt, l, mt, ms, minP, displayName, f1, f2);
     }
 
     public static void handle(PacketSaveKit msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
-            // Проверяем, что у игрока открыто именно меню редактора
             if (player != null && player.isCreative() && player.containerMenu instanceof KitEditorMenu menu) {
                 AASWorldData data = AASWorldData.get(player.serverLevel());
-                AASWorldData.KitInfo kit = msg.team.equals("BLUE") ? data.blueKits.get(msg.kitName) : data.redKits.get(msg.kitName);
+                AASWorldData.KitInfo baseKit = msg.team.equals("BLUE") ? data.blueKits.get(msg.kitName) : data.redKits.get(msg.kitName);
 
-                if (kit != null) {
-                    kit.isLeaderOnly = msg.isLeader;
-                    kit.maxPerTeam = msg.maxTeam;
-                    kit.maxPerSquad = msg.maxSquad;
-                    kit.minSquadPlayers = msg.minSquadPlayers;
+                if (baseKit != null) {
+                    AASWorldData.KitInfo target = msg.isAlt ? baseKit.getOrCreateAlt() : baseKit;
 
-                    // 7. СОХРАНЯЕМ ОБА МАССИВА В ДАННЫЕ МИРА
-                    kit.resupplyFlags = msg.resupplyFlags;
-                    kit.saveNbtFlags = msg.nbtFlags; // <--- ВАЖНО: сохраняем NBT флаги
+                    if (!msg.isAlt) {
+                        baseKit.isLeaderOnly = msg.isLeader;
+                        baseKit.maxPerTeam = msg.maxTeam;
+                        baseKit.maxPerSquad = msg.maxSquad;
+                        baseKit.minSquadPlayers = msg.minSquadPlayers;
+                        baseKit.hasAlt = msg.hasAlt;
+                    }
 
-                    // Копируем предметы из инвентаря меню в кит
+                    target.displayName = msg.displayName;   // <-- НОВОЕ: своё имя для той версии, что редактировали
+                    target.resupplyFlags = msg.resupplyFlags;
+                    target.saveNbtFlags = msg.nbtFlags;
+
                     for(int i=0; i<49; i++) {
-                        kit.inventory.set(i, menu.kitInventory.getItem(i).copy());
+                        target.inventory.set(i, menu.kitInventory.getItem(i).copy());
                     }
 
                     data.setDirty();
-                    // Синхронизируем обновленные данные со всеми клиентами
                     PacketHandler.sendToAllClients(player.serverLevel(), data);
                 }
             }

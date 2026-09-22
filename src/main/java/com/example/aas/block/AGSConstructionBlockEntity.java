@@ -14,6 +14,7 @@ public class AGSConstructionBlockEntity extends BlockEntity {
     public static final int MAX_PROGRESS = 2400; // 2 минуты
     private int currentProgress = 0;
     private int activeDiggers = 0;
+    private boolean sapperBoost = false;
     private String teamOwner = "NEUTRAL";
 
     public AGSConstructionBlockEntity(BlockPos pos, BlockState state) {
@@ -24,9 +25,12 @@ public class AGSConstructionBlockEntity extends BlockEntity {
     public String getTeam() { return teamOwner; }
     public float getPercentage() { return (float) currentProgress / MAX_PROGRESS; }
 
-    public void addProgress() {
+    public void addProgress() { addProgress(false); }
+
+    public void addProgress(boolean isSapper) {
         if (currentProgress < MAX_PROGRESS) {
             this.activeDiggers++;
+            if (isSapper) this.sapperBoost = true;
             setChanged();
         }
     }
@@ -37,22 +41,24 @@ public class AGSConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, AGSConstructionBlockEntity entity) {
+    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, AGSConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
-
-                // === ПУНКТ 4: КОНФИГ ===
-                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                if (entity.sapperBoost) speed *= 2.0f;
+                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
-
                 entity.currentProgress += (int) Math.ceil(speed);
             }
 
             if (entity.currentProgress >= MAX_PROGRESS) {
                 if (state.getBlock() instanceof AGSConstructionBlock block) {
+                    // === ПЫЛЬ ДЛЯ AGS ===
+                    ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                            25, 0.6, 0.4, 0.6, 0.05);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }
@@ -62,8 +68,8 @@ public class AGSConstructionBlockEntity extends BlockEntity {
             }
         }
         entity.activeDiggers = 0;
+        entity.sapperBoost = false;
     }
-
     // ... (save/load) ...
     @Override
     protected void saveAdditional(CompoundTag tag) {

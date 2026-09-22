@@ -10,15 +10,13 @@ import java.util.function.Supplier;
 
 public class PacketSelectKit {
     public final String kitName;
-    public PacketSelectKit(String kitName) { this.kitName = kitName; }
+    public final boolean isAlt; // выбрана ли альтернативная версия кита
 
-    public static void encode(PacketSelectKit msg, FriendlyByteBuf buf) { buf.writeUtf(msg.kitName); }
-    public static PacketSelectKit decode(FriendlyByteBuf buf) { return new PacketSelectKit(buf.readUtf()); }
+    public PacketSelectKit(String kitName) { this(kitName, false); }
+    public PacketSelectKit(String kitName, boolean isAlt) { this.kitName = kitName; this.isAlt = isAlt; }
 
-    // PATH: src\main\java\com\example\aas\network\PacketSelectKit.java
-// Замените метод handle целиком:
-
-    // PATH: src/main/java/com/example/aas/network/PacketSelectKit.java
+    public static void encode(PacketSelectKit msg, FriendlyByteBuf buf) { buf.writeUtf(msg.kitName); buf.writeBoolean(msg.isAlt); }
+    public static PacketSelectKit decode(FriendlyByteBuf buf) { return new PacketSelectKit(buf.readUtf(), buf.readBoolean()); }
 
     public static void handle(PacketSelectKit msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
@@ -26,18 +24,19 @@ public class PacketSelectKit {
             if (player != null) {
                 AASWorldData data = AASWorldData.get(player.serverLevel());
 
-                // Ставим класс "в ожидание"
+                // Ставим класс "в ожидание" вместе с выбранным вариантом (стандарт/альт)
                 player.getPersistentData().putString("AAS_PendingKit", msg.kitName);
+                player.getPersistentData().putBoolean("AAS_PendingKitAlt", msg.isAlt);
 
                 // МГНОВЕННАЯ СИНХРОНИЗАЦИЯ:
                 // Чтобы у всех сразу появилась иконка у ника этого игрока
                 PacketHandler.sendToAllClients(player.serverLevel(), data);
 
                 if (!data.isGameStarted) {
-                    player.sendSystemMessage(Component.literal("Класс " + msg.kitName + " забронирован. Вы получите его при старте игры.")
+                    player.sendSystemMessage(Component.literal(Component.translatable("aas.msg.kit_reserved", msg.kitName).getString())
                             .withStyle(ChatFormatting.YELLOW));
                 } else {
-                    player.sendSystemMessage(Component.literal("Класс " + msg.kitName + " выбран. Перезайдите на базу для получения.")
+                    player.sendSystemMessage(Component.translatable("aas.msg.kit_selected_main", msg.kitName)
                             .withStyle(ChatFormatting.YELLOW));
                 }
             }

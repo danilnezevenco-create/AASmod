@@ -1,8 +1,23 @@
 {
   "variants": {
-    "facing=north": { "model": "aas:block/ammo_bag" },
-    "facing=east":  { "model": "aas:block/ammo_bag", "y": 90 },
-    "facing=south": { "model": "aas:block/ammo_bag", "y": 180 },
-    "facing=west":  { "model": "aas:block/ammo_bag", "y": 270 }
+    "facing=north,uses=1": { "model": "aas:block/ammo_bag" },
+    "facing=east,uses=1":  { "model": "aas:block/ammo_bag", "y": 90 },
+    "facing=south,uses=1": { "model": "aas:block/ammo_bag", "y": 180 },
+    "facing=west,uses=1":  { "model": "aas:block/ammo_bag", "y": 270 },
+
+    "facing=north,uses=2": { "model": "aas:block/ammo_bag" },
+    "facing=east,uses=2":  { "model": "aas:block/ammo_bag", "y": 90 },
+    "facing=south,uses=2": { "model": "aas:block/ammo_bag", "y": 180 },
+    "facing=west,uses=2":  { "model": "aas:block/ammo_bag", "y": 270 },
+
+    "facing=north,uses=3": { "model": "aas:block/ammo_bag" },
+    "facing=east,uses=3":  { "model": "aas:block/ammo_bag", "y": 90 },
+    "facing=south,uses=3": { "model": "aas:block/ammo_bag", "y": 180 },
+    "facing=west,uses=3":  { "model": "aas:block/ammo_bag", "y": 270 },
+
+    "facing=north,uses=4": { "model": "aas:block/ammo_bag" },
+    "facing=east,uses=4":  { "model": "aas:block/ammo_bag", "y": 90 },
+    "facing=south,uses=4": { "model": "aas:block/ammo_bag", "y": 180 },
+    "facing=west,uses=4":  { "model": "aas:block/ammo_bag", "y": 270 }
   }
 }

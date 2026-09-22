@@ -10,7 +10,8 @@
     "PlayerSkinMixin",
     "PlayerModelMixin",
     "FirstPersonArmFixMixin",
-    "MouseSensitivityMixin"
+    "MouseSensitivityMixin",
+    "ChatPanelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

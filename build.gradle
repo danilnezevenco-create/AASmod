@@ -64,26 +64,61 @@ mixin {
 repositories {
     maven { url 'https://repo.spongepowered.org/repository/maven-public/' }
     maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+    maven { url = "https://maven.theillusivec4.top/" }
+    maven { url = "https://maven.maxhenkel.de/repository/public" } // <-- Репозиторий VoiceChat API
+    // ВАЖНО (добавлено): репозиторий Modrinth, чтобы можно было скачать САМ jar мода
+    // Simple Voice Chat в dev-окружение. Без этого ModList.isLoaded("voicechat")
+    // в runClient/runServer всегда будет false, а в IDE классы API будут
+    // подсвечены как нерезолвящиеся (именно то, что ты описывал в пункте 4).
     maven {
-        url = "https://maven.theillusivec4.top/"
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
     }
     mavenCentral()
 }
 
+// Версия API мода Simple Voice Chat (используется при компиляции - предоставляет
+// классы de.maxhenkel.voicechat.api.*). РЕАЛИЗАЦИЮ этих интерфейсов в runtime дает
+// сам jar мода voicechat (см. зависимость ниже).
+def voicechat_api_version = "2.5.0"
+// Версия самого мода Simple Voice Chat для Forge 1.20.1, который будет
+// установлен в dev-окружение (run/mods), чтобы его можно было реально
+// протестировать локально, а не только в полной сборке.
+//
+// ВАЖНО: версия 2.6.20 вызывала NoSuchMethodError на Minecraft.m_91087_()
+// при запуске в dev-окружении (NoSuchMethodError = несовместимость classpath/
+// маппингов между этой сборкой voicechat и используемым Forge 47.4.10).
+// Понижено до 2.6.12 - это именно та версия, которая по факту установлена
+// на твоем реальном сервере (видно в исходном логе клиента), так что
+// dev-окружение теперь точно соответствует продакшену.
+def voicechat_version = "1.20.1-2.6.12"
+
+// === ЗАВИСИМОСТИ ВАШЕГО МОДА ===
 dependencies {
     compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.4.0+1.20.1:api")
     runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.4.0+1.20.1")
-// Forge
+
+    // Forge
     minecraft "net.minecraftforge:forge:1.20.1-47.4.10"
-// GeckoLib
+
+    // GeckoLib
     implementation fg.deobf('software.bernie.geckolib:geckolib-forge-1.20.1:4.4.4')
 
-// Simple Voice Chat API (файл должен лежать в папке libs внутри проекта)
-    compileOnly files('libs/voicechat-api-2.5.0.jar')
+    // ИСПРАВЛЕНО: было compileOnly, по официальному гайду Simple Voice Chat
+    // для Forge нужен "implementation", иначе API-классы не попадают
+    // в classpath компиляции корректно во всех конфигурациях Gradle.
+    implementation "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
 
-// Mixin Processor
+    // ДОБАВЛЕНО: реальный jar мода Simple Voice Chat для dev-окружения
+    // (runClient/runServer). Без этого ты физически не можешь протестировать
+    // интеграцию voicechat в среде разработки - именно то, что у тебя сейчас
+    // происходит (в dev все работает, потому что voicechat там не загружен,
+    // а ModList.isLoaded("voicechat") == false).
+    runtimeOnly fg.deobf("maven.modrinth:simple-voice-chat:forge-${voicechat_version}")
+
+    // Mixin Processor
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-
 }
 
 // Важно для правильной сборки мода: прописываем Mixin в манифест JAR файла

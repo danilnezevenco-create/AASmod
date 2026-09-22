@@ -159,12 +159,12 @@ public class AGS30Entity extends Entity implements GeoEntity {
         // Проверка патронов
         if (!shooter.isCreative()) {
             if (!hasMagazine()) {
-                shooter.displayClientMessage(Component.literal("No Ammo Box!").withStyle(ChatFormatting.RED), true);
+                shooter.displayClientMessage(Component.translatable("aas.msg.ags.no_mag").withStyle(ChatFormatting.RED), true);
                 shootCooldown = 20;
                 return;
             }
             if (getAmmoCount() <= 0) {
-                shooter.displayClientMessage(Component.literal("Empty!").withStyle(ChatFormatting.RED), true);
+                shooter.displayClientMessage(Component.translatable("aas.msg.ags.empty").withStyle(ChatFormatting.RED), true);
                 shootCooldown = 20;
                 return;
             }
@@ -240,7 +240,7 @@ public class AGS30Entity extends Entity implements GeoEntity {
                     setAmmoCount(ammo);
                     if (!player.isCreative()) stack.shrink(1);
                     this.playSound(ModSounds.M2_LOAD.get(), 1.0f, 1.0f);
-                    player.displayClientMessage(Component.literal("AGS Loaded: " + ammo + " rounds"), true);
+                    player.displayClientMessage(Component.translatable("aas.msg.ags.loaded", ammo), true);
                     return InteractionResult.SUCCESS;
                 } else {
                     player.displayClientMessage(Component.literal("Already loaded!"), true);
@@ -257,7 +257,7 @@ public class AGS30Entity extends Entity implements GeoEntity {
                 setHasMagazine(false);
                 setAmmoCount(0);
                 this.playSound(ModSounds.M2_UNLOAD.get(), 1.0f, 1.0f);
-                player.displayClientMessage(Component.literal("AGS Unloaded (" + remaining + ")"), true);
+                player.displayClientMessage(Component.translatable("aas.msg.ags.unloaded", remaining), true);
                 return InteractionResult.SUCCESS;
             }
 

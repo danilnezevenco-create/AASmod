@@ -3,7 +3,10 @@ package com.example.aas.item;
 import com.example.aas.block.*;
 import com.example.aas.client.renderer.EntrenchingToolRenderer;
 import com.example.aas.sound.ModSounds;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import net.minecraft.ChatFormatting;
+import com.example.aas.block.VehicleStationBlockEntity;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -13,7 +16,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -30,17 +37,24 @@ import software.bernie.geckolib.core.animation.*;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 import software.bernie.geckolib.animatable.SingletonGeoAnimatable;
+import com.google.common.collect.Multimap;
+import net.minecraft.world.entity.EquipmentSlot;
 
 import java.util.function.Consumer;
 
 public class EntrenchingToolItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private final Multimap<Attribute, AttributeModifier> defaultModifiers;
 
     @Override
     public float getDestroySpeed(ItemStack stack, BlockState state) {
         // Если это одна из наших построек и она ЕЩЕ НЕ ДОСТРОЕНА
         if (isAASConstruction(state) && !isConstructed(state)) {
-            return 50.0F; // Максимальная скорость (мгновенно)
+            // ИСКЛЮЧЕНИЕ: Чертеж Хаба лопата быстро не ломает
+            if (state.is(ModBlocks.HUB_BLOCK.get())) {
+                return super.getDestroySpeed(stack, state);
+            }
+            return 20.0F; // Максимальная скорость (мгновенно) для всех остальных чертежей
         }
         return super.getDestroySpeed(stack, state);
     }
@@ -56,6 +70,17 @@ public class EntrenchingToolItem extends Item implements GeoItem {
     public EntrenchingToolItem() {
         super(new Properties().stacksTo(1));
         SingletonGeoAnimatable.registerSyncedAnimatable(this);
+
+        // Применяем атрибуты незеритового топора (+9 урона, -3 скорость атаки)
+        ImmutableMultimap.Builder<Attribute, AttributeModifier> builder = ImmutableMultimap.builder();
+        builder.put(Attributes.ATTACK_DAMAGE, new AttributeModifier(BASE_ATTACK_DAMAGE_UUID, "Tool modifier", 9.0, AttributeModifier.Operation.ADDITION));
+        builder.put(Attributes.ATTACK_SPEED, new AttributeModifier(BASE_ATTACK_SPEED_UUID, "Tool modifier", -3.0, AttributeModifier.Operation.ADDITION));
+        this.defaultModifiers = builder.build();
+    }
+
+    @Override
+    public Multimap<Attribute, AttributeModifier> getDefaultAttributeModifiers(EquipmentSlot slot) {
+        return slot == EquipmentSlot.MAINHAND ? this.defaultModifiers : super.getDefaultAttributeModifiers(slot);
     }
 
     private long getOrAssignID(ItemStack stack, Level level) {
@@ -112,7 +137,6 @@ public class EntrenchingToolItem extends Item implements GeoItem {
                 if (isAASConstruction(state)) {
                     // 1. НЕЛЬЗЯ КОПАТЬ УЖЕ ПОСТРОЕННОЕ
                     if (isConstructed(state)) {
-                        player.displayClientMessage(Component.literal("Structure is already finished!").withStyle(ChatFormatting.YELLOW), true);
                         stopDigging(player, stack);
                         return;
                     }
@@ -122,7 +146,6 @@ public class EntrenchingToolItem extends Item implements GeoItem {
                     String structureTeam = getStructureTeam(be);
 
                     if (!structureTeam.equals("NEUTRAL") && !structureTeam.equalsIgnoreCase(playerTeam) && !player.isCreative()) {
-                        player.displayClientMessage(Component.literal("Cannot build ENEMY structures!").withStyle(ChatFormatting.RED), true);
                         stopDigging(player, stack);
                         return;
                     }
@@ -136,7 +159,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
 
                     // 4. В КРЕАТИВЕ Х10 СКОРОСТЬ
                     if (player.isCreative()) {
-                        addCreativeProgressToBE(be, 10);
+                        addCreativeProgressToBE(be, 50);
                     } else {
                         addProgressToBE(be, player);
                     }
@@ -172,10 +195,15 @@ public class EntrenchingToolItem extends Item implements GeoItem {
     }
 
     private boolean isAASConstruction(BlockState state) {
-        return state.is(ModBlocks.HUB_BLOCK.get()) || state.is(ModBlocks.WALL_BLOCK.get()) ||
-                state.is(ModBlocks.BARBED_WIRE_BLOCK.get()) || state.is(ModBlocks.M2_CONSTRUCTION_BLOCK.get()) ||
-                state.is(ModBlocks.AGS_CONSTRUCTION_BLOCK.get()) || state.is(ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()) ||
-                state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get());
+        return state.is(ModBlocks.HUB_BLOCK.get()) ||
+                state.is(ModBlocks.WALL_BLOCK.get()) ||
+                state.is(ModBlocks.WALL_SLAB_BLOCK.get()) || // Добавлено
+                state.is(ModBlocks.BARBED_WIRE_BLOCK.get()) ||
+                state.is(ModBlocks.M2_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.AGS_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.TOW_CONSTRUCTION_BLOCK.get()) ||
+                state.is(ModBlocks.VEHICLE_STATION_BLOCK.get()); // Добавлено
     }
 
     private String getStructureTeam(BlockEntity be) {
@@ -186,6 +214,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
         if (be instanceof M2ConstructionBlockEntity m) return m.getTeam();
         if (be instanceof MortarConstructionBlockEntity mo) return mo.getTeam();
         if (be instanceof TOWConstructionBlockEntity t) return t.getTeam();
+        if (be instanceof VehicleStationBlockEntity vs) return vs.getTeam(); // Добавлено
         return "NEUTRAL";
     }
 
@@ -197,23 +226,28 @@ public class EntrenchingToolItem extends Item implements GeoItem {
         else if (be instanceof M2ConstructionBlockEntity b) b.addCreativeProgress(multiplier);
         else if (be instanceof MortarConstructionBlockEntity b) b.addCreativeProgress(multiplier);
         else if (be instanceof TOWConstructionBlockEntity b) b.addCreativeProgress(multiplier);
+        else if (be instanceof VehicleStationBlockEntity b) b.addCreativeProgress(multiplier); // Добавлено
     }
 
     private boolean isConstructed(BlockState state) {
         if (state.hasProperty(WallBlock.CONSTRUCTED)) return state.getValue(WallBlock.CONSTRUCTED);
         if (state.hasProperty(HubBlock.CONSTRUCTED)) return state.getValue(HubBlock.CONSTRUCTED);
         if (state.hasProperty(BarbedWireBlock.CONSTRUCTED)) return state.getValue(BarbedWireBlock.CONSTRUCTED);
+        if (state.hasProperty(VehicleStationBlock.CONSTRUCTED)) return state.getValue(VehicleStationBlock.CONSTRUCTED);
         return false;
     }
 
+    // СТАЛО
     private void addProgressToBE(BlockEntity be, Player player) {
-        if (be instanceof HubBlockEntity b) b.addProgress();
-        else if (be instanceof WallBlockEntity b) b.addProgress();
-        else if (be instanceof BarbedWireBlockEntity b) b.addProgress();
-        else if (be instanceof AGSConstructionBlockEntity b) b.addProgress();
-        else if (be instanceof M2ConstructionBlockEntity b) b.addProgress();
-        else if (be instanceof MortarConstructionBlockEntity b) b.addProgress();
-        else if (be instanceof TOWConstructionBlockEntity b) b.addProgress();
+        boolean isSapper = "Sapper".equalsIgnoreCase(player.getPersistentData().getString("AAS_CurrentKit"));
+        if (be instanceof HubBlockEntity b) b.addProgress(isSapper);
+        else if (be instanceof WallBlockEntity b) b.addProgress(isSapper);
+        else if (be instanceof BarbedWireBlockEntity b) b.addProgress(isSapper);
+        else if (be instanceof AGSConstructionBlockEntity b) b.addProgress(isSapper);
+        else if (be instanceof M2ConstructionBlockEntity b) b.addProgress(isSapper);
+        else if (be instanceof MortarConstructionBlockEntity b) b.addProgress(isSapper);
+        else if (be instanceof TOWConstructionBlockEntity b) b.addProgress(isSapper);
+        else if (be instanceof VehicleStationBlockEntity b) b.addProgress(isSapper);
     }
 
     @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }

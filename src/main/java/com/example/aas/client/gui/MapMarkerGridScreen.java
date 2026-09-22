@@ -3,6 +3,9 @@ package com.example.aas.client.gui;
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketPlaceMapMarker;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.example.aas.sound.ModSounds;
+import com.example.aas.sound.ModSounds;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -43,8 +46,13 @@ public class MapMarkerGridScreen extends Screen {
             // Кнопка расположена ниже иконки
             this.addRenderableWidget(Button.builder(Component.literal(type), b -> {
                 PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(worldX, worldZ, type));
+                Minecraft.getInstance().player.playSound(ModSounds.MAP_MARKER_PLACE.get(), 1.0f, 1.0f);
                 // После нажатия возвращаемся в меню отрядов
-                this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
+                if (!this.minecraft.player.isAlive()) {
+                    this.minecraft.setScreen(new com.example.aas.client.AASDeathScreen(null, false));
+                } else {
+                    this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
+                }
             }).bounds(x, y + 45, BTN_WIDTH, 20).build());
 
             i++;
@@ -53,7 +61,11 @@ public class MapMarkerGridScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
-        this.renderBackground(gui);
+        if (!this.minecraft.player.isAlive()) {
+            gui.fill(0, 0, this.width, this.height, 0xFF000000);
+        } else {
+            this.renderBackground(gui);
+        }
         gui.drawCenteredString(font, title, width / 2, 15, 0xFFFFFF);
 
         int totalWidth = COLS * CELL_WIDTH;

@@ -36,7 +36,7 @@ public class AASMod {
 
         // Регистрируем конфиг (общий для клиента и сервера)
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AASConfig.SPEC);
-
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, AASConfig.CLIENT_SPEC);
         // === ИСПРАВЛЕННАЯ РЕГИСТРАЦИЯ ЭКРАНА КОНФИГА ===
         // Мы используем DistExecutor, чтобы вызвать метод из ClientConfigRegistry.
         // Так как AASConfigScreen не упоминается в этом файле, сервер не попытается его загрузить.

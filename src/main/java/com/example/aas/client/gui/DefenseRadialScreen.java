@@ -84,7 +84,6 @@ public class DefenseRadialScreen extends Screen {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         PoseStack pose = gui.pose();
-
         int size = 95;
 
         for (int i = 0; i < 5; i++) {
@@ -95,25 +94,20 @@ public class DefenseRadialScreen extends Screen {
             boolean isSelected = (i == selected);
             float scale = isSelected ? 1.15f : 1.0f;
             pose.scale(scale, scale, 1.0f);
-
             pose.translate(-size / 2.0f, -size, 0);
 
-            if (isSelected) {
-                RenderSystem.setShaderColor(0.4f, 1.0f, 0.4f, 1.0f);
-            } else {
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            }
+            if (isSelected) RenderSystem.setShaderColor(0.4f, 1.0f, 0.4f, 1.0f);
+            else RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
             gui.blit(SECTOR_TEXTURE_5, 0, 0, 0, 0, size, size, size, size);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-
             pose.popPose();
         }
 
-        // 0 = 1x1, 1 = 2x2, 2 = 3x3, 3 = WIRE, 4 = HUB
-        drawLabel(gui, "1x1", centerX, centerY - 75, selected == 0);
-        drawLabel(gui, "2x2", centerX + 70, centerY - 25, selected == 1);
-        drawLabel(gui, "3x3", centerX + 45, centerY + 65, selected == 2);
+        // ОБНОВЛЕННЫЕ НАЗВАНИЯ:
+        drawLabel(gui, "Walls", centerX, centerY - 75, selected == 0);
+        drawLabel(gui, "Bunker", centerX + 70, centerY - 25, selected == 1);
+        drawLabel(gui, "Vehicle Station", centerX + 45, centerY + 65, selected == 2);
         drawLabel(gui, "WIRE", centerX - 45, centerY + 65, selected == 3);
         drawLabel(gui, "HUB", centerX - 70, centerY - 25, selected == 4);
     }
@@ -151,29 +145,27 @@ public class DefenseRadialScreen extends Screen {
                 if (shiftedAngle >= 360) shiftedAngle -= 360;
 
                 int sector = (int) (shiftedAngle / 72);
-                int actionId = 10 + sector;
 
                 // === ЛОГИКА ВЫБОРА ===
-                if (actionId == 10) {
-                    ClientPlacementHandler.startPlacing(10); // Wall 1x1
+                if (sector == 0) {
+                    this.isSwitching = true;
+                    Minecraft.getInstance().setScreen(new WallRadialScreen(this)); // Открываем меню стен
+                }
+                else if (sector == 1) { // Сектор Бункера
+                    com.example.aas.client.ClientPlacementHandler.startPlacing(17); // ID 17 для бункера
                     this.onClose();
                 }
-                else if (actionId == 11) {
-                    ClientPlacementHandler.startPlacing(11); // Wall 2x2
+                else if (sector == 2) {
+                    com.example.aas.client.ClientPlacementHandler.startPlacing(18); // ID 18
                     this.onClose();
                 }
-                else if (actionId == 12) {
-                    ClientPlacementHandler.startPlacing(12); // Wall 3x3
+                else if (sector == 3) {
+                    ClientPlacementHandler.startPlacing(13); // Wire
                     this.onClose();
                 }
-                // ... В методе mouseClicked
-                // selected == 3 (Сектор WIRE)
-                else if (actionId == 13) {
-                    ClientPlacementHandler.startPlacing(13); // ID 13 = Wire
-                    this.onClose();
-                }
-                else {
-                    PacketHandler.INSTANCE.sendToServer(new PacketRadioAction(actionId));
+                else if (sector == 4) {
+                    // Сразу отправляем пакет на сервер. Сервер сам всё проверит и поставит ХАБ.
+                    PacketHandler.INSTANCE.sendToServer(new PacketRadioAction(14));
                     this.onClose();
                 }
                 return true;

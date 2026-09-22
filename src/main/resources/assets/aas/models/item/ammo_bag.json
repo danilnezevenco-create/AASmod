@@ -1,3 +1,16 @@
 {
-	"parent": "aas:block/ammo_bag"
+  "loader": "forge:separate_transforms",
+  "base": {
+    "parent": "item/generated",
+    "textures": {
+      "layer0": "aas:item/ammo_bag_gui"
+    }
+  },
+  "perspectives": {
+    "firstperson_righthand": { "parent": "aas:block/ammo_bag" },
+    "firstperson_lefthand":  { "parent": "aas:block/ammo_bag" },
+    "thirdperson_righthand": { "parent": "aas:block/ammo_bag" },
+    "thirdperson_lefthand":  { "parent": "aas:block/ammo_bag" },
+    "ground":                { "parent": "aas:block/ammo_bag" }
+  }
 }

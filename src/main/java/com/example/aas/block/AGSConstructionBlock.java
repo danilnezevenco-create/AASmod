@@ -1,5 +1,6 @@
 package com.example.aas.block;
 import com.example.aas.entity.AGS30Entity;
+import com.example.aas.item.AGSAmmoItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -81,7 +82,8 @@ public class AGSConstructionBlock extends BaseEntityBlock {
         // 2. Сбрасываем поворот башни в 0 (относительно базы)
         gun.setTurretYaw(0f);
 
-        gun.setHasMagazine(false); // Спавним пустым
+        gun.setHasMagazine(true);
+        gun.setAmmoCount(AGSAmmoItem.MAX_AMMO); // 30 гранат
 
         level.addFreshEntity(gun);
         level.removeBlock(pos, false);

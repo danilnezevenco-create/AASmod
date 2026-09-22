@@ -4,12 +4,14 @@ import com.example.aas.network.PacketHandler;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.example.aas.sound.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import java.util.LinkedHashMap;
+import com.example.aas.network.PacketSquadMarker;
 import java.util.Map;
 
 public class TacticalMapRadialScreen extends Screen {
@@ -27,7 +29,11 @@ public class TacticalMapRadialScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(gui);
+        if (!this.minecraft.player.isAlive()) {
+            gui.fill(0, 0, this.width, this.height, 0xFF000000); // Полностью черный
+        } else {
+            this.renderBackground(gui); // Обычный полупрозрачный
+        }
 
         int centerX = this.width / 2;
         int centerY = this.height / 2;
@@ -77,6 +83,16 @@ public class TacticalMapRadialScreen extends Screen {
         drawLabel(gui, "TEAM", centerX, centerY - 70, selected == 0);
         drawLabel(gui, "ENEMY", centerX + 60, centerY + 30, selected == 1);
         drawLabel(gui, "SQUAD", centerX - 60, centerY + 30, selected == 2);
+
+        int cx = width / 2;
+        int cy = height / 2;
+        boolean hoverCenter = distance < 20;  // Если мышь в центре
+
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        if (hoverCenter) RenderSystem.setShaderColor(0.8f, 0.8f, 0.8f, 1);
+        gui.blit(new ResourceLocation("aas", "textures/gui/map_icons/player_circle.png"), cx - 12, cy - 12, 0, 0, 24, 24, 24, 24);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+
     }
 
     private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean selected) {
@@ -92,6 +108,20 @@ public class TacticalMapRadialScreen extends Screen {
             double dx = mx - centerX;
             double dy = my - centerY;
             double dist = Math.sqrt(dx * dx + dy * dy);
+
+            // --- ЛОГИКА ЦЕНТРАЛЬНОЙ КНОПКИ ТУТ ---
+            if (dist < 20) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(wx, wz, 6));
+                Minecraft.getInstance().player.playSound(ModSounds.MAP_MARKER_PLACE.get(), 1.0f, 1.0f);
+                if (!this.minecraft.player.isAlive()) {
+                    this.minecraft.setScreen(new com.example.aas.client.AASDeathScreen(null, false));
+                } else {
+                    this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
+                }
+                return true;
+            }
+            // -------------------------------------
+
             if (dist < 10) return false;
 
             double angle = Math.toDegrees(Math.atan2(dy, dx)) + 90;
@@ -121,6 +151,10 @@ public class TacticalMapRadialScreen extends Screen {
     private Map<String, ResourceLocation> getTeamMarkers() {
         Map<String, ResourceLocation> m = new LinkedHashMap<>();
         m.put("Supply Request", new ResourceLocation("aas", "textures/gui/map_icons/supply_request_marker.png"));
+
+        // Добавляем иконку сюда!
+        m.put("Artillery Request", new ResourceLocation("aas", "textures/gui/map_icons/artillery_request_marker.png"));
+
         return m;
     }
 

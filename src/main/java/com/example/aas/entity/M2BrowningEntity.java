@@ -163,12 +163,12 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
 
         if (!shooter.isCreative()) {
             if (!hasMagazine()) {
-                shooter.displayClientMessage(Component.literal("No Magazine!").withStyle(ChatFormatting.RED), true);
+                shooter.displayClientMessage(Component.translatable("aas.msg.m2.no_mag").withStyle(ChatFormatting.RED), true);
                 shootCooldown = 20;
                 return;
             }
             if (getAmmoCount() <= 0) {
-                shooter.displayClientMessage(Component.literal("Empty!").withStyle(ChatFormatting.RED), true);
+                shooter.displayClientMessage(Component.translatable("aas.msg.m2.empty").withStyle(ChatFormatting.RED), true);
                 shootCooldown = 20;
                 return;
             }
@@ -274,7 +274,7 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
                 setHasMagazine(false);
                 setAmmoCount(0);
                 this.playSound(ModSounds.M2_UNLOAD.get(), 1.0f, 1.0f);
-                player.displayClientMessage(Component.literal("Unloaded (" + remainingAmmo + ")"), true);
+                player.displayClientMessage(Component.translatable("aas.msg.m2.unloaded", remainingAmmo), true);
                 return InteractionResult.SUCCESS;
             }
 
@@ -285,7 +285,7 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
                     setAmmoCount(ammoInBox);
                     if (!player.isCreative()) stack.shrink(1);
                     this.playSound(ModSounds.M2_LOAD.get(), 1.0f, 1.0f);
-                    player.displayClientMessage(Component.literal("Loaded: " + ammoInBox + " rounds"), true);
+                    player.displayClientMessage(Component.translatable("aas.msg.m2.loaded", ammoInBox), true);
                     return InteractionResult.SUCCESS;
                 } else {
                     player.displayClientMessage(Component.literal("Already loaded!"), true);

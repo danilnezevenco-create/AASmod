@@ -19,11 +19,14 @@ public class ModCreativeModeTabs {
                     .displayItems((pParameters, pOutput) -> {
 
                         pOutput.accept(ModItems.SQUAD_LEADER_RADIO.get());
+                        pOutput.accept(ModItems.OFFICER_PHONE.get());
                         pOutput.accept(ModItems.ENTRENCHING_TOOL.get());
+                        pOutput.accept(ModItems.BINOCULARS.get());
                         pOutput.accept(ModItems.VEHICLE_SPAWNER_ITEM.get());
                         pOutput.accept(ModItems.MAIN_SUPPLY_ITEM.get());
                         pOutput.accept(ModItems.KIT_SETUP_ITEM.get());
                         pOutput.accept(ModItems.GAME_START_TRIGGER_ITEM.get());
+                        pOutput.accept(ModItems.INVASION_PREP_TRIGGER_ITEM.get());
 
                         pOutput.accept(ModItems.M2_AMMO.get());
                         pOutput.accept(ModItems.AGS_AMMO.get());
@@ -36,11 +39,16 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.BLUE_CAS_FIGHTER.get());    // New
                         pOutput.accept(ModItems.BLUE_COMBAT_VEHICLE.get());
                         pOutput.accept(ModItems.BLUE_INFANTRY_VEHICLE.get());
+                        pOutput.accept(ModItems.BLUE_ATGM_CARRIER.get());
                         pOutput.accept(ModItems.BLUE_SUPPLY_MARKER.get());
                         pOutput.accept(ModItems.BLUE_SUPPLY_HELICOPTER.get());
                         pOutput.accept(ModItems.BLUE_STATIC_ZU.get());
                         pOutput.accept(ModItems.BLUE_MOBILE_ZU.get());
                         pOutput.accept(ModItems.BLUE_BOAT.get());
+                        pOutput.accept(ModItems.BLUE_MOTORCYCLE.get());
+                        pOutput.accept(ModItems.BLUE_LIGHT_SUPPLY.get());
+                        pOutput.accept(ModItems.BLUE_HEAVY_SUPPLY.get());
+                        pOutput.accept(ModItems.BLUE_SPG.get());
                         // === RED TEAM ===
                         pOutput.accept(ModItems.RED_APC.get());
                         pOutput.accept(ModItems.RED_TANK.get());
@@ -49,11 +57,16 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.RED_CAS_FIGHTER.get());    // New
                         pOutput.accept(ModItems.RED_COMBAT_VEHICLE.get());
                         pOutput.accept(ModItems.RED_INFANTRY_VEHICLE.get());
+                        pOutput.accept(ModItems.RED_ATGM_CARRIER.get());
                         pOutput.accept(ModItems.RED_SUPPLY_MARKER.get());
                         pOutput.accept(ModItems.RED_SUPPLY_HELICOPTER.get());
                         pOutput.accept(ModItems.RED_STATIC_ZU.get());
                         pOutput.accept(ModItems.RED_MOBILE_ZU.get());
                         pOutput.accept(ModItems.RED_BOAT.get());
+                        pOutput.accept(ModItems.RED_MOTORCYCLE.get());
+                        pOutput.accept(ModItems.RED_LIGHT_SUPPLY.get());
+                        pOutput.accept(ModItems.RED_HEAVY_SUPPLY.get());
+                        pOutput.accept(ModItems.RED_SPG.get());
                     })
                     .build());
 

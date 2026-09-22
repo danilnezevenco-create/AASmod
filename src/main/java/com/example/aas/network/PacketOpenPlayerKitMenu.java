@@ -16,10 +16,33 @@ public class PacketOpenPlayerKitMenu {
         public String name;
         public boolean available;
         public String reason;
-        public List<ItemStack> items; // <--- ДОБАВЛЕНО
+        public List<ItemStack> items;
 
-        public KitDTO(String n, boolean a, String r, List<ItemStack> items) {
+        public boolean hasAlt;
+        public List<ItemStack> altItems;
+
+        public boolean isOfficer;
+
+        // === НОВОЕ: раздельные отображаемые названия ===
+        public String displayName;     // имя STANDARD-версии (уже с фоллбэком на name)
+        public String altDisplayName;  // имя ALTERNATIVE-версии (уже с фоллбэком на name)
+
+        public KitDTO(String n, boolean a, String r, List<ItemStack> items, boolean hasAlt, List<ItemStack> altItems,
+                      boolean isOfficer, String displayName, String altDisplayName) {
             this.name = n; this.available = a; this.reason = r; this.items = items;
+            this.hasAlt = hasAlt; this.altItems = altItems;
+            this.isOfficer = isOfficer;
+            this.displayName = (displayName == null || displayName.isEmpty()) ? n : displayName;
+            this.altDisplayName = (altDisplayName == null || altDisplayName.isEmpty()) ? n : altDisplayName;
+        }
+
+        // Старые сигнатуры — оставлены для обратной совместимости, displayName = name по умолчанию.
+        public KitDTO(String n, boolean a, String r, List<ItemStack> items, boolean hasAlt, List<ItemStack> altItems, boolean isOfficer) {
+            this(n, a, r, items, hasAlt, altItems, isOfficer, n, n);
+        }
+
+        public KitDTO(String n, boolean a, String r, List<ItemStack> items, boolean hasAlt, List<ItemStack> altItems) {
+            this(n, a, r, items, hasAlt, altItems, false, n, n);
         }
     }
 
@@ -32,9 +55,16 @@ public class PacketOpenPlayerKitMenu {
             buf.writeUtf(k.name);
             buf.writeBoolean(k.available);
             buf.writeUtf(k.reason);
-            // Пишем предметы
             buf.writeInt(k.items.size());
             for(ItemStack stack : k.items) buf.writeItem(stack);
+
+            buf.writeBoolean(k.hasAlt);
+            buf.writeInt(k.altItems.size());
+            for(ItemStack stack : k.altItems) buf.writeItem(stack);
+
+            buf.writeBoolean(k.isOfficer);
+            buf.writeUtf(k.displayName);      // <-- НОВОЕ
+            buf.writeUtf(k.altDisplayName);   // <-- НОВОЕ
         }
     }
 
@@ -49,7 +79,16 @@ public class PacketOpenPlayerKitMenu {
             List<ItemStack> items = new ArrayList<>();
             for(int j=0; j<itemCount; j++) items.add(buf.readItem());
 
-            list.add(new KitDTO(name, avail, reason, items));
+            boolean hasAlt = buf.readBoolean();
+            int altItemCount = buf.readInt();
+            List<ItemStack> altItems = new ArrayList<>();
+            for(int j=0; j<altItemCount; j++) altItems.add(buf.readItem());
+
+            boolean isOfficer = buf.readBoolean();
+            String displayName = buf.readUtf();      // <-- НОВОЕ
+            String altDisplayName = buf.readUtf();   // <-- НОВОЕ
+
+            list.add(new KitDTO(name, avail, reason, items, hasAlt, altItems, isOfficer, displayName, altDisplayName));
         }
         return new PacketOpenPlayerKitMenu(list);
     }

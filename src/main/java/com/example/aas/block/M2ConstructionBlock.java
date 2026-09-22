@@ -2,6 +2,7 @@
 package com.example.aas.block;
 
 import com.example.aas.entity.M2BrowningEntity;
+import com.example.aas.item.M2AmmoItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -82,7 +83,8 @@ public class M2ConstructionBlock extends BaseEntityBlock {
 
         gun.setYRot(yaw);
         gun.setTurretYaw(yaw);
-        gun.setHasMagazine(false);
+        gun.setHasMagazine(true);
+        gun.setAmmoCount(M2AmmoItem.MAX_AMMO); // 200 патронов
 
         level.addFreshEntity(gun);
         level.removeBlock(pos, false);

@@ -2,9 +2,12 @@ package com.example.aas.client.gui;
 
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketSquadMarker;
+import com.example.aas.sound.ModSounds;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -25,7 +28,11 @@ public class SquadMarkerRadialScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(gui);
+        if (!this.minecraft.player.isAlive()) {
+            gui.fill(0, 0, this.width, this.height, 0xFF000000);
+        } else {
+            this.renderBackground(gui);
+        }
         int centerX = width / 2;
         int centerY = height / 2;
         double dx = mouseX - centerX;
@@ -117,14 +124,23 @@ public class SquadMarkerRadialScreen extends Screen {
                 } else {
                     // Логика для TEAM и ENEMY (пока можно просто закрывать или слать типы 4 и 5)
                     PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(targetX, targetZ, sel + 4));
-                    this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
+                    if (!this.minecraft.player.isAlive()) {
+                        this.minecraft.setScreen(new com.example.aas.client.AASDeathScreen(null, false));
+                    } else {
+                        this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
+                    }
                 }
             } else {
                 double angle = Math.toDegrees(Math.atan2(dy, dx));
                 if (angle < 0) angle += 360;
                 int type = (angle >= 45 && angle < 135) ? 1 : (angle >= 135 && angle < 225) ? 2 : (angle >= 225 && angle < 315) ? 3 : 0;
                 PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(targetX, targetZ, type));
-                this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
+                Minecraft.getInstance().player.playSound(ModSounds.MAP_MARKER_PLACE.get(), 1.0f, 1.0f);
+                if (!this.minecraft.player.isAlive()) {
+                    this.minecraft.setScreen(new com.example.aas.client.AASDeathScreen(null, false));
+                } else {
+                    this.minecraft.setScreen(new com.example.aas.client.gui.SquadSelectionScreen());
+                }
             }
             return true;
         }

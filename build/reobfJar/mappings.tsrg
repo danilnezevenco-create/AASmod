@@ -1,4 +1,9 @@
 tsrg2 left right
+com/example/aas/mixin/ChatPanelMixin com/example/aas/mixin/ChatPanelMixin
+	chatScrollbarPos f_93763_
+	trimmedMessages f_93761_
+	getLinesPerPage ()I m_93816_
+	getScale ()D m_93815_
 com/mojang/blaze3d/Blaze3D com/mojang/blaze3d/Blaze3D
 	<init> ()V <init>
 	getTime ()D m_83640_

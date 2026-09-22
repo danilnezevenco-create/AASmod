@@ -14,6 +14,7 @@ public class MortarConstructionBlockEntity extends BlockEntity {
     public static final int MAX_PROGRESS = 2400; // 2 минуты (дольше, чем пулемет)
     private int currentProgress = 0;
     private int activeDiggers = 0;
+    private boolean sapperBoost = false;
     private String teamOwner = "NEUTRAL";
 
     public MortarConstructionBlockEntity(BlockPos pos, BlockState state) {
@@ -34,9 +35,12 @@ public class MortarConstructionBlockEntity extends BlockEntity {
         return (float) currentProgress / MAX_PROGRESS;
     }
 
-    public void addProgress() {
+    public void addProgress() { addProgress(false); }
+
+    public void addProgress(boolean isSapper) {
         if (currentProgress < MAX_PROGRESS) {
             this.activeDiggers++;
+            if (isSapper) this.sapperBoost = true;
             setChanged();
         }
     }
@@ -47,23 +51,24 @@ public class MortarConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, MortarConstructionBlockEntity entity) {
+    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, MortarConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
-
-                // Применяем множитель скорости из конфига
-                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                if (entity.sapperBoost) speed *= 2.0f;
+                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
-
                 entity.currentProgress += (int) Math.ceil(speed);
             }
 
             if (entity.currentProgress >= MAX_PROGRESS) {
-                // ВАЖНО: Проверяем MortarConstructionBlock
                 if (state.getBlock() instanceof MortarConstructionBlock block) {
+                    // === ПЫЛЬ ДЛЯ МОРТИРЫ ===
+                    ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                            25, 0.6, 0.4, 0.6, 0.05);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }
@@ -73,6 +78,7 @@ public class MortarConstructionBlockEntity extends BlockEntity {
             }
         }
         entity.activeDiggers = 0;
+        entity.sapperBoost = false;
     }
 
     @Override

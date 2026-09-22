@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "particle": "minecraft:block/dirt",
+    "up": "minecraft:block/dropper_front_vertical",
+    "down": "minecraft:block/dirt",
+    "north": "minecraft:block/dirt",
+    "south": "minecraft:block/dirt",
+    "east": "minecraft:block/dirt",
+    "west": "minecraft:block/dirt"
+  }
+}

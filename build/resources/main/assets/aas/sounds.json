@@ -18,6 +18,16 @@
       }
     ]
   },
+  "station_idle": {
+    "category": "block",
+    "subtitle": "subtitles.aas.station_idle",
+    "sounds": [
+      {
+        "name": "aas:station_idle",
+        "stream": true
+      }
+    ]
+  },
   "radio_open": {
     "category": "player",
     "sounds": [
@@ -34,6 +44,15 @@
       {
         "name": "aas:hub_idle",
         "stream": true
+      }
+    ]
+  },
+  "radio_beep": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "aas:radio_beep",
+        "stream": false
       }
     ]
   },
@@ -86,17 +105,87 @@
       }
     ]
   },
+  "player_downed": {
+    "category": "player",
+    "sounds": [
+      "aas:player_downed"
+    ]
+  },
+  "map_marker_place": {
+    "category": "player",
+    "sounds": [ "aas:map_marker_place" ]
+  },
+  "blueprint_place": {
+    "category": "block",
+    "sounds": [ "aas:blueprint_place" ]
+  },
   "help_scream": {
     "category": "player",
     "sounds": [
-      {
-        "name": "aas:help_scream",
-        "stream": false
-      }
+      "aas:help_scream"
     ]
   },
-  "player_downed": {
+  "team_select": {
     "category": "player",
-    "sounds": ["aas:player_downed"]
-  }
+    "sounds": [
+      "aas:team_select"
+    ]
+  },
+  "kit_select": {
+    "category": "player",
+    "sounds": [
+      "aas:kit_select"
+    ]
+  },
+  "squad_join": {
+    "category": "player",
+    "sounds": [
+      "aas:squad_join"
+    ]
+  },
+  "squad_leave": {
+    "category": "player",
+    "sounds": [
+      "aas:squad_leave"
+    ]
+  },
+  "ukraine_scream_1": { "category": "player", "sounds": ["aas:ukraine/scream_1"] },
+  "ukraine_scream_2": { "category": "player", "sounds": ["aas:ukraine/scream_2"] },
+  "ukraine_scream_3": { "category": "player", "sounds": ["aas:ukraine/scream_3"] },
+
+  "russia_scream_1": { "category": "player", "sounds": ["aas:russia/scream_1"] },
+  "russia_scream_2": { "category": "player", "sounds": ["aas:russia/scream_2"] },
+  "russia_scream_3": { "category": "player", "sounds": ["aas:russia/scream_3"] },
+
+  "usa_scream_1": { "category": "player", "sounds": ["aas:usa/scream_1"] },
+  "usa_scream_2": { "category": "player", "sounds": ["aas:usa/scream_2"] },
+  "usa_scream_3": { "category": "player", "sounds": ["aas:usa/scream_3"] },
+
+  "nato_scream_1": { "category": "player", "sounds": ["aas:nato/scream_1"] },
+  "nato_scream_2": { "category": "player", "sounds": ["aas:nato/scream_2"] },
+  "nato_scream_3": { "category": "player", "sounds": ["aas:nato/scream_3"] },
+
+  "bluefor_scream_1": { "category": "player", "sounds": ["aas:bluefor/scream_1"] },
+  "bluefor_scream_2": { "category": "player", "sounds": ["aas:bluefor/scream_2"] },
+  "bluefor_scream_3": { "category": "player", "sounds": ["aas:bluefor/scream_3"] },
+
+  "redfor_scream_1": { "category": "player", "sounds": ["aas:redfor/scream_1"] },
+  "redfor_scream_2": { "category": "player", "sounds": ["aas:redfor/scream_2"] },
+  "redfor_scream_3": { "category": "player", "sounds": ["aas:redfor/scream_3"] },
+
+  "insurgency_scream_1": { "category": "player", "sounds": ["aas:insurgency/scream_1"] },
+  "insurgency_scream_2": { "category": "player", "sounds": ["aas:insurgency/scream_2"] },
+  "insurgency_scream_3": { "category": "player", "sounds": ["aas:insurgency/scream_3"] },
+
+  "pmc_scream_1": { "category": "player", "sounds": ["aas:pmc/scream_1"] },
+  "pmc_scream_2": { "category": "player", "sounds": ["aas:pmc/scream_2"] },
+  "pmc_scream_3": { "category": "player", "sounds": ["aas:pmc/scream_3"] },
+
+  "germany_scream_1": { "category": "player", "sounds": ["aas:germany/scream_1"] },
+  "germany_scream_2": { "category": "player", "sounds": ["aas:germany/scream_2"] },
+  "germany_scream_3": { "category": "player", "sounds": ["aas:germany/scream_3"] },
+
+  "militia_scream_1": { "category": "player", "sounds": ["aas:militia/scream_1"] },
+  "militia_scream_2": { "category": "player", "sounds": ["aas:militia/scream_2"] },
+  "militia_scream_3": { "category": "player", "sounds": ["aas:militia/scream_3"] }
 }

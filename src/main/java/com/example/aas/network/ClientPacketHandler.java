@@ -1,12 +1,13 @@
 package com.example.aas.network;
 
 import com.example.aas.client.ClientData;
-// Импорт MapPlayerInfo удален, так как они в одном пакете
+// Раскомментируйте или добавьте этот импорт, если он пропал
+import com.example.aas.network.MapPlayerInfo;
 
 public class ClientPacketHandler {
     public static void handleSyncMap(PacketSyncMapPlayers msg) {
         ClientData.mapPlayers.clear();
-        for (MapPlayerInfo info : msg.getPlayers()) { // Используйте геттер или прямой доступ
+        for (MapPlayerInfo info : msg.getPlayers()) {
             ClientData.mapPlayers.put(info.name, info);
         }
     }

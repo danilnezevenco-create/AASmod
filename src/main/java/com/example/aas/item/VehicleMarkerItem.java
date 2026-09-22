@@ -14,17 +14,20 @@ public class VehicleMarkerItem extends Item {
     private final String team; // "BLUE" или "RED"
     private final String type; // Название техники
     private final int penalty; // Цена потери в тикетах
+    private final int maxMats; // <--- НОВОЕ ПОЛЕ
 
-    public VehicleMarkerItem(String team, String type, int penalty) {
+    public VehicleMarkerItem(String team, String type, int penalty, int maxMats) {
         super(new Item.Properties().stacksTo(1));
         this.team = team;
         this.type = type;
         this.penalty = penalty;
+        this.maxMats = maxMats;
     }
 
     public String getTeam() { return team; }
     public String getType() { return type; }
     public int getPenalty() { return penalty; }
+    public int getMaxMats() { return maxMats; } // <--- ГЕТТЕР
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
@@ -32,5 +35,8 @@ public class VehicleMarkerItem extends Item {
         tooltip.add(Component.literal("Team: " + team).withStyle(color));
         tooltip.add(Component.literal("Type: " + type).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Loss Penalty: -" + penalty + " Tickets").withStyle(ChatFormatting.DARK_RED));
+        if (maxMats > 0) {
+            tooltip.add(Component.literal("Contains: " + maxMats + " Materials").withStyle(ChatFormatting.YELLOW));
+        }
     }
 }

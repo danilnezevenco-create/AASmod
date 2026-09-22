@@ -27,20 +27,30 @@ public class ModBlocks {
             () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).noOcclusion()));
     public static final RegistryObject<Block> MORTAR_CONSTRUCTION_BLOCK = BLOCKS.register("mortar_construction", MortarConstructionBlock::new);
     public static final RegistryObject<Block> TOW_CONSTRUCTION_BLOCK = BLOCKS.register("tow_construction", TOWConstructionBlock::new);
-
+    public static final RegistryObject<Block> INVASION_PREP_TRIGGER = BLOCKS.register("invasion_prep_trigger", InvasionPrepTriggerBlock::new);
+    // Добавьте эту строку рядом с WALL_BLOCK
+    public static final RegistryObject<Block> WALL_SLAB_BLOCK = BLOCKS.register("wall_slab_block", WallSlabBlock::new);
     // Склады
     public static final RegistryObject<Block> AGS_AMMO_STACK_BLOCK = BLOCKS.register("ags_ammo_stack", AGSAmmoStackBlock::new);
     public static final RegistryObject<Block> M2_AMMO_STACK_BLOCK = BLOCKS.register("m2_ammo_stack", M2AmmoStackBlock::new);
     public static final RegistryObject<Block> MORTAR_SHELL_STACK_BLOCK = BLOCKS.register("mortar_shell_stack", MortarShellStackBlock::new);
     public static final RegistryObject<Block> TOW_MISSILE_STACK_BLOCK = BLOCKS.register("tow_missile_stack", TOWMissileStackBlock::new);
-
+    // В ModBlocks.java в секции === БЛОКИ ===
+    public static final RegistryObject<Block> BUNKER_BLOCK = BLOCKS.register("bunker_block", BunkerBlock::new);
+    public static final RegistryObject<Block> VEHICLE_STATION_BLOCK = BLOCKS.register("vehicle_station", VehicleStationBlock::new);
+    public static final RegistryObject<BlockEntityType<VehicleStationBlockEntity>> VEHICLE_STATION_BE = BLOCK_ENTITIES.register("vehicle_station_be",
+            () -> BlockEntityType.Builder.of(VehicleStationBlockEntity::new, VEHICLE_STATION_BLOCK.get()).build(null));
+    public static final RegistryObject<Block> CAMO_NET_BLOCK = BLOCKS.register("camo_net", CamoNetBlock::new);
+    // В секции === BLOCK ENTITIES ===
+    public static final RegistryObject<BlockEntityType<BunkerBlockEntity>> BUNKER_BE = BLOCK_ENTITIES.register("bunker_be",
+            () -> BlockEntityType.Builder.of(BunkerBlockEntity::new, BUNKER_BLOCK.get()).build(null));
     // === BLOCK ENTITIES ===
     public static final RegistryObject<BlockEntityType<RallyPointBlockEntity>> RALLY_BE = BLOCK_ENTITIES.register("rally_be", () -> BlockEntityType.Builder.of(RallyPointBlockEntity::new, BLUE_RALLY_BLOCK.get(), RED_RALLY_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<HubBlockEntity>> HUB_BE = BLOCK_ENTITIES.register("hub_be", () -> BlockEntityType.Builder.of(HubBlockEntity::new, HUB_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<BarbedWireBlockEntity>> WIRE_BE = BLOCK_ENTITIES.register("wire_be", () -> BlockEntityType.Builder.of(BarbedWireBlockEntity::new, BARBED_WIRE_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<AGSConstructionBlockEntity>> AGS_CONSTRUCTION_BE = BLOCK_ENTITIES.register("ags_construction_be", () -> BlockEntityType.Builder.of(AGSConstructionBlockEntity::new, AGS_CONSTRUCTION_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<M2ConstructionBlockEntity>> M2_CONSTRUCTION_BE = BLOCK_ENTITIES.register("m2_construction_be", () -> BlockEntityType.Builder.of(M2ConstructionBlockEntity::new, M2_CONSTRUCTION_BLOCK.get()).build(null));
-    public static final RegistryObject<BlockEntityType<WallBlockEntity>> WALL_BE = BLOCK_ENTITIES.register("wall_be", () -> BlockEntityType.Builder.of(WallBlockEntity::new, WALL_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<WallBlockEntity>> WALL_BE = BLOCK_ENTITIES.register("wall_be", () -> BlockEntityType.Builder.of(WallBlockEntity::new, WALL_BLOCK.get(), WALL_SLAB_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<MainSupplyBlockEntity>> MAIN_SUPPLY_BE = BLOCK_ENTITIES.register("main_supply_be", () -> BlockEntityType.Builder.of(MainSupplyBlockEntity::new, MAIN_SUPPLY_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<MortarConstructionBlockEntity>> MORTAR_CONSTRUCTION_BE = BLOCK_ENTITIES.register("mortar_construction_be", () -> BlockEntityType.Builder.of(MortarConstructionBlockEntity::new, MORTAR_CONSTRUCTION_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<TOWConstructionBlockEntity>> TOW_CONSTRUCTION_BE = BLOCK_ENTITIES.register("tow_construction_be", () -> BlockEntityType.Builder.of(TOWConstructionBlockEntity::new, TOW_CONSTRUCTION_BLOCK.get()).build(null));
@@ -53,7 +63,8 @@ public class ModBlocks {
                     AGS_AMMO_STACK_BLOCK.get(),
                     M2_AMMO_STACK_BLOCK.get()
             ).build(null));
-
+    public static final RegistryObject<BlockEntityType<AmmoBagBlockEntity>> AMMO_BAG_BE = BLOCK_ENTITIES.register("ammo_bag_be",
+            () -> BlockEntityType.Builder.of(AmmoBagBlockEntity::new, AMMO_BAG_BLOCK.get()).build(null));
     public static void register(IEventBus bus) {
         BLOCKS.register(bus);
         BLOCK_ENTITIES.register(bus);

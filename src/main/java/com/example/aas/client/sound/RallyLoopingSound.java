@@ -3,6 +3,7 @@ package com.example.aas.client.sound;
 import com.example.aas.block.RallyPointBlockEntity;
 import com.example.aas.sound.ModSounds;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 
@@ -15,9 +16,10 @@ public class RallyLoopingSound extends AbstractTickableSoundInstance {
         this.looping = true;
         this.delay = 0;
         this.volume = 0.4F; // Громкость
-        this.x = rally.getBlockPos().getX() + 0.5;
-        this.y = rally.getBlockPos().getY() + 0.5;
-        this.z = rally.getBlockPos().getZ() + 0.5;
+        this.attenuation = SoundInstance.Attenuation.LINEAR;
+        this.x = (float)rally.getBlockPos().getX() + 0.5f;
+        this.y = (float)rally.getBlockPos().getY() + 0.5f;
+        this.z = (float)rally.getBlockPos().getZ() + 0.5f;
     }
 
     @Override

@@ -11,20 +11,22 @@ import java.util.List;
 
 public class SupplyTruckMarkerItem extends Item {
     private final String team;
-    private final int penalty;       // <-- НОВОЕ ПОЛЕ
-    private final String vehicleType; // <-- НОВОЕ ПОЛЕ
+    private final int penalty;
+    private final String vehicleType;
+    private final int maxMats; // <--- НОВОЕ ПОЛЕ
 
-    // Обновленный конструктор
-    public SupplyTruckMarkerItem(String team, int penalty, String vehicleType) {
+    public SupplyTruckMarkerItem(String team, int penalty, String vehicleType, int maxMats) {
         super(new Properties().stacksTo(1));
         this.team = team;
         this.penalty = penalty;
         this.vehicleType = vehicleType;
+        this.maxMats = maxMats;
     }
 
     public String getTeam() { return team; }
     public int getPenalty() { return penalty; }
     public String getVehicleType() { return vehicleType; }
+    public int getMaxMats() { return maxMats; } // <--- ГЕТТЕР
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
@@ -32,9 +34,10 @@ public class SupplyTruckMarkerItem extends Item {
         tooltip.add(Component.literal("Team: " + team).withStyle(color));
         tooltip.add(Component.literal("Type: " + vehicleType).withStyle(ChatFormatting.GRAY));
 
-        // Заменили на динамическое значение:
         tooltip.add(Component.literal("Max " + com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get() + " Crates. Press X to drop.").withStyle(ChatFormatting.YELLOW));
-
+        if (maxMats > 0) {
+            tooltip.add(Component.literal("Contains: " + maxMats + " Materials").withStyle(ChatFormatting.YELLOW));
+        }
         tooltip.add(Component.literal("Loss Penalty: -" + penalty + " Tickets").withStyle(ChatFormatting.RED));
         tooltip.add(Component.literal("thank exactly").withStyle(ChatFormatting.DARK_PURPLE).withStyle(ChatFormatting.ITALIC));
     }

@@ -1,0 +1,58 @@
+{
+  "variants": {
+    "build_stage=0,constructed=false,facing=north,valid=true": { "model": "aas:block/wall_slab_base" },
+    "build_stage=0,constructed=false,facing=east,valid=true":  { "model": "aas:block/wall_slab_base", "y": 90 },
+    "build_stage=0,constructed=false,facing=south,valid=true": { "model": "aas:block/wall_slab_base", "y": 180 },
+    "build_stage=0,constructed=false,facing=west,valid=true":  { "model": "aas:block/wall_slab_base", "y": 270 },
+
+    "build_stage=0,constructed=false,facing=north,valid=false": { "model": "aas:block/wall_slab_invalid" },
+    "build_stage=0,constructed=false,facing=east,valid=false":  { "model": "aas:block/wall_slab_invalid", "y": 90 },
+    "build_stage=0,constructed=false,facing=south,valid=false": { "model": "aas:block/wall_slab_invalid", "y": 180 },
+    "build_stage=0,constructed=false,facing=west,valid=false":  { "model": "aas:block/wall_slab_invalid", "y": 270 },
+
+    "build_stage=1,constructed=false,facing=north,valid=true": { "model": "aas:block/wall_slab_stage1" },
+    "build_stage=1,constructed=false,facing=east,valid=true":  { "model": "aas:block/wall_slab_stage1", "y": 90 },
+    "build_stage=1,constructed=false,facing=south,valid=true": { "model": "aas:block/wall_slab_stage1", "y": 180 },
+    "build_stage=1,constructed=false,facing=west,valid=true":  { "model": "aas:block/wall_slab_stage1", "y": 270 },
+    "build_stage=1,constructed=false,facing=north,valid=false": { "model": "aas:block/wall_slab_stage1" },
+    "build_stage=1,constructed=false,facing=east,valid=false":  { "model": "aas:block/wall_slab_stage1", "y": 90 },
+    "build_stage=1,constructed=false,facing=south,valid=false": { "model": "aas:block/wall_slab_stage1", "y": 180 },
+    "build_stage=1,constructed=false,facing=west,valid=false":  { "model": "aas:block/wall_slab_stage1", "y": 270 },
+
+    "build_stage=2,constructed=false,facing=north,valid=true": { "model": "aas:block/wall_slab_stage2" },
+    "build_stage=2,constructed=false,facing=east,valid=true":  { "model": "aas:block/wall_slab_stage2", "y": 90 },
+    "build_stage=2,constructed=false,facing=south,valid=true": { "model": "aas:block/wall_slab_stage2", "y": 180 },
+    "build_stage=2,constructed=false,facing=west,valid=true":  { "model": "aas:block/wall_slab_stage2", "y": 270 },
+    "build_stage=2,constructed=false,facing=north,valid=false": { "model": "aas:block/wall_slab_stage2" },
+    "build_stage=2,constructed=false,facing=east,valid=false":  { "model": "aas:block/wall_slab_stage2", "y": 90 },
+    "build_stage=2,constructed=false,facing=south,valid=false": { "model": "aas:block/wall_slab_stage2", "y": 180 },
+    "build_stage=2,constructed=false,facing=west,valid=false":  { "model": "aas:block/wall_slab_stage2", "y": 270 },
+
+    "build_stage=0,constructed=true,facing=north,valid=true":  { "model": "aas:block/wall_slab_solid" },
+    "build_stage=0,constructed=true,facing=east,valid=true":   { "model": "aas:block/wall_slab_solid", "y": 90 },
+    "build_stage=0,constructed=true,facing=south,valid=true":  { "model": "aas:block/wall_slab_solid", "y": 180 },
+    "build_stage=0,constructed=true,facing=west,valid=true":   { "model": "aas:block/wall_slab_solid", "y": 270 },
+    "build_stage=0,constructed=true,facing=north,valid=false":  { "model": "aas:block/wall_slab_solid" },
+    "build_stage=0,constructed=true,facing=east,valid=false":   { "model": "aas:block/wall_slab_solid", "y": 90 },
+    "build_stage=0,constructed=true,facing=south,valid=false":  { "model": "aas:block/wall_slab_solid", "y": 180 },
+    "build_stage=0,constructed=true,facing=west,valid=false":   { "model": "aas:block/wall_slab_solid", "y": 270 },
+
+    "build_stage=1,constructed=true,facing=north,valid=true":  { "model": "aas:block/wall_slab_solid" },
+    "build_stage=1,constructed=true,facing=east,valid=true":   { "model": "aas:block/wall_slab_solid", "y": 90 },
+    "build_stage=1,constructed=true,facing=south,valid=true":  { "model": "aas:block/wall_slab_solid", "y": 180 },
+    "build_stage=1,constructed=true,facing=west,valid=true":   { "model": "aas:block/wall_slab_solid", "y": 270 },
+    "build_stage=1,constructed=true,facing=north,valid=false":  { "model": "aas:block/wall_slab_solid" },
+    "build_stage=1,constructed=true,facing=east,valid=false":   { "model": "aas:block/wall_slab_solid", "y": 90 },
+    "build_stage=1,constructed=true,facing=south,valid=false":  { "model": "aas:block/wall_slab_solid", "y": 180 },
+    "build_stage=1,constructed=true,facing=west,valid=false":   { "model": "aas:block/wall_slab_solid", "y": 270 },
+
+    "build_stage=2,constructed=true,facing=north,valid=true":  { "model": "aas:block/wall_slab_solid" },
+    "build_stage=2,constructed=true,facing=east,valid=true":   { "model": "aas:block/wall_slab_solid", "y": 90 },
+    "build_stage=2,constructed=true,facing=south,valid=true":  { "model": "aas:block/wall_slab_solid", "y": 180 },
+    "build_stage=2,constructed=true,facing=west,valid=true":   { "model": "aas:block/wall_slab_solid", "y": 270 },
+    "build_stage=2,constructed=true,facing=north,valid=false":  { "model": "aas:block/wall_slab_solid" },
+    "build_stage=2,constructed=true,facing=east,valid=false":   { "model": "aas:block/wall_slab_solid", "y": 90 },
+    "build_stage=2,constructed=true,facing=south,valid=false":  { "model": "aas:block/wall_slab_solid", "y": 180 },
+    "build_stage=2,constructed=true,facing=west,valid=false":   { "model": "aas:block/wall_slab_solid", "y": 270 }
+  }
+}

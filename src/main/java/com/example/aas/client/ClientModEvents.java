@@ -3,6 +3,7 @@ package com.example.aas.client;
 
 import com.example.aas.block.ModBlocks;
 import com.example.aas.client.renderer.*;
+import com.example.aas.client.renderer.AmmoBagIconRenderer;
 import com.example.aas.entity.ModEntities;
 import com.example.aas.menu.ModMenuTypes;
 import com.example.aas.client.gui.VehicleSpawnerScreen;
@@ -28,6 +29,9 @@ public class ClientModEvents {
 
         // Рендерер для ящика
         event.registerEntityRenderer(ModEntities.SUPPLY_CRATE.get(), SupplyCrateRenderer::new);
+
+        // Командная иконка над сумкой с патронами (видна только своей команде, как 3D-пинг)
+        event.registerBlockEntityRenderer(ModBlocks.AMMO_BAG_BE.get(), AmmoBagIconRenderer::new);
     }
 
     @SubscribeEvent
@@ -41,7 +45,6 @@ public class ClientModEvents {
             // Регистрация меню спавнера
             MenuScreens.register(ModMenuTypes.VEHICLE_SPAWNER_MENU.get(), VehicleSpawnerScreen::new);
 
-            // === ВОТ ЭТА СТРОКА РЕШАЕТ ПРОБЛЕМУ ===
             // Регистрация меню настройки китов
             MenuScreens.register(ModMenuTypes.KIT_EDITOR_MENU.get(), KitEditorScreen::new);
         });

@@ -10,6 +10,10 @@
     "com/example/aas/mixin/FirstPersonArmFixMixin": {
       "renderArmWithItem": "Lnet/minecraft/client/renderer/ItemInHandRenderer;m_109371_(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
     },
+    "com/example/aas/mixin/ChatPanelMixin": {
+      "render": "Lnet/minecraft/client/gui/components/ChatComponent;m_280165_(Lnet/minecraft/client/gui/GuiGraphics;III)V",
+      "getClickedComponentStyleAt": "Lnet/minecraft/client/gui/components/ChatComponent;m_93800_(DD)Lnet/minecraft/network/chat/Style;"
+    },
     "com/example/aas/mixin/PlayerSkinMixin": {
       "getSkinTextureLocation": "Lnet/minecraft/client/player/AbstractClientPlayer;m_108560_()Lnet/minecraft/resources/ResourceLocation;"
     }
@@ -25,6 +29,10 @@
       },
       "com/example/aas/mixin/FirstPersonArmFixMixin": {
         "renderArmWithItem": "Lnet/minecraft/client/renderer/ItemInHandRenderer;m_109371_(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+      },
+      "com/example/aas/mixin/ChatPanelMixin": {
+        "render": "Lnet/minecraft/client/gui/components/ChatComponent;m_280165_(Lnet/minecraft/client/gui/GuiGraphics;III)V",
+        "getClickedComponentStyleAt": "Lnet/minecraft/client/gui/components/ChatComponent;m_93800_(DD)Lnet/minecraft/network/chat/Style;"
       },
       "com/example/aas/mixin/PlayerSkinMixin": {
         "getSkinTextureLocation": "Lnet/minecraft/client/player/AbstractClientPlayer;m_108560_()Lnet/minecraft/resources/ResourceLocation;"

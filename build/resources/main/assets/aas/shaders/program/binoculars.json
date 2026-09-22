@@ -1,0 +1,25 @@
+{
+  "blend": {
+    "func": "add",
+    "srcprev": "one",
+    "dstprev": "zero",
+    "srcalpha": "one",
+    "dstalpha": "zero"
+  },
+  "vertex": "minecraft:blit",
+  "fragment": "aas:binoculars",
+  "attributes": [ "Position" ],
+  "samplers": [
+    { "name": "DiffuseSampler" }
+  ],
+  "uniforms": [
+    { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+    { "name": "InSize",  "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] },
+    { "name": "OutSize", "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] },
+    { "name": "TubeRadius",   "type": "float", "count": 1, "values": [ 0.48 ] },
+    { "name": "TubeSoftness", "type": "float", "count": 1, "values": [ 0.15 ] },
+    { "name": "TubeSpacing",  "type": "float", "count": 1, "values": [ 0.20 ] },
+    { "name": "TubeMerge",    "type": "float", "count": 1, "values": [ 0.05 ] },
+    { "name": "ChromaticAberration", "type": "float", "count": 1, "values": [ 1.5 ] }
+  ]
+}

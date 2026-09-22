@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.network.NetworkEvent;
+import com.example.aas.world.AASWorldData;
 
 import java.util.function.Supplier;
 
@@ -37,17 +38,41 @@ public class PacketDownedAction {
                 // Вся логика смерти, сообщений в чат и снятия тикетов теперь находится в этом методе:
                 com.example.aas.events.DownedHandler.forceGiveUp(player);
             }
-            else if (msg.action == 0) { // CALL MEDIC
+            // В файле PacketDownedAction.java в методе handle (внутри else if (msg.action == 0))
+            // В PacketDownedAction.java внутри метода handle, в блоке action == 0 (Call Medic)
+            else if (msg.action == 0) {
                 long currentTime = level.getGameTime();
                 long lastCall = player.getPersistentData().getLong("AAS_LastMedicShout");
 
-                // Защита от спама кнопкой "Позвать медика" (задержка 5 секунд)
-                if (currentTime - lastCall >= 100) {
+                if (currentTime - lastCall >= 300) {
                     player.getPersistentData().putLong("AAS_LastMedicShout", currentTime);
-                    player.getPersistentData().putLong("AAS_LastMedicShoutTimeMS", System.currentTimeMillis());
+                    player.getPersistentData().putLong("AAS_LastMedicShoutTimeMS", level.getGameTime());
 
-                    level.playSound(null, player.blockPosition(),
-                            ModSounds.HELP_SCREAM.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+                    AASWorldData data = AASWorldData.get(level);
+                    String faction = "none";
+
+                    if (player.getTeam() != null) {
+                        String teamName = player.getTeam().getName();
+                        faction = teamName.equalsIgnoreCase("Blue") ? data.blueFaction : data.redFaction;
+                    }
+
+                    net.minecraft.sounds.SoundEvent finalSound;
+
+                    // ПРОВЕРКА: Если фракция не установлена ("none" или пустая), сразу ставим обычный крик
+                    if (faction == null || faction.isEmpty() || faction.equalsIgnoreCase("none")) {
+                        finalSound = ModSounds.HELP_SCREAM.get();
+                    }
+                    // Иначе проверяем, есть ли такая фракция в нашем списке звуков
+                    else if (ModSounds.FACTION_SCREAMS.containsKey(faction.toLowerCase())) {
+                        int randomIndex = player.getRandom().nextInt(3);
+                        finalSound = ModSounds.FACTION_SCREAMS.get(faction.toLowerCase()).get(randomIndex).get();
+                    }
+                    // Если фракция какая-то странная, которой нет в списке — тоже обычный крик
+                    else {
+                        finalSound = ModSounds.HELP_SCREAM.get();
+                    }
+
+                    level.playSound(null, player.getX(), player.getY(), player.getZ(), finalSound, SoundSource.PLAYERS, 2.0F, 1.0F);
                 }
             }
         });

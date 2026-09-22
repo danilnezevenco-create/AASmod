@@ -5,7 +5,7 @@ issueTrackerURL="https://github.com/"
 
 [[mods]]
 modId="aas"
-version="1.7.1"
+version="1.8.0"
 displayName="Advance And Secure"
 displayURL="https://www.curseforge.com/minecraft/mc-mods/aas"
 logoFile="logo.png"
@@ -29,4 +29,15 @@ modId="forge"
 mandatory=true
 versionRange="[47,)"
 ordering="NONE"
+side="BOTH"
+
+[[dependencies.aas]]
+modId="voicechat"
+mandatory=false
+versionRange="[1.20.1,)"
+# ИСПРАВЛЕНО: было ordering="NONE". AAS регистрирует @ForgeVoicechatPlugin
+# и обращается к VoicechatServerApi - ставим AFTER, чтобы Forge гарантированно
+# грузил AAS только после того, как voicechat (если установлен) полностью
+# инициализирован. Это убирает потенциальную гонку порядка загрузки модов.
+ordering="AFTER"
 side="BOTH"

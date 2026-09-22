@@ -1,0 +1,18 @@
+{
+  "targets": ["swap"],
+  "passes": [
+    {
+      "name": "aas:binoculars",
+      "intarget": "minecraft:main",
+      "outtarget": "swap",
+      "uniforms": [
+        { "name": "TubeRadius",       "values": [0.48] },
+        { "name": "TubeSoftness",     "values": [0.15] },
+        { "name": "TubeSpacing",      "values": [0.20] },
+        { "name": "TubeMerge",        "values": [0.05] },
+        { "name": "ChromaticAberration", "values": [1.5] }
+      ]
+    },
+    { "name": "blit", "intarget": "swap", "outtarget": "minecraft:main" }
+  ]
+}

@@ -17,6 +17,8 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
 import com.example.aas.sound.ModSounds;
+import net.minecraft.sounds.SoundSource;
+import com.example.aas.sound.ModSounds;
 
 import java.util.function.Supplier;
 
@@ -57,7 +59,7 @@ public class PacketRadioAction {
 
             if (!player.isCreative()) {
                 if (player.getTeam() == null) {
-                    player.sendSystemMessage(Component.literal("Access Denied: You must be in a TEAM!").withStyle(ChatFormatting.RED));
+                    player.sendSystemMessage(Component.translatable("aas.msg.need_team").withStyle(ChatFormatting.RED));
                     return;
                 }
                 if (playerSquad == null) {
@@ -74,7 +76,7 @@ public class PacketRadioAction {
             long currentGameTime = currentLevel.getGameTime();
 
             if (msg.actionId == 0) { // Rally
-                long lastUse = stack.getOrCreateTag().getLong("RallyCooldownEnd");
+                long lastUse = playerSquad.nextRallyAvailableTick;
                 if (currentGameTime < lastUse && !player.isCreative()) {
                     long timeLeft = (lastUse - currentGameTime) / 20;
                     player.sendSystemMessage(Component.literal("Rally Point Cooldown: " + timeLeft + "s").withStyle(ChatFormatting.RED));
@@ -90,12 +92,19 @@ public class PacketRadioAction {
                 if (team.equals("NEUTRAL") && player.isCreative()) team = "BLUE";
 
                 if (trySpawnRally(player, currentLevel, team, playerSquad, data)) {
-                    long nextAvailableTime = currentGameTime + (13 * 60 * 20); // 8 минут КД
-                    stack.getOrCreateTag().putLong("RallyCooldownEnd", nextAvailableTime);
+                    // Мелкая поправка: 10 * 60 * 20 это 10 минут, а не 8. Если нужно 8, ставь 8 * 60 * 20
+                    playerSquad.nextRallyAvailableTick = currentGameTime + (5 * 60 * 20);
                     player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
+                    com.example.aas.events.StatsHandler.addStats(player, 0, 15, "Rally Placed");
                 } else {
-                    stack.getOrCreateTag().putLong("RallyCooldownEnd", currentGameTime + (30 * 20)); // Штраф 30 сек
+                    playerSquad.nextRallyAvailableTick = currentGameTime + (15 * 20);
                 }
+
+                // === ОБЯЗАТЕЛЬНО ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ СЮДА ===
+                // Чтобы клиент точно узнал о новом КД отряда (и в случае успеха, и в случае провала)
+                data.setDirty();
+                PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(player.level()::dimension), new PacketSyncSquads(data.squads));
+
             } else {
                 handleConstructionLogic(msg.actionId, player, currentLevel, data);
             }
@@ -112,17 +121,19 @@ public class PacketRadioAction {
         if (actionId == 14) { // HUB
             final String playerTeam = (player.getTeam() != null) ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
 
-            // 1. Проверка лимита ХАБов
+            // 1. Проверка лимита ХАБов (Теперь из AASWorldData)
             long hubCount = data.hubs.stream().filter(h -> h.team.equalsIgnoreCase(playerTeam)).count();
-            if (hubCount >= AASConfig.MAX_HUBS_PER_TEAM.get() && !player.isCreative()) {
-                player.sendSystemMessage(Component.literal("FOB Limit Reached for this world!").withStyle(ChatFormatting.RED));
+            int maxHubsAllowed = playerTeam.equals("BLUE") ? data.maxBlueHubs : data.maxRedHubs;
+
+            if (hubCount >= maxHubsAllowed && !player.isCreative()) {
+                player.sendSystemMessage(Component.translatable("aas.msg.hub_limit", maxHubsAllowed).withStyle(ChatFormatting.RED));
                 return;
             }
 
             // 2. Проверка дистанции до союзных ХАБов
             for (AASWorldData.HubInfo existingHub : data.hubs) {
                 if (existingHub.team.equalsIgnoreCase(playerTeam) && existingHub.pos.distSqr(targetPos) < AASConfig.MIN_HUB_DISTANCE.get() * AASConfig.MIN_HUB_DISTANCE.get()) {
-                    player.sendSystemMessage(Component.literal("Too close to friendly FOB!").withStyle(ChatFormatting.RED));
+                    player.sendSystemMessage(Component.translatable("aas.msg.too_close_hub").withStyle(ChatFormatting.RED));
                     return;
                 }
             }
@@ -139,26 +150,48 @@ public class PacketRadioAction {
                         .findFirst().orElse(null);
 
                 if (targetCrate == null) {
-                    player.sendSystemMessage(Component.literal("FOB placement requires a Supply Crate within 50 blocks!").withStyle(ChatFormatting.RED));
+                    player.sendSystemMessage(Component.translatable("aas.msg.hub_needs_crate").withStyle(ChatFormatting.RED));
                     return;
                 } else {
                     targetCrate.discard(); // Удаляем ящик
-                    player.sendSystemMessage(Component.literal("Supply Crate consumed for FOB placement.").withStyle(ChatFormatting.YELLOW));
+                    player.sendSystemMessage(Component.literal("Supply Crate consumed for HUB placement.").withStyle(ChatFormatting.YELLOW));
                 }
             }
 
             // 4. Установка блока и сохранение данных
             level.setBlock(targetPos, ModBlocks.HUB_BLOCK.get().defaultBlockState(), 3);
+            level.playSound(null, targetPos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
             BlockEntity be = level.getBlockEntity(targetPos);
             if (be instanceof HubBlockEntity hubEntity) {
                 hubEntity.setTeam(playerTeam);
                 level.sendBlockUpdated(targetPos, level.getBlockState(targetPos), level.getBlockState(targetPos), 3);
             }
 
-            data.hubs.add(new AASWorldData.HubInfo(targetPos, playerTeam, false, level.dimension().location().toString()));
+            // --- ИЗМЕНЕНО: ИСПОЛЬЗУЕМ player.getScoreboardName() вместо pName ---
+            data.hubs.add(new AASWorldData.HubInfo(targetPos, playerTeam, false, level.dimension().location().toString(), player.getScoreboardName()));
+            com.example.aas.events.StatsHandler.addStats(player, 20, 0, "FOB Placed");
+            // --------------------------------------------------------------------
+
             data.setDirty();
             PacketHandler.sendToAllClients(level, data);
-            player.sendSystemMessage(Component.literal("FOB Blueprint placed!").withStyle(ChatFormatting.GREEN));
+            player.sendSystemMessage(Component.literal("HUB Blueprint placed!").withStyle(ChatFormatting.GREEN));
+        } if (actionId == 18) { // Vehicle Station
+            String playerTeam = (player.getTeam() != null) ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
+
+            level.setBlock(targetPos, ModBlocks.VEHICLE_STATION_BLOCK.get().defaultBlockState(), 3);
+            level.playSound(null, targetPos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
+
+            BlockEntity be = level.getBlockEntity(targetPos);
+            if (be instanceof VehicleStationBlockEntity vs) {
+                vs.setTeam(playerTeam);
+            }
+
+            // ДОБАВЛЯЕМ В СПИСОК ДЛЯ КАРТЫ
+            data.vehicleStations.add(new AASWorldData.StationInfo(targetPos, playerTeam, level.dimension().location().toString()));
+            data.setDirty();
+            PacketHandler.sendToAllClients(level, data);
+
+            player.sendSystemMessage(Component.literal("Vehicle Station Blueprint placed.").withStyle(ChatFormatting.GREEN));
         } else if (actionId == 20)
             placeBlueprint(level, targetPos, player, ModBlocks.M2_CONSTRUCTION_BLOCK.get().defaultBlockState().setValue(M2ConstructionBlock.FACING, player.getDirection().getOpposite()), "M2");
         else if (actionId == 21)
@@ -172,6 +205,7 @@ public class PacketRadioAction {
     private static void placeBlueprint(ServerLevel level, BlockPos pos, ServerPlayer player, BlockState state, String name) {
         if (!level.getBlockState(pos).isAir() && !level.getBlockState(pos).canBeReplaced()) return;
         level.setBlock(pos, state, 3);
+        level.playSound(null, pos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
         BlockEntity be = level.getBlockEntity(pos);
         String pTeam = (player.getTeam() != null) ? player.getTeam().getName() : "NEUTRAL";
 
@@ -188,14 +222,16 @@ public class PacketRadioAction {
 
         // 1. ПРОВЕРКА: Близость к точкам захвата
         for (AASWorldData.CapturePoint point : data.capturePoints) {
-            Vec3 center = point.area.getCenter();
-            if (pos.distToCenterSqr(center.x, center.y, center.z) < AASConfig.MIN_RALLY_POINT_DISTANCE.get() * AASConfig.MIN_RALLY_POINT_DISTANCE.get()) {
-                player.sendSystemMessage(Component.literal("Too close to Capture Point!").withStyle(ChatFormatting.RED));
-                return false;
+            for (AABB zoneArea : point.getAllAreas()) {
+                Vec3 center = zoneArea.getCenter();
+                if (pos.distToCenterSqr(center.x, center.y, center.z) < AASConfig.MIN_RALLY_POINT_DISTANCE.get() * AASConfig.MIN_RALLY_POINT_DISTANCE.get()) {
+                    player.sendSystemMessage(Component.literal("Too close to Capture Point!").withStyle(ChatFormatting.RED));
+                    return false;
+                }
             }
         }
 
-        // 2. ПРОВЕРКА: Враги в радиусе блокировки (из конфига)
+        // 2. ПРОВЕРКА: Враги в радиусе блокировки
         int checkRadius = AASConfig.RALLY_BLOCK_RADIUS.get();
         AABB enemyBox = new AABB(pos).inflate(checkRadius);
         for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, enemyBox)) {
@@ -205,54 +241,53 @@ public class PacketRadioAction {
             }
         }
 
-        // 3. ПРОВЕРКА: Buddy System (Нужен 1 союзник в радиусе 5 блоков)
-        AABB allyBox = new AABB(pos).inflate(5);
-        int allies = 0;
-        for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, allyBox)) {
-            if (p != player && !p.isSpectator() && p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(team)) {
-                allies++;
+        // === РАСЧЕТ СООТРЯДНИКОВ (Вот этой части у вас не хватало) ===
+        int playerSquadId = player.getPersistentData().getInt("AAS_SquadID");
+        AABB squadBox = new AABB(pos).inflate(10);
+        int squadMatesNearby = 0;
+
+        for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, squadBox)) {
+            if (p == player || p.isSpectator()) continue;
+
+            int otherSquadId = p.getPersistentData().getInt("AAS_SquadID");
+            // Если ID совпадают и это не 0
+            if (playerSquadId != 0 && otherSquadId == playerSquadId) {
+                squadMatesNearby++;
             }
         }
+        // ============================================================
 
-        // ВЫПОЛНЕНИЕ: Если союзник рядом ИЛИ игрок в креативе
-        if (allies >= 1 || player.isCreative()) {
+        // Теперь условие будет работать
+        if (squadMatesNearby >= 1 || player.isCreative()) {
 
-            // 1. УДАЛЕНИЕ СТАРОГО РАЛИКА БЕЗ ШТРАФА
             if (squad.rallyPos != null && level.isLoaded(squad.rallyPos)) {
-                // Пытаемся найти BlockEntity старого ралика
                 BlockEntity oldBe = level.getBlockEntity(squad.rallyPos);
                 if (oldBe instanceof RallyPointBlockEntity rbe) {
-                    // ГЛАВНОЕ: ставим флаг Decay, чтобы при удалении блока НЕ снялись тикеты
                     rbe.isDecay = true;
                 }
-                // Теперь удаляем блок - штрафа не будет
                 level.removeBlock(squad.rallyPos, false);
             }
 
-            // 2. УСТАНОВКА НОВОГО БЛОКА
             BlockState rallyState = team.equals("BLUE") ? ModBlocks.BLUE_RALLY_BLOCK.get().defaultBlockState() : ModBlocks.RED_RALLY_BLOCK.get().defaultBlockState();
             level.setBlock(pos, rallyState, 3);
 
-            // Привязываем ID отряда к новому блоку
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof RallyPointBlockEntity rbe) {
                 rbe.setSquadId(squad.id);
             }
 
-
-            // Сохраняем данные
             squad.rallyPos = pos;
             squad.rallyDimension = level.dimension().location().toString();
-            squad.rallyExpiryTick = level.getGameTime() + 12000; // 10 минут
+            squad.rallyExpiryTick = level.getGameTime() + 12000;
+
+            if (be instanceof RallyPointBlockEntity rbe) {
+                rbe.setExpiryTick(squad.rallyExpiryTick);
+            }
 
             player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
 
-            // Обновление данных мира
-            if (team.equals("BLUE")) {
-                data.blueRallies.add(pos);
-            } else {
-                data.redRallies.add(pos);
-            }
+            if (team.equals("BLUE")) data.blueRallies.add(pos);
+            else data.redRallies.add(pos);
 
             data.setDirty();
             PacketHandler.sendToAllClients(level, data);
@@ -260,7 +295,7 @@ public class PacketRadioAction {
 
             return true;
         } else {
-            player.sendSystemMessage(Component.literal("Need 1 ally nearby!").withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(Component.translatable("aas.msg.need_squadmate").withStyle(ChatFormatting.RED));
             return false;
         }
     }

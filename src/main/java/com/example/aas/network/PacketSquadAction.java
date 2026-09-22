@@ -1,7 +1,7 @@
 // PATH: src\main\java\com\example\aas\network\PacketSquadAction.java
 package com.example.aas.network;
 
-import com.example.aas.config.AASConfig; // <--- ДОБАВЛЕН ИМПОРТ
+import com.example.aas.config.AASConfig;
 import com.example.aas.item.ModItems;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.ChatFormatting;
@@ -11,6 +11,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
+import com.example.aas.util.SquadPlaytimeHelper;
+import java.util.ArrayList;
 
 import java.util.function.Supplier;
 
@@ -73,15 +75,14 @@ public class PacketSquadAction {
                 AASWorldData.Squad newSquad = new AASWorldData.Squad(newId, finalName, pTeam, pName, currentDim);
                 newSquad.members.add(pName);
                 data.squads.add(newSquad);
-
+                com.example.aas.voicechat.VoicechatCompat.createAndJoinGroup(player, newId, finalName);
                 updatePlayerTags(player, newId, true);
 
-                // ПРОВЕРКА КОНФИГА: ВЫДАЕМ РАЦИЮ ЛИДЕРУ ТОЛЬКО ЕСЛИ ВКЛЮЧЕНО
                 if (AASConfig.AUTO_GIVE_SL_RADIO.get()) {
                     giveRadio(player);
                 }
 
-                player.sendSystemMessage(Component.literal("Squad created: " + finalName).withStyle(ChatFormatting.GOLD));
+                player.sendSystemMessage(Component.translatable("aas.msg.squad_created", finalName).withStyle(ChatFormatting.GOLD));
             }
             // === 1. JOIN ===
             else if (msg.action == 1) {
@@ -98,8 +99,12 @@ public class PacketSquadAction {
                         leaveCurrentSquad(player, data);
 
                         s.members.add(pName);
+                        com.example.aas.voicechat.VoicechatCompat.joinGroup(player, s.id);
                         updatePlayerTags(player, s.id, false);
-                        player.sendSystemMessage(Component.literal("Joined squad: " + s.name).withStyle(ChatFormatting.GREEN));
+                        player.sendSystemMessage(Component.translatable("aas.msg.joined_squad", s.name).withStyle(ChatFormatting.GREEN));
+                        long hours = SquadPlaytimeHelper.getPlaytimeHoursByName(player.server, s.leader);
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                                new PacketSquadLeaderPlaytime(s.leader, hours, true));
                         break;
                     }
                 }
@@ -107,31 +112,26 @@ public class PacketSquadAction {
             // === 2. LEAVE ===
             else if (msg.action == 2) {
                 leaveCurrentSquad(player, data);
-                player.sendSystemMessage(Component.literal("You left the squad.").withStyle(ChatFormatting.YELLOW));
+                player.sendSystemMessage(Component.translatable("aas.msg.left_squad").withStyle(ChatFormatting.YELLOW));
             }
             // === 3. KICK ===
             else if (msg.action == 3) {
                 AASWorldData.Squad targetSquad = null;
-                // Ищем отряд по ID
                 for(AASWorldData.Squad s : data.squads) { if(s.id == msg.squadId) { targetSquad = s; break; } }
 
                 if (targetSquad != null) {
                     String targetName = msg.stringData;
                     ServerPlayer targetEntity = player.server.getPlayerList().getPlayerByName(targetName);
 
-                    // УСЛОВИЕ 1: Лидер кикает игрока (как раньше)
                     boolean isLeaderKicking = targetSquad.leader.equals(pName) && !targetName.equals(pName);
-
-                    // УСЛОВИЕ 2: Игрок кикает оффлайн-лидера
                     boolean isKickingOfflineLeader = targetName.equals(targetSquad.leader) && targetEntity == null && targetSquad.members.contains(pName);
 
                     if (isLeaderKicking || isKickingOfflineLeader) {
                         if (targetSquad.members.remove(targetName)) {
-                            // Если кикнули лидера — назначаем нового (первого в списке)
                             if (targetName.equals(targetSquad.leader) && !targetSquad.members.isEmpty()) {
+                                targetSquad.removeFromFireteams(targetSquad.members.get(0));
                                 targetSquad.leader = targetSquad.members.get(0);
 
-                                // Выдаем новому лидеру теги и радио
                                 ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(targetSquad.leader);
                                 if (newLeader != null) {
                                     updatePlayerTags(newLeader, targetSquad.id, true);
@@ -140,11 +140,13 @@ public class PacketSquadAction {
                                 }
                             }
 
-                            // Если кикнутый игрок был онлайн — чистим ему теги
                             if (targetEntity != null) {
                                 removePlayerTags(targetEntity);
                                 removeRadio(targetEntity);
+                                com.example.aas.voicechat.VoicechatCompat.leaveGroup(targetEntity);
                                 targetEntity.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
+                                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> targetEntity),
+                                        new PacketSquadLeaderPlaytime("", -1, false));
                             }
 
                             player.server.getPlayerList().broadcastSystemMessage(
@@ -162,21 +164,33 @@ public class PacketSquadAction {
                     if (mySquad.members.contains(targetName)) {
 
                         removeRadio(player);
-
+                        mySquad.removeFromFireteams(targetName);
                         mySquad.leader = targetName;
+                        long hoursForMembers = SquadPlaytimeHelper.getPlaytimeHoursByName(player.server, targetName);
+                        for (String memberName : mySquad.members) {
+                            if (memberName.equals(targetName)) continue; // сам новый лидер плашку не видит
+                            ServerPlayer m = player.server.getPlayerList().getPlayerByName(memberName);
+                            if (m != null) {
+                                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> m),
+                                        new PacketSquadLeaderPlaytime(targetName, hoursForMembers, true));
+                            }
+                        }
                         updatePlayerTags(player, mySquad.id, false);
 
                         ServerPlayer target = player.server.getPlayerList().getPlayerByName(targetName);
                         if (target != null) {
                             updatePlayerTags(target, mySquad.id, true);
 
-                            // ПРОВЕРКА КОНФИГА: ВЫДАЕМ РАЦИЮ НОВОМУ ЛИДЕРУ ТОЛЬКО ЕСЛИ ВКЛЮЧЕНО
                             if (AASConfig.AUTO_GIVE_SL_RADIO.get()) {
                                 giveRadio(target);
                             }
-
-                            target.displayClientMessage(Component.literal("You have been promoted to Squad Leader!").withStyle(ChatFormatting.GOLD), true);
+                            target.displayClientMessage(Component.translatable("aas.msg.promoted_sl").withStyle(ChatFormatting.GOLD), true);
                         }
+                        // ПРИМЕЧАНИЕ: если targetName сейчас офлайн, его AAS_SquadID/AAS_IsSquadLeader
+                        // не обновятся здесь (некому). mySquad.leader в мировых данных уже верный,
+                        // но персистентные теги игрока рассинхронизируются до его следующего входа.
+                        // Нужно досинхронизировать их в обработчике логина игрока (PlayerLoggedInEvent),
+                        // иначе после захода этот игрок временно не будет проходить проверку amICommander/SL.
 
                         player.sendSystemMessage(Component.literal("Promoted " + targetName).withStyle(ChatFormatting.GOLD));
                     }
@@ -189,10 +203,119 @@ public class PacketSquadAction {
                     mySquad.isLocked = !mySquad.isLocked;
                     String status = mySquad.isLocked ? "LOCKED" : "UNLOCKED";
                     ChatFormatting color = mySquad.isLocked ? ChatFormatting.RED : ChatFormatting.GREEN;
-                    player.sendSystemMessage(Component.literal("Squad is now " + status).withStyle(color));
+                    player.sendSystemMessage(Component.translatable(mySquad.isLocked ? "aas.msg.squad_locked" : "aas.msg.squad_unlocked").withStyle(color));
                 }
             }
+            // === 6. ASSIGN FTL BRAVO ===
+            else if (msg.action == 6) {
+                AASWorldData.Squad mySquad = getPlayerSquad(pName, data);
+                if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.bravoLeader.equals(pName))) {
+                    String target = msg.stringData;
+                    if (mySquad.members.contains(target) && !mySquad.leader.equals(target) && !mySquad.charlieLeader.equals(target)) {
+                        mySquad.removeFromFireteams(target);
+                        mySquad.bravoLeader = target;
+                        if (!mySquad.bravoMembers.contains(target)) mySquad.bravoMembers.add(target);
+                        player.sendSystemMessage(Component.translatable("aas.msg.ftl_assigned", target, "Bravo").withStyle(ChatFormatting.GOLD));
+                    }
+                }
+            }
+            // === 7. ASSIGN FTL CHARLIE ===
+            else if (msg.action == 7) {
+                AASWorldData.Squad mySquad = getPlayerSquad(pName, data);
+                if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.charlieLeader.equals(pName))) {
+                    String target = msg.stringData;
+                    if (mySquad.members.contains(target) && !mySquad.leader.equals(target) && !mySquad.bravoLeader.equals(target)) {
+                        mySquad.removeFromFireteams(target);
+                        mySquad.charlieLeader = target;
+                        if (!mySquad.charlieMembers.contains(target)) mySquad.charlieMembers.add(target);
+                        player.sendSystemMessage(Component.translatable("aas.msg.ftl_assigned", target, "Charlie").withStyle(ChatFormatting.GOLD));
+                    }
+                }
+            }
+            // === 8. ADD TO BRAVO ===
+            else if (msg.action == 8) {
+                AASWorldData.Squad mySquad = getPlayerSquad(pName, data);
+                if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.bravoLeader.equals(pName))) {
+                    String target = msg.stringData;
+                    if (mySquad.members.contains(target) && !mySquad.leader.equals(target)) {
+                        mySquad.removeFromFireteams(target);
+                        mySquad.bravoMembers.add(target);
+                    }
+                }
+            }
+            // === 9. ADD TO CHARLIE ===
+            else if (msg.action == 9) {
+                AASWorldData.Squad mySquad = getPlayerSquad(pName, data);
+                if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.charlieLeader.equals(pName))) {
+                    String target = msg.stringData;
+                    if (mySquad.members.contains(target) && !mySquad.leader.equals(target)) {
+                        mySquad.removeFromFireteams(target);
+                        mySquad.charlieMembers.add(target);
+                    }
+                }
+            }
+            // === 10. REMOVE FROM FIRETEAM ===
+            else if (msg.action == 10) {
+                AASWorldData.Squad mySquad = getPlayerSquad(pName, data);
+                if (mySquad != null) {
+                    String target = msg.stringData;
+                    boolean canRemove = mySquad.leader.equals(pName) ||
+                            (mySquad.bravoLeader.equals(pName) && mySquad.bravoMembers.contains(target)) ||
+                            (mySquad.charlieLeader.equals(pName) && mySquad.charlieMembers.contains(target));
 
+                    if (canRemove) {
+                        mySquad.removeFromFireteams(target);
+                    }
+                }
+            }
+            else if (msg.action == 11) { // DISBAND SQUAD (CMD Only)
+                AASWorldData.Squad targetSquad = null;
+                for(AASWorldData.Squad s : data.squads) { if(s.id == msg.squadId) { targetSquad = s; break; } }
+
+                if (targetSquad != null) {
+                    boolean isBlue = targetSquad.team.equalsIgnoreCase("Blue");
+                    int teamCmdId = isBlue ? data.blueCMDId : data.redCMDId;
+
+                    if (player.getPersistentData().getInt("AAS_SquadID") == teamCmdId && player.getPersistentData().getBoolean("AAS_IsSquadLeader")) {
+
+                        Component disbandMsg = Component.translatable("aas.msg.cmd_disbanded_squad", targetSquad.name).withStyle(ChatFormatting.RED);
+                        for (ServerPlayer teamPlayer : player.server.getPlayerList().getPlayers()) {
+                            if (teamPlayer.getTeam() != null && teamPlayer.getTeam().getName().equalsIgnoreCase(targetSquad.team)) {
+                                teamPlayer.sendSystemMessage(disbandMsg);
+                            }
+                        }
+
+                        for (String memberName : new ArrayList<>(targetSquad.members)) {
+                            ServerPlayer m = player.server.getPlayerList().getPlayerByName(memberName);
+                            if (m != null) {
+                                m.getPersistentData().putString("AAS_CurrentKit", "Unassigned");
+                                com.example.aas.network.PacketHandler.INSTANCE.send(
+                                        net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> m),
+                                        new com.example.aas.network.PacketSyncMyKit("Unassigned"));
+                                m.getPersistentData().remove("AAS_PendingKit");
+                                m.getPersistentData().remove("AAS_SquadID");
+                                m.getPersistentData().remove("AAS_IsSquadLeader");
+                                removeRadio(m);
+                                m.getInventory().clearContent();
+                                com.example.aas.network.ResupplyHandler.clearCurios(m);
+                                m.inventoryMenu.broadcastChanges();
+                                m.displayClientMessage(Component.translatable("aas.msg.squad_disbanded_cmd").withStyle(ChatFormatting.RED), true);
+                                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> m),
+                                        new PacketSquadLeaderPlaytime("", -1, false));
+                                com.example.aas.voicechat.VoicechatCompat.leaveGroup(m);
+                            }
+                        }
+
+                        data.squads.remove(targetSquad);
+                        if (msg.squadId == teamCmdId) {
+                            if (isBlue) data.blueCMDId = -1; else data.redCMDId = -1;
+                        }
+
+                        data.setDirty();
+                        PacketHandler.sendToAllClients(player.serverLevel(), data);
+                    }
+                }
+            }
             data.setDirty();
             PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(player.level()::dimension), new PacketSyncSquads(data.squads));
         });
@@ -221,20 +344,46 @@ public class PacketSquadAction {
 
     public static void leaveCurrentSquad(ServerPlayer player, AASWorldData data) {
         String pName = player.getScoreboardName();
+        com.example.aas.voicechat.VoicechatCompat.leaveGroup(player);
 
-        // 1. Удаляем из списков отрядов
         for (AASWorldData.Squad s : data.squads) {
             if (s.members.contains(pName)) {
                 s.members.remove(pName);
+                s.removeFromFireteams(pName);
+
+                String pTeam = (player.getTeam() != null) ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
+                boolean voteCancelled = false;
+
+                if (pTeam.equals("BLUE") && data.blueCmdVoteActive && data.blueCmdCandidateName.equals(pName)) {
+                    data.blueCmdVoteActive = false;
+                    data.blueCmdVotes.clear();
+                    voteCancelled = true;
+                } else if (pTeam.equals("RED") && data.redCmdVoteActive && data.redCmdCandidateName.equals(pName)) {
+                    data.redCmdVoteActive = false;
+                    data.redCmdVotes.clear();
+                    voteCancelled = true;
+                }
+
+                if (voteCancelled) {
+                    Component cancelMsg = Component.literal("CMD Application cancelled: " + pName + " left.")
+                            .withStyle(ChatFormatting.RED);
+                    player.server.getPlayerList().broadcastSystemMessage(cancelMsg, false);
+                }
+
                 if (s.leader.equals(pName)) {
-                    removeRadio(player); // Забираем рацию
+                    removeRadio(player);
+
                     if (!s.members.isEmpty()) {
+                        s.removeFromFireteams(s.members.get(0));
                         s.leader = s.members.get(0);
                         ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(s.leader);
                         if (newLeader != null) {
                             updatePlayerTags(newLeader, s.id, true);
                             if (com.example.aas.config.AASConfig.AUTO_GIVE_SL_RADIO.get()) giveRadio(newLeader);
                         }
+                    } else {
+                        if (s.id == data.blueCMDId) data.blueCMDId = -1;
+                        if (s.id == data.redCMDId) data.redCMDId = -1;
                     }
                 }
                 break;
@@ -242,28 +391,26 @@ public class PacketSquadAction {
         }
         data.squads.removeIf(s -> s.members.isEmpty());
 
-        // 2. СБРОС КИТА (Теги и Инвентарь)
-        // Пишем "Unassigned", чтобы сбросить текущий кит
         player.getPersistentData().putString("AAS_CurrentKit", "Unassigned");
-        // Очищаем PendingKit (пустая строка), чтобы убрать "Бронирование"
+        com.example.aas.network.PacketHandler.INSTANCE.send(
+                net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                new com.example.aas.network.PacketSyncMyKit("Unassigned"));
         player.getPersistentData().putString("AAS_PendingKit", "");
 
-        // Полная очистка инвентаря (включая броню и вторую руку)
         player.getInventory().clearContent();
+        com.example.aas.network.ResupplyHandler.clearCurios(player);
         player.inventoryMenu.broadcastChanges();
         player.containerMenu.broadcastChanges();
 
-        // Убираем теги отряда
         removePlayerTags(player);
-
-        // 3. Сообщение игроку
+        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                new PacketSquadLeaderPlaytime("", -1, false));
         if (!data.isGameStarted) {
-            player.displayClientMessage(Component.literal("§eLeft squad. Pre-game kit cleared."), true);
+            player.displayClientMessage(Component.translatable("aas.msg.left_squad_pregame").withStyle(ChatFormatting.YELLOW), true);
         } else {
-            player.displayClientMessage(Component.literal("§eLeft squad. Equipment reset."), true);
+            player.displayClientMessage(Component.translatable("aas.msg.left_squad_reset").withStyle(ChatFormatting.YELLOW), true);
         }
 
-        // 4. СИНХРОНИЗАЦИЯ (Чтобы иконка в меню пропала у всех сразу)
         data.setDirty();
         PacketHandler.sendToAllClients(player.serverLevel(), data);
     }
@@ -272,12 +419,12 @@ public class PacketSquadAction {
         if (player == null) return;
         boolean hasRadio = false;
         for (ItemStack stack : player.getInventory().items) {
-            if (stack.getItem() == ModItems.SQUAD_LEADER_RADIO.get()) {
+            if (stack.getItem() instanceof com.example.aas.item.RallyItem) {
                 hasRadio = true;
                 break;
             }
         }
-        if (!hasRadio && player.getOffhandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get()) hasRadio = true;
+        if (!hasRadio && player.getOffhandItem().getItem() instanceof com.example.aas.item.RallyItem) hasRadio = true;
 
         if (!hasRadio) {
             ItemStack radioStack = new ItemStack(ModItems.SQUAD_LEADER_RADIO.get());
@@ -291,11 +438,11 @@ public class PacketSquadAction {
         if (player == null) return;
 
         if (!com.example.aas.config.AASConfig.AUTO_GIVE_SL_RADIO.get()) {
-            return; // Если конфиг выключен, ничего не забираем!
+            return;
         }
 
         player.getInventory().clearOrCountMatchingItems(
-                p -> p.getItem() == ModItems.SQUAD_LEADER_RADIO.get(),
+                p -> p.getItem() instanceof com.example.aas.item.RallyItem,
                 -1,
                 player.inventoryMenu.getCraftSlots());
         player.inventoryMenu.broadcastChanges();
