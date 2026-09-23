@@ -82,6 +82,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketReviveProgress.class, PacketReviveProgress::encode, PacketReviveProgress::decode, PacketReviveProgress::handle);
         INSTANCE.registerMessage(id++, PacketSquadLeaderPlaytime.class, PacketSquadLeaderPlaytime::encode, PacketSquadLeaderPlaytime::decode, PacketSquadLeaderPlaytime::handle);
         INSTANCE.registerMessage(id++, PacketDeleteMarker.class, PacketDeleteMarker::encode, PacketDeleteMarker::decode, PacketDeleteMarker::handle);
+        INSTANCE.registerMessage(id++, PacketPlaceRadialMarker.class, PacketPlaceRadialMarker::encode, PacketPlaceRadialMarker::decode, PacketPlaceRadialMarker::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

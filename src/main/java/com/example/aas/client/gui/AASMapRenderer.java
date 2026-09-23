@@ -73,6 +73,9 @@ public class AASMapRenderer implements AutoCloseable {
     private static final ResourceLocation MAIN_BASE_ICON = new ResourceLocation("aas", "textures/gui/map_icons/main_base.png");
     private static final ResourceLocation ICON_OBJ_ATTACK = new ResourceLocation("aas", "textures/gui/map_icons/objective_attack.png");
     private static final ResourceLocation ICON_OBJ_DEFEND = new ResourceLocation("aas", "textures/gui/map_icons/objective_defend.png");
+    private static final int COLOR_SQUAD_LINE = 0xFF00FF00; // чистый зелёный (#00FF00), как в референсе
+    private static final int COLOR_BRAVO_LINE   = 0xFFAA33FF; // фиолетовый — Bravo
+    private static final int COLOR_CHARLIE_LINE = 0xFF00E5CC; // бирюзовый — Charlie
     private static final ResourceLocation HUB_SELECTED_ICON = new ResourceLocation("aas", "textures/gui/map_icons/hub_icon_selected.png");
     private static final ResourceLocation RALLY_SELECTED_ICON = new ResourceLocation("aas", "textures/gui/map_icons/rally_icon_selected.png");
     private static final ResourceLocation MAIN_SELECTED_ICON = new ResourceLocation("aas", "textures/gui/map_icons/main_base_selected.png");
@@ -394,7 +397,7 @@ public class AASMapRenderer implements AutoCloseable {
 
                 // РќРћР’РћР•: РЅР°Рґ РєСЂСѓР¶РєРѕРј вЂ” Р±СѓРєРІР° B/C РґР»СЏ РіР»Р°РІС‹ С„Р°РµСЂС‚РёРјР°, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёРј С†РІРµС‚РѕРј
                 if (!info.isDowned && info.fireteamRole != null && !info.fireteamRole.isEmpty()) {
-                    int fireteamColor = "B".equals(info.fireteamRole) ? 0xFFFF00FF : 0xFF00FFAA; // С‚Р°РєРёРµ Р¶Рµ С†РІРµС‚Р°, РєР°Рє Сѓ РјРµС‚РѕРє Bravo/Charlie
+                    int fireteamColor = "B".equals(info.fireteamRole) ? COLOR_BRAVO_LINE : COLOR_CHARLIE_LINE;
                     gui.pose().pushPose();
                     gui.pose().translate(sx, sy - 9, 360);
                     gui.pose().scale(0.5f, 0.5f, 1.0f);
@@ -927,27 +930,27 @@ public class AASMapRenderer implements AutoCloseable {
         if (mySquad.marker != null && mySquad.marker.type != 6) {
             drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.marker,
                     getSquadMarkerIcon(mySquad.marker.type),
-                    getSquadMarkerColor(mySquad.marker.type),
-                    true); // РїСѓРЅРєС‚РёСЂ РІСЃРµРіРґР°
+                    COLOR_SQUAD_LINE, // ← было getSquadMarkerColor(mySquad.marker.type)
+                    true);
         }
 
-        // РњРµС‚РєР° Bravo
+        // Метка Bravo
         if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6) {
             boolean canSee = isSL || isBravo;
             if (canSee) {
-                boolean withDash = isSL || isBravo; // СЃРІРѕРё вЂ” СЃ РїСѓРЅРєС‚РёСЂРѕРј
+                boolean withDash = isSL || isBravo; // свои — с пунктиром
                 drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.bravoMarker,
-                        getBravoMarkerIcon(mySquad.bravoMarker.type), 0xFFFF00FF, withDash);
+                        getBravoMarkerIcon(mySquad.bravoMarker.type), COLOR_BRAVO_LINE, withDash);
             }
         }
 
-        // РњРµС‚РєР° Charlie
+        // Метка Charlie
         if (mySquad.charlieMarker != null && mySquad.charlieMarker.type != 6) {
             boolean canSee = isSL || isCharlie;
             if (canSee) {
-                boolean withDash = isSL || isCharlie; // СЃРІРѕРё вЂ” СЃ РїСѓРЅРєС‚РёСЂРѕРј
+                boolean withDash = isSL || isCharlie; // свои — с пунктиром
                 drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.charlieMarker,
-                        getCharlieMarkerIcon(mySquad.charlieMarker.type), 0xFF00FFAA, withDash);
+                        getCharlieMarkerIcon(mySquad.charlieMarker.type), COLOR_CHARLIE_LINE, withDash);
             }
         }
 
@@ -956,12 +959,12 @@ public class AASMapRenderer implements AutoCloseable {
         if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6 && !isSL && !isBravo) {
             // isCharlie РёР»Рё РїСЂРѕСЃС‚Рѕ РЅРµ Bravo Рё РЅРµ SL вЂ” РІРёРґРёС‚ РјРµС‚РєСѓ Р±РµР· РїСѓРЅРєС‚РёСЂР°
             drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.bravoMarker,
-                    getBravoMarkerIcon(mySquad.bravoMarker.type), 0xFFFF00FF, false);
+                    getBravoMarkerIcon(mySquad.bravoMarker.type), COLOR_BRAVO_LINE, false);
         }
 
         if (mySquad.charlieMarker != null && mySquad.charlieMarker.type != 6 && !isSL && !isCharlie) {
             drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.charlieMarker,
-                    getCharlieMarkerIcon(mySquad.charlieMarker.type), 0xFF00FFAA, false);
+                    getCharlieMarkerIcon(mySquad.charlieMarker.type), COLOR_CHARLIE_LINE, false);
         }
     }
 
@@ -976,7 +979,7 @@ public class AASMapRenderer implements AutoCloseable {
         int py = (int) (mapY + (mapSize / 2) + (mc.player.getZ() - cz) / bpp);
 
         if (withDash) {
-            drawDashedLine(gui, px, py, mx, my, color);
+            drawSolidLine(gui, px, py, mx, my, color);   // ← было drawDashedLine(gui, px, py, mx, my, color);
         }
 
         if (isPointOnMap(mx, my)) {
@@ -997,14 +1000,7 @@ public class AASMapRenderer implements AutoCloseable {
     }
 
     private int getSquadMarkerColor(int type) {
-        switch (type) {
-            case 1: return 0xFFFFAA00; // Attack
-            case 2: return 0xFF5555FF; // Defend
-            case 3: return 0xFFFF55FF; // Build
-            case 4: return 0xFFFFFFFF; // Team
-            case 5: return 0xFFFF0000; // Enemy
-            default: return 0xFF55FF55; // Move (Green)
-        }
+        return COLOR_SQUAD_LINE; // теперь всегда салатовый, независимо от типа метки (move/attack/build/...)
     }
     private ResourceLocation getSquadMarkerIcon(int type) {
         switch (type) {

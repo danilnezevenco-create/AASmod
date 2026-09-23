@@ -531,14 +531,14 @@ public class AASOverlay {
 
     private static String getDirectionLabel(int degree) {
         switch (degree) {
-            case 0: return "S";
-            case 45: return "SW";
-            case 90: return "W";
-            case 135: return "NW";
-            case 180: return "N";
-            case 225: return "NE";
-            case 270: return "E";
-            case 315: return "SE";
+            case 0: return I18n.get("aas.compass.s");
+            case 45: return I18n.get("aas.compass.sw");
+            case 90: return I18n.get("aas.compass.w");
+            case 135: return I18n.get("aas.compass.nw");
+            case 180: return I18n.get("aas.compass.n");
+            case 225: return I18n.get("aas.compass.ne");
+            case 270: return I18n.get("aas.compass.e");
+            case 315: return I18n.get("aas.compass.se");
             default: return String.valueOf(degree);
         }
     }
@@ -574,12 +574,12 @@ public class AASOverlay {
         gui.renderOutline(x, y, pWidth, pHeight, 0xFF55FF55);
 
         // Используем локальную переменную candidateName
-        gui.drawCenteredString(mc.font, "CMD VOTE: " + candidateName, x + pWidth/2, y + 5, 0xFFFFD700);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.cmd_vote", candidateName), x + pWidth/2, y + 5, 0xFFFFD700);
 
         gui.pose().pushPose();
         gui.pose().scale(0.75f, 0.75f, 1.0f);
         int sx = (int)((x + pWidth/2)/0.75f);
-        gui.drawCenteredString(mc.font, "Needs 50% SL votes to pass", sx, (int)((y + 16)/0.75f), 0xFFAAAAAA);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.cmd_vote_hint"), sx, (int)((y + 16)/0.75f), 0xFFAAAAAA);
         gui.pose().popPose();
 
         gui.fill(x + 5, y + 28, x + pWidth - 5, y + 29, 0x55FFFFFF);
@@ -605,9 +605,9 @@ public class AASOverlay {
 
         // 6. Подсказка по кнопкам
         if (!mc.player.getScoreboardName().equals(candidateName)) {
-            gui.drawCenteredString(mc.font, "F7: YES | F8: NO", x + pWidth/2, y + pHeight - 12, 0xFFBBBBBB);
+            gui.drawCenteredString(mc.font, I18n.get("aas.hud.cmd_vote_keys"), x + pWidth/2, y + pHeight - 12, 0xFFBBBBBB);
         } else {
-            gui.drawCenteredString(mc.font, "WAITING FOR VOTES", x + pWidth/2, y + pHeight - 12, 0xFF55FF55);
+            gui.drawCenteredString(mc.font, I18n.get("aas.hud.waiting_for_votes"), x + pWidth/2, y + pHeight - 12, 0xFF55FF55);
         }
     }
 
@@ -644,16 +644,16 @@ public class AASOverlay {
 
         gui.fill(x, y, x + 150, y + 45, 0xAA000000);
         gui.renderOutline(x, y, 150, 45, 0xFFFF5555);
-        gui.drawCenteredString(mc.font, "ARTILLERY REQUEST", x + 75, y + 5, 0xFFFF5555);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.artillery_request"), x + 75, y + 5, 0xFFFF5555);
 
         gui.pose().pushPose();
         gui.pose().scale(0.8f, 0.8f, 1.0f);
         int sx = (int)((x + 75) / 0.8f);
-        gui.drawCenteredString(mc.font, "From: " + requester, sx, (int)((y + 18)/0.8f), 0xFFFFFFFF);
-        gui.drawCenteredString(mc.font, "Pos: " + pos.getX() + ", " + pos.getZ(), sx, (int)((y + 28)/0.8f), 0xFFAAAAAA);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.from", requester), sx, (int)((y + 18)/0.8f), 0xFFFFFFFF);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.pos", pos.getX(), pos.getZ()), sx, (int)((y + 28)/0.8f), 0xFFAAAAAA);
         gui.pose().popPose();
 
-        gui.drawCenteredString(mc.font, "PgUp: CONFIRM | PgDn: DENY", x + 75, y + 35, 0xFFFFFF55);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.artillery_keys"), x + 75, y + 35, 0xFFFFFF55);
 
         // Полоска прогресса (рассчитана строго на 200 тиков / 10 секунд)
         float progress = Math.max(0, timer / 200f);
@@ -728,7 +728,7 @@ public class AASOverlay {
 
             // 4. ТЕКСТ
             String teamDisplayName = note.team.equalsIgnoreCase("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
-            String status = note.isNeutralized ? " neutralized " : " captured ";
+            String status = note.isNeutralized ? (" " + I18n.get("aas.hud.neutralized") + " ") : (" " + I18n.get("aas.hud.captured") + " ");
             String msg = (teamDisplayName + status + note.pointName).toUpperCase();
 
             int textAlpha = (int)(overallAlpha * 255) << 24;
@@ -846,7 +846,7 @@ public class AASOverlay {
         gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
 
         // Заголовок
-        gui.drawCenteredString(mc.font, "Build Mode", xStart + (uiWidth / 2), yStart + 4, goldLight);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.build_mode"), xStart + (uiWidth / 2), yStart + 4, goldLight);
 
         RenderSystem.enableBlend();
 
@@ -855,7 +855,7 @@ public class AASOverlay {
         // Иконка ЛКМ
         gui.blit(MOUSE_LEFT, xStart + 8, row1Y, 0, 0, 12, 12, 12, 12);
         // Текст
-        gui.drawString(mc.font, "Rotate", xStart + 26, row1Y + 2, 0xFFFFFFFF, true);
+        gui.drawString(mc.font, I18n.get("aas.hud.rotate"), xStart + 26, row1Y + 2, 0xFFFFFFFF, true);
         // Иконка Действия (Круговая стрелка)
         gui.blit(ICON_ROTATE, xStart + uiWidth - 20, row1Y, 0, 0, 12, 12, 12, 12);
 
@@ -864,7 +864,7 @@ public class AASOverlay {
         // Иконка ПКМ
         gui.blit(MOUSE_RIGHT, xStart + 8, row2Y, 0, 0, 12, 12, 12, 12);
         // Текст
-        gui.drawString(mc.font, "Confirm", xStart + 26, row2Y + 2, 0xFFFFFFFF, true);
+        gui.drawString(mc.font, I18n.get("aas.hud.confirm"), xStart + 26, row2Y + 2, 0xFFFFFFFF, true);
         // Иконка Действия (Галочка / Молоток)
         gui.blit(ICON_CONFIRM, xStart + uiWidth - 20, row2Y, 0, 0, 12, 12, 12, 12);
 
@@ -1022,7 +1022,7 @@ public class AASOverlay {
             if (team.equalsIgnoreCase("BLUE")) teamColor = 0xFF5555FF;
             else if (team.equalsIgnoreCase("RED")) teamColor = 0xFFFF5555;
 
-            String text = "Materials: " + mats;
+            String text = I18n.get("aas.hud.materials", mats);
             int textWidth = mc.font.width(text);
             int textX = (width - textWidth) / 2;
             int textY = height - 70;
@@ -1108,10 +1108,10 @@ public class AASOverlay {
 
         RenderSystem.enableBlend();
         gui.blit(BUILD_ICON, xStart + 8, yStart + 8, 0, 0, 12, 12, 12, 12);
-        gui.drawString(mc.font, "Build", xStart + 26, yStart + 10, 0xFFFFFFFF, true);
+        gui.drawString(mc.font, I18n.get("aas.hud.build"), xStart + 26, yStart + 10, 0xFFFFFFFF, true);
 
         gui.blit(DIG_ICON, xStart + 8, yStart + 24, 0, 0, 12, 12, 12, 12);
-        gui.drawString(mc.font, "Destroy", xStart + 26, yStart + 26, 0xFFFFFFFF, true);
+        gui.drawString(mc.font, I18n.get("aas.hud.destroy"), xStart + 26, yStart + 26, 0xFFFFFFFF, true);
 
         int barX = xStart + 26;
         int barY = yStart + 42;
@@ -1124,9 +1124,9 @@ public class AASOverlay {
         }
 
         if (finished) {
-            gui.drawCenteredString(mc.font, "Structure finished!", xStart + uiWidth/2, yStart + 52, 0xFFFFFF00);
+            gui.drawCenteredString(mc.font, I18n.get("aas.hud.structure_finished"), xStart + uiWidth/2, yStart + 52, 0xFFFFFF00);
         } else if (isEnemy) {
-            gui.drawCenteredString(mc.font, "Enemy structure!", xStart + uiWidth/2, yStart + 52, 0xFFFF5555);
+            gui.drawCenteredString(mc.font, I18n.get("aas.hud.enemy_structure"), xStart + uiWidth/2, yStart + 52, 0xFFFF5555);
         }
         RenderSystem.disableBlend();
     }
@@ -1360,7 +1360,7 @@ public class AASOverlay {
         gui.renderOutline(xPos, yPos, panelWidth, panelHeight, 0xFFFFFFFF);
 
         // 5. Заголовок и Таймер
-        gui.drawCenteredString(mc.font, "VOTE TO START", xPos + panelWidth / 2, yPos + 5, 0xFFFFD700);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.vote_to_start"), xPos + panelWidth / 2, yPos + 5, 0xFFFFD700);
         int seconds = Math.max(0, ClientData.voteTimer);
         String timeStr = String.format("%02d:%02d", seconds / 60, seconds % 60);
         gui.drawCenteredString(mc.font, timeStr, xPos + panelWidth / 2, yPos + 16, 0xFFFFFFFF);
@@ -1375,8 +1375,8 @@ public class AASOverlay {
         int redColor = ClientData.redReady ? 0xFF55FF55 : 0xFFFF5555;
 
         // Рисуем названия фракций и их статус
-        gui.drawString(mc.font, blueName + ": " + (ClientData.blueReady ? "READY" : "WAITING"), xPos + 8, yPos + 32, blueColor, true);
-        gui.drawString(mc.font, redName + ": " + (ClientData.redReady ? "READY" : "WAITING"), xPos + 8, yPos + 44, redColor, true);
+        gui.drawString(mc.font, blueName + ": " + (ClientData.blueReady ? I18n.get("aas.hud.ready") : I18n.get("aas.hud.waiting_status")), xPos + 8, yPos + 32, blueColor, true);
+        gui.drawString(mc.font, redName + ": " + (ClientData.redReady ? I18n.get("aas.hud.ready") : I18n.get("aas.hud.waiting_status")), xPos + 8, yPos + 44, redColor, true);
 
         // 7. Список игроков команды (начинается ниже статусов фракций)
         int currentY = yPos + headerHeight + statusHeight;
@@ -1399,7 +1399,7 @@ public class AASOverlay {
         }
 
         // 8. Подсказка в самом низу
-        gui.drawCenteredString(mc.font, "F9: YES | F10: NO", xPos + panelWidth / 2, yPos + panelHeight - 12, 0xFFBBBBBB);
+        gui.drawCenteredString(mc.font, I18n.get("aas.hud.vote_keys"), xPos + panelWidth / 2, yPos + panelHeight - 12, 0xFFBBBBBB);
 
         gui.pose().popPose();
     }
@@ -1497,13 +1497,13 @@ public class AASOverlay {
             } else if (crates == 0) {
                 color = 0xFFFF5555;
             }
-            String text = "Supplies: " + crates + " / " + maxCrates;
+            String text = I18n.get("aas.hud.supplies", crates, maxCrates);
             int textWidth = mc.font.width(text);
             int x = width - textWidth - 10;
             int y = height - 25;
             drawOutlinedString(gui, mc, text, x, y, color);
             if (isCharging) {
-                String reloadText = "RELOADING...";
+                String reloadText = I18n.get("aas.hud.reloading");
                 drawOutlinedString(gui, mc, reloadText, width - mc.font.width(reloadText) - 10, y - 10, 0xFF55FF55);
             }
         }
@@ -1528,7 +1528,7 @@ public class AASOverlay {
             maxAmmo = AGSAmmoItem.MAX_AMMO;
         }
         if (currentAmmo != -1) {
-            String text = "Ammo: " + currentAmmo + " / " + maxAmmo;
+            String text = I18n.get("aas.hud.ammo", currentAmmo, maxAmmo);
             int x = 10;
             int y = height - 40;
             int color = (currentAmmo == 0) ? 0xFFFF5555 : 0xFFFFFFFF;

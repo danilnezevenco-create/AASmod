@@ -367,6 +367,7 @@ public class InteractionEvents {
                 state.is(ModBlocks.BLUE_RALLY_BLOCK.get()) ||
                 state.is(ModBlocks.RED_RALLY_BLOCK.get()) ||
                 state.is(ModBlocks.AMMO_BAG_BLOCK.get()) ||
+                state.is(ModBlocks.VEHICLE_STATION_BLOCK.get()) ||
                 (isDefense && allowDefenses) ||
                 state.is(Tags.Blocks.GLASS) ||
                 state.is(Tags.Blocks.GLASS_PANES) ||

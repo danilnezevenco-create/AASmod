@@ -15,6 +15,8 @@ import org.joml.Matrix4f;
 import com.example.aas.item.SupplyTruckMarkerItem;
 import com.example.aas.item.VehicleMarkerItem;
 import com.example.aas.network.*;
+import com.example.aas.network.PacketPlaceRadialMarker;
+import com.example.aas.client.gui.WorldMarkerRadialScreen;
 import com.example.aas.client.gui.DownedScreen;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -68,6 +70,24 @@ public class ClientEvents {
     private static final ResourceLocation MOVE_TEX_CHARLIE = new ResourceLocation("aas", "textures/gui/map_icons/marker_move_charlie.png");
     private static final ResourceLocation PING_TEX_CHARLIE = new ResourceLocation("aas", "textures/gui/map_icons/ping_eye_charlie.png");
     private static boolean revivingHeld = false;
+    // === Радиальное меню установки меток (удержание PLACE_PING_KEY) ===
+    private static boolean radialKeyHeld = false;       // клавиша сейчас зажата (после первого press)
+    private static long radialKeyPressTime = 0L;        // System.currentTimeMillis() в момент press
+    private static boolean radialScreenOpened = false;  // экран уже открыт этим удержанием
+    private static boolean pingKeyPhysicallyDown = false;
+    private static final long RADIAL_HOLD_MS = 250L;    // порог удержания перед открытием меню
+
+    private static final ResourceLocation MARKER_ATTACK_3D = new ResourceLocation("aas", "textures/gui/map_icons/marker_attack.png");
+    private static final ResourceLocation MARKER_DEFEND_3D = new ResourceLocation("aas", "textures/gui/map_icons/marker_defend.png");
+    private static final ResourceLocation MARKER_BUILD_3D  = new ResourceLocation("aas", "textures/gui/map_icons/marker_build.png");
+
+    private static final ResourceLocation MARKER_ATTACK_BRAVO = new ResourceLocation("aas", "textures/gui/map_icons/marker_attack_bravo.png");
+    private static final ResourceLocation MARKER_DEFEND_BRAVO = new ResourceLocation("aas", "textures/gui/map_icons/marker_defend_bravo.png");
+    private static final ResourceLocation MARKER_BUILD_BRAVO  = new ResourceLocation("aas", "textures/gui/map_icons/marker_build_bravo.png");
+
+    private static final ResourceLocation MARKER_ATTACK_CHARLIE = new ResourceLocation("aas", "textures/gui/map_icons/marker_attack_charlie.png");
+    private static final ResourceLocation MARKER_DEFEND_CHARLIE = new ResourceLocation("aas", "textures/gui/map_icons/marker_defend_charlie.png");
+    private static final ResourceLocation MARKER_BUILD_CHARLIE  = new ResourceLocation("aas", "textures/gui/map_icons/marker_build_charlie.png");
     private static int reviveTargetId = -1;        // кому в последний раз послали START
     private static int reviveResendCooldown = 0;   // тики до повторного START, если сервер не подтвердил
     private static final int REVIVE_RESEND_TICKS = 10;
@@ -121,6 +141,18 @@ public class ClientEvents {
                     ClientData.globalDeathTimestamp = 0;
                     ClientData.deathFadePlayed = false;
                 }
+            }
+        }
+
+        // === Радиальное меню меток: если клавиша зажата дольше порога — открываем меню ===
+        if (radialKeyHeld && !radialScreenOpened && mc.screen == null) {
+            long held = System.currentTimeMillis() - radialKeyPressTime;
+            if (held >= RADIAL_HOLD_MS && pingKeyPhysicallyDown) {
+                radialScreenOpened = true;
+                int group = getMySquadGroup(mc);
+                mc.setScreen(new WorldMarkerRadialScreen(group < 0 ? 0 : group)); // если не лидер — покажем иконки SL как запасной вариант
+            } else if (!pingKeyPhysicallyDown) {                     // ← было !isDown()
+                radialKeyHeld = false;
             }
         }
 
@@ -267,6 +299,44 @@ public class ClientEvents {
             BlockPos mPos = new BlockPos(mySquad.charlieMarker.x, mySquad.charlieMarker.y, mySquad.charlieMarker.z);
             render3DMarker(poseStack, cameraPos, mPos, MOVE_TEX_CHARLIE, mc, 1.0f, 0.5);
         }
+        // --- Attack / Defend / Build для лидера отряда ---
+        if (mySquad.marker != null && gameTime < mySquad.marker.expiryTick) {
+            BlockPos mPos = new BlockPos(mySquad.marker.x, mySquad.marker.y, mySquad.marker.z);
+            ResourceLocation tex = radialMarkerTexture(mySquad.marker.type, 0);
+            if (tex != null) render3DMarker(poseStack, cameraPos, mPos, tex, mc, 1.0f, 0.5);
+        }
+        // --- Attack / Defend / Build для Bravo FTL ---
+        if (mySquad.bravoMarker != null && gameTime < mySquad.bravoMarker.expiryTick) {
+            BlockPos mPos = new BlockPos(mySquad.bravoMarker.x, mySquad.bravoMarker.y, mySquad.bravoMarker.z);
+            ResourceLocation tex = radialMarkerTexture(mySquad.bravoMarker.type, 1);
+            if (tex != null) render3DMarker(poseStack, cameraPos, mPos, tex, mc, 1.0f, 0.5);
+        }
+        // --- Attack / Defend / Build для Charlie FTL ---
+        if (mySquad.charlieMarker != null && gameTime < mySquad.charlieMarker.expiryTick) {
+            BlockPos mPos = new BlockPos(mySquad.charlieMarker.x, mySquad.charlieMarker.y, mySquad.charlieMarker.z);
+            ResourceLocation tex = radialMarkerTexture(mySquad.charlieMarker.type, 2);
+            if (tex != null) render3DMarker(poseStack, cameraPos, mPos, tex, mc, 1.0f, 0.5);
+        }
+    }
+
+    /** type: 1-Attack, 2-Defend, 3-Build. squadGroup: 0-SL, 1-Bravo, 2-Charlie. */
+    private static ResourceLocation radialMarkerTexture(int type, int squadGroup) {
+        switch (type) {
+            case 1: return squadGroup == 1 ? MARKER_ATTACK_BRAVO : squadGroup == 2 ? MARKER_ATTACK_CHARLIE : MARKER_ATTACK_3D;
+            case 2: return squadGroup == 1 ? MARKER_DEFEND_BRAVO : squadGroup == 2 ? MARKER_DEFEND_CHARLIE : MARKER_DEFEND_3D;
+            case 3: return squadGroup == 1 ? MARKER_BUILD_BRAVO  : squadGroup == 2 ? MARKER_BUILD_CHARLIE  : MARKER_BUILD_3D;
+            default: return null;
+        }
+    }
+    /** 0 = SL, 1 = Bravo FTL, 2 = Charlie FTL, -1 = не лидер. */
+    private static int getMySquadGroup(Minecraft mc) {
+        String myName = mc.player.getScoreboardName();
+        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
+            if (s.leader.equals(myName)) return 0;
+            if (s.bravoLeader.equals(myName)) return 1;
+            if (s.charlieLeader.equals(myName)) return 2;
+        }
+        return -1;
     }
     @SubscribeEvent
     public static void onRenderOverlayPre(RenderGuiOverlayEvent.Pre event) {
@@ -314,6 +384,43 @@ public class ClientEvents {
             return true; // РјРµС‚РєСѓ СЂРµР°Р»СЊРЅРѕ РїРѕСЃС‚Р°РІРёР»Рё
         }
         return false; // РЅРµ Р±С‹Р»Рѕ РїСЂР°РІ вЂ” pick-block РЅРµ С‚СЂРѕРіР°РµРј
+    }
+    /**
+     * Нажатие клавиши/кнопки установки метки.
+     * Shift зажат -> как и раньше, мгновенно ставим метку движения (не трогаем).
+     * Без Shift -> НЕ ставим метку сразу, а запускаем таймер удержания:
+     *   - если клавиша отпущена быстро (< RADIAL_HOLD_MS) -> обычный "глазик" (см. handleRadialKeyRelease)
+     *   - если клавиша удержана дольше порога -> открываем радиальное меню (см. onClientTick)
+     */
+    private static void handleRadialKeyPress(Minecraft mc) {
+        pingKeyPhysicallyDown = true; // ← добавили
+
+        if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
+            tryPlacePingLogic(mc);
+            return;
+        }
+        radialKeyHeld = true;
+        radialScreenOpened = false;
+        radialKeyPressTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Отпускание клавиши/кнопки установки метки.
+     * Если меню уже было открыто по удержанию — про закрытие/установку метки
+     * заботится сам WorldMarkerRadialScreen (его mouseReleased/keyReleased).
+     * Если меню НЕ успело открыться (короткий тап) — ставим обычную метку-глаз,
+     * как это было раньше при обычном клике.
+     */
+    private static void handleRadialKeyRelease(Minecraft mc) {
+        pingKeyPhysicallyDown = false; // ← добавили, ДО проверки на radialKeyHeld
+
+        if (!radialKeyHeld) return;
+        boolean wasScreenOpened = radialScreenOpened;
+        radialKeyHeld = false;
+        radialScreenOpened = false;
+        if (!wasScreenOpened) {
+            tryPlacePingLogic(mc);
+        }
     }
     /**
      * РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РѕС‚СЂРёСЃРѕРІРєРё 3D РјР°СЂРєРµСЂР°
@@ -375,11 +482,14 @@ public class ClientEvents {
             }
         }
 
-        if (ModKeyBindings.PLACE_PING_KEY.matchesMouse(event.getButton()) && event.getAction() == GLFW.GLFW_PRESS) {
-            // РњРµС‚РєР° СЂР°Р±РѕС‚Р°РµС‚ РўРћР›Р¬РљРћ РІ С‡РёСЃС‚РѕР№ РёРіСЂРµ: РЅРµ РІ С‡Р°С‚Рµ, РЅРµ РІ РёРЅРІРµРЅС‚Р°СЂРµ, РЅРµ РІ РјРµРЅСЋ вЂ”
-            // С‡С‚РѕР±С‹ РЅРёРєРѕРіРґР° РЅРµ РєРѕРЅС„Р»РёРєС‚РѕРІР°С‚СЊ СЃ Pick Block (С‚Р° Р¶Рµ СЃСЂРµРґРЅСЏСЏ РєРЅРѕРїРєР° РјС‹С€Рё)
-            if (mc.screen == null && tryPlacePingLogic(mc)) {
-                event.setCanceled(true);
+        if (ModKeyBindings.PLACE_PING_KEY.matchesMouse(event.getButton())) {
+            if (event.getAction() == GLFW.GLFW_PRESS) {
+                if (mc.screen == null) {
+                    event.setCanceled(true); // не даём сконфликтовать с Pick Block
+                    handleRadialKeyPress(mc);
+                }
+            } else if (event.getAction() == GLFW.GLFW_RELEASE) {
+                handleRadialKeyRelease(mc);
             }
         }
         if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_RIGHT && event.getAction() == GLFW.GLFW_PRESS) {
@@ -515,9 +625,13 @@ public class ClientEvents {
                 }
             }
         }
-        if (ModKeyBindings.PLACE_PING_KEY.matches(event.getKey(), event.getScanCode()) && event.getAction() == GLFW.GLFW_PRESS) {
-            if (mc.screen == null) {
-                tryPlacePingLogic(mc);
+        if (ModKeyBindings.PLACE_PING_KEY.matches(event.getKey(), event.getScanCode())) {
+            if (event.getAction() == GLFW.GLFW_PRESS) {
+                if (mc.screen == null) {
+                    handleRadialKeyPress(mc);
+                }
+            } else if (event.getAction() == GLFW.GLFW_RELEASE) {
+                handleRadialKeyRelease(mc);
             }
             return;
         }
