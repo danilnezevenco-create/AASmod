@@ -304,24 +304,22 @@ public class AASOverlay {
         }
         if (mySquad == null) return;
 
-        boolean isSL      = mySquad.leader.equals(myName);
-        boolean isBravo   = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
-        boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
-
-        // Метка лидера — видят все
-        if (mySquad.marker != null && mySquad.marker.type == 0) {
-            drawSquadCompassMarker(gui, mc, playerYaw, centerX, y, pixelsPerDegree, widthInPixels, visibleRange, mySquad.marker, MOVE_TEXTURE);
+        // Leader marker — ЛЮБОЙ тип (move, attack, defend, build)
+        if (mySquad.marker != null) {
+            ResourceLocation icon = getSquadMarkerIcon(mySquad.marker.type);
+            drawSquadCompassMarker(gui, mc, playerYaw, centerX, y, pixelsPerDegree, widthInPixels, visibleRange, mySquad.marker, icon);
         }
 
-        // Bravo — свои видят всегда, чужие (Charlie) тоже видят но иконка та же
-        if (mySquad.bravoMarker != null && mySquad.bravoMarker.type == 0) {
-            // Видят все кроме тех, кто не в отряде вообще — но мы уже внутри mySquad
-            drawSquadCompassMarker(gui, mc, playerYaw, centerX, y, pixelsPerDegree, widthInPixels, visibleRange, mySquad.bravoMarker, MOVE_TEX_BRAVO);
+        // Bravo marker — ЛЮБОЙ тип с суффиксом _bravo
+        if (mySquad.bravoMarker != null) {
+            ResourceLocation icon = getSquadMarkerIconWithSuffix(mySquad.bravoMarker.type, "_bravo");
+            drawSquadCompassMarker(gui, mc, playerYaw, centerX, y, pixelsPerDegree, widthInPixels, visibleRange, mySquad.bravoMarker, icon);
         }
 
-        // Charlie — аналогично
-        if (mySquad.charlieMarker != null && mySquad.charlieMarker.type == 0) {
-            drawSquadCompassMarker(gui, mc, playerYaw, centerX, y, pixelsPerDegree, widthInPixels, visibleRange, mySquad.charlieMarker, MOVE_TEX_CHARLIE);
+        // Charlie marker — ЛЮБОЙ тип с суффиксом _charlie
+        if (mySquad.charlieMarker != null) {
+            ResourceLocation icon = getSquadMarkerIconWithSuffix(mySquad.charlieMarker.type, "_charlie");
+            drawSquadCompassMarker(gui, mc, playerYaw, centerX, y, pixelsPerDegree, widthInPixels, visibleRange, mySquad.charlieMarker, icon);
         }
     }
 
@@ -350,6 +348,17 @@ public class AASOverlay {
             case 5: return new ResourceLocation("aas", "textures/gui/map_icons/marker_attack.png"); // Enemy
             default: return new ResourceLocation("aas", "textures/gui/map_icons/marker_move.png"); // Move
         }
+    }
+    private static ResourceLocation getSquadMarkerIconWithSuffix(int type, String suffix) {
+        String baseName;
+        switch (type) {
+            case 1: baseName = "marker_attack"; break;
+            case 2: baseName = "marker_defend"; break;
+            case 3: baseName = "marker_build"; break;
+            case 5: baseName = "marker_attack"; break;
+            default: baseName = "marker_move"; break;
+        }
+        return new ResourceLocation("aas", "textures/gui/map_icons/" + baseName + suffix + ".png");
     }
     private static void renderMarkersOnCompass(GuiGraphics gui, Minecraft mc, float playerYaw, float centerX, float y, float pixelsPerDegree, float widthInPixels, float visibleRange) {
         String myTeam = (mc.player.getTeam() != null) ? mc.player.getTeam().getName().toUpperCase() : "NEUTRAL";

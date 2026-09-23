@@ -151,7 +151,7 @@
   "aas.radio.defenses": "Сооружение",
   "aas.radio.staticgun": "Оружие",
   "aas.radio.cancel": "Отмена",
-  "aas.radio.hint": "Отпустите или нажмите ЛКМ для выбора",
+  "aas.radio.hint": "Нажмите ЛКМ для выбора",
   "aas.radio.back": "Назад",
   "aas.radio.wait": "Ждать: %sс",
   "aas.build.hub": "ХАБ",

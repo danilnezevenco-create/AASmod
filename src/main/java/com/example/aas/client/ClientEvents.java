@@ -75,7 +75,7 @@ public class ClientEvents {
     private static long radialKeyPressTime = 0L;        // System.currentTimeMillis() в момент press
     private static boolean radialScreenOpened = false;  // экран уже открыт этим удержанием
     private static boolean pingKeyPhysicallyDown = false;
-    private static final long RADIAL_HOLD_MS = 250L;    // порог удержания перед открытием меню
+    private static final long RADIAL_HOLD_MS = 180L;    // порог удержания перед открытием меню
 
     private static final ResourceLocation MARKER_ATTACK_3D = new ResourceLocation("aas", "textures/gui/map_icons/marker_attack.png");
     private static final ResourceLocation MARKER_DEFEND_3D = new ResourceLocation("aas", "textures/gui/map_icons/marker_defend.png");
