@@ -6,7 +6,7 @@
 	ammoStackDestruction = true
 	#Digging speed multiplier
 	#Range: 0.1 ~ 10.0
-	diggingSpeedMultiplier = 1.0
+	diggingSpeedMultiplier = 2.5
 	#If true, in Survival/Adventure mode players CANNOT interact with storage/loot blocks: chests, trapped chests, ender chests, barrels, shulker boxes, furnaces/blast furnaces/smokers, hoppers, dispensers/droppers, brewing stands, trapdoors and anvils. Everything else (doors, fence gates, buttons, levers, crafting table, etc.) is now allowed.
 	restrictInteractionsToDoorsAndGates = false
 	#Prevent players from breaking blocks
@@ -67,7 +67,7 @@
 	#Enable knockout mechanic
 	enableKnockout = true
 	#Registry name of the item used to revive (e.g. 'minecraft:paper')
-	reviveItem = "aas_medicine:bandage"
+	reviveItem = "minecraft:paper"
 	#Time in seconds where dying again results in instant death
 	#Range: 0 ~ 600
 	reviveCooldownSeconds = 120
@@ -83,7 +83,7 @@
 	#Completely block access to the vehicle inventory (from the outside via Shift+RMB and from the inside by pressing E)
 	preventVehicleInventoryAccess = true
 	#If the squad leader does not have the "Officer" kit, the squad will disband after 120 seconds.
-	requireOfficerForSL = true
+	requireOfficerForSL = false
 	#Prevent players from entering vehicles claimed by the enemy team
 	preventEnemyVehicleEntry = true
 	#If true, only Pilots can fly and only Mechanics can drive heavy vehicles. Others are kicked from driver seat after 5 seconds.
@@ -92,9 +92,13 @@
 	autoBalanceTeams = false
 	#Preparation time for defenders in Invasion mode (minutes)
 	#Range: 1 ~ 30
-	invasionPrepTimeMinutes = 5
+	invasionPrepTimeMinutes = 1
 	#Prevent players from carrying more than 1 Ammo Bag at a time.
 	oneAmmoBagPerPlayer = true
+	#If true, chat messages about a destroyed/dismantled HUB, Rally Point or Vehicle are only sent to the team that owns/lost it - the opposing team will no longer see these messages. Players who are not on the BLUE or RED team (spectators, no team, etc.) still see both teams' messages. If false (default), everyone sees every destruction message like before.
+	separateTeamDestructionMessages = true
+	#If true, only players with the 'Rifleman' kit can pick up an Ammo Bag (even their own). Creative mode ignores this.
+	requireRiflemanForAmmoBag = true
 
 ["Balance Settings"]
 	#Range: 0 ~ 10000

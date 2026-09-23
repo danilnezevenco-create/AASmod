@@ -78,6 +78,8 @@ public class AASMapRenderer implements AutoCloseable {
     private static final ResourceLocation MAIN_SELECTED_ICON = new ResourceLocation("aas", "textures/gui/map_icons/main_base_selected.png");
     private static final ResourceLocation MATS_ICON = new ResourceLocation("aas", "textures/gui/mats_icon.png");
     private static final ResourceLocation STATION_ICON = new ResourceLocation("aas", "textures/gui/map_icons/vehicle_station.png");
+    private static final ResourceLocation RHOMBUS_CMD = new ResourceLocation("aas", "textures/gui/map_icons/squad_rhombus_cmd.png");
+    private static final ResourceLocation RHOMBUS_NORMAL = new ResourceLocation("aas", "textures/gui/map_icons/squad_rhombus.png");
     private static final Map<String, ResourceLocation> VEHICLE_ICONS = new HashMap<>();
     static {
         VEHICLE_ICONS.put("APC", new ResourceLocation("aas", "textures/gui/map_icons/apc.png"));
@@ -1174,18 +1176,22 @@ public class AASMapRenderer implements AutoCloseable {
             boolean canSee = squad.members.contains(myName) || amISquadLeader;
             if (!canSee) continue;
 
+            // Определяем, является ли этот отряд CMD (командирским)
+            boolean isCMDSquad = (teamCMDIdForNums != -1 && squad.id == teamCMDIdForNums);
+
             // --- Метки SL + метки фаертима Bravo + метки фаертима Charlie ---
-            drawRhombusMarkerList(gui, mc, squad.rhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp);
-            drawRhombusMarkerList(gui, mc, squad.bravoRhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp);
-            drawRhombusMarkerList(gui, mc, squad.charlieRhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp);
+            drawRhombusMarkerList(gui, mc, squad.rhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp, isCMDSquad);
+            drawRhombusMarkerList(gui, mc, squad.bravoRhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp, isCMDSquad);
+            drawRhombusMarkerList(gui, mc, squad.charlieRhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp, isCMDSquad);
         }
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
     // Отрисовка одного списка свободных меток отряда (общая для SL / Bravo / Charlie).
+    // Параметр isCMDSquad определяет, какую текстуру использовать.
     private void drawRhombusMarkerList(GuiGraphics gui, Minecraft mc, List<AASWorldData.SquadMarker> markers,
-                                        AASWorldData.Squad squad, List<AASWorldData.Squad> teamSquadsForNums,
-                                        long time, double cx, double cz, double bpp) {
+                                       AASWorldData.Squad squad, List<AASWorldData.Squad> teamSquadsForNums,
+                                       long time, double cx, double cz, double bpp, boolean isCMDSquad) {
         for (AASWorldData.SquadMarker rm : markers) {
             long timeLeft = rm.expiryTick - time;
             if (timeLeft <= 0) continue;
@@ -1196,9 +1202,12 @@ public class AASMapRenderer implements AutoCloseable {
             int my = (int) (mapY + (mapSize / 2) + (rm.z - cz) / bpp);
 
             if (isPointOnMap(mx, my)) {
+                // Выбираем текстуру: CMD использует свою, обычные — стандартную
+                ResourceLocation rhombusTex = isCMDSquad ? RHOMBUS_CMD : RHOMBUS_NORMAL;
+
                 RenderSystem.enableBlend();
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
-                gui.blit(new ResourceLocation("aas", "textures/gui/map_icons/squad_rhombus.png"), mx - 8, my - 8, 0, 0, 16, 16, 16, 16);
+                gui.blit(rhombusTex, mx - 8, my - 8, 0, 0, 16, 16, 16, 16);
 
                 gui.pose().pushPose();
                 gui.pose().translate(mx, my, 500);
@@ -1277,25 +1286,23 @@ public class AASMapRenderer implements AutoCloseable {
     /** Информация о метке, по которой кликнули на карте (для контекстного меню удаления). */
     public static class MarkerHit {
         public enum MarkerCategory {
-            SQUAD_RHOMBUS, // Ромбики (SL, Bravo, Charlie)
-            SQUAD_NORMAL,  // Обычные метки отряда (Move, Attack, Defend, Build)
-            TACTICAL       // Тактические метки (TEAM, ENEMY, SUPPLY и т.д.)
+            SQUAD_RHOMBUS,
+            SQUAD_NORMAL,
+            TACTICAL
         }
 
         public MarkerCategory category;
-
-        // Данные для меток отряда (SQUAD)
         public AASWorldData.Squad squad;
-        public String list; // "SL", "BRAVO", "CHARLIE", "NORMAL"
+        public String list;
         public AASWorldData.SquadMarker squadMarker;
-
-        // Данные для тактических меток (TACTICAL)
         public AASWorldData.MapMarker mapMarker;
-
         public int screenX, screenY;
 
-        // Фабричные методы для удобного создания
-        public static MarkerHit squad(AASWorldData.Squad squad, String list, AASWorldData.SquadMarker marker, int sx, int sy) {
+        // НОВЫЕ ПОЛЯ: мировые координаты метки
+        public double worldX;
+        public double worldZ;
+
+        public static MarkerHit squad(AASWorldData.Squad squad, String list, AASWorldData.SquadMarker marker, int sx, int sy, double wx, double wz) {
             MarkerHit hit = new MarkerHit();
             hit.category = "NORMAL".equals(list) ? MarkerCategory.SQUAD_NORMAL : MarkerCategory.SQUAD_RHOMBUS;
             hit.squad = squad;
@@ -1303,15 +1310,19 @@ public class AASMapRenderer implements AutoCloseable {
             hit.squadMarker = marker;
             hit.screenX = sx;
             hit.screenY = sy;
+            hit.worldX = wx;
+            hit.worldZ = wz;
             return hit;
         }
 
-        public static MarkerHit tactical(AASWorldData.MapMarker marker, int sx, int sy) {
+        public static MarkerHit tactical(AASWorldData.MapMarker marker, int sx, int sy, double wx, double wz) {
             MarkerHit hit = new MarkerHit();
             hit.category = MarkerCategory.TACTICAL;
             hit.mapMarker = marker;
             hit.screenX = sx;
             hit.screenY = sy;
+            hit.worldX = wx;
+            hit.worldZ = wz;
             return hit;
         }
     }
@@ -1328,7 +1339,6 @@ public class AASMapRenderer implements AutoCloseable {
         String myTeam = getPlayerTeamStrict(mc);
         boolean amILeader = isSquadLeaderOrFTL(mc.player);
 
-        // 1. Проверяем метки отрядов (Ромбики и Обычные)
         for (AASWorldData.Squad squad : ClientData.clientSquads) {
             if (myTeam == null || !squad.team.equalsIgnoreCase(myTeam)) continue;
             boolean canSee = squad.members.contains(myName) || amILeader;
@@ -1336,45 +1346,37 @@ public class AASMapRenderer implements AutoCloseable {
 
             MarkerHit hit = null;
 
-            // А) Проверяем ромбики
             hit = checkMarkerListHit(squad, squad.rhombusMarkers, "SL", mouseX, mouseY, cx, cz, bpp, time);
             if (hit == null) hit = checkMarkerListHit(squad, squad.bravoRhombusMarkers, "BRAVO", mouseX, mouseY, cx, cz, bpp, time);
             if (hit == null) hit = checkMarkerListHit(squad, squad.charlieRhombusMarkers, "CHARLIE", mouseX, mouseY, cx, cz, bpp, time);
 
-            // Б) Проверяем ОБЫЧНЫЕ метки отряда (Move, Attack, Defend, Build)
-            // Они хранятся как одиночные объекты, а не списки
-
-            // 1. Метка лидера отряда (SL)
             if (hit == null && squad.marker != null && squad.marker.type != 6) {
                 int mx = (int) (mapX + (mapSize / 2) + (squad.marker.x - cx) / bpp);
                 int my = (int) (mapY + (mapSize / 2) + (squad.marker.z - cz) / bpp);
                 if (isPointOnMap(mx, my) && Math.hypot(mouseX - mx, mouseY - my) <= 8) {
-                    hit = MarkerHit.squad(squad, "SL", squad.marker, mx, my);
+                    hit = MarkerHit.squad(squad, "SL", squad.marker, mx, my, squad.marker.x, squad.marker.z);
                 }
             }
 
-            // 2. Метка лидера фаертима Bravo
             if (hit == null && squad.bravoMarker != null && squad.bravoMarker.type != 6) {
                 int mx = (int) (mapX + (mapSize / 2) + (squad.bravoMarker.x - cx) / bpp);
                 int my = (int) (mapY + (mapSize / 2) + (squad.bravoMarker.z - cz) / bpp);
                 if (isPointOnMap(mx, my) && Math.hypot(mouseX - mx, mouseY - my) <= 8) {
-                    hit = MarkerHit.squad(squad, "BRAVO", squad.bravoMarker, mx, my);
+                    hit = MarkerHit.squad(squad, "BRAVO", squad.bravoMarker, mx, my, squad.bravoMarker.x, squad.bravoMarker.z);
                 }
             }
 
-            // 3. Метка лидера фаертима Charlie
             if (hit == null && squad.charlieMarker != null && squad.charlieMarker.type != 6) {
                 int mx = (int) (mapX + (mapSize / 2) + (squad.charlieMarker.x - cx) / bpp);
                 int my = (int) (mapY + (mapSize / 2) + (squad.charlieMarker.z - cz) / bpp);
                 if (isPointOnMap(mx, my) && Math.hypot(mouseX - mx, mouseY - my) <= 8) {
-                    hit = MarkerHit.squad(squad, "CHARLIE", squad.charlieMarker, mx, my);
+                    hit = MarkerHit.squad(squad, "CHARLIE", squad.charlieMarker, mx, my, squad.charlieMarker.x, squad.charlieMarker.z);
                 }
             }
 
             if (hit != null) return hit;
         }
 
-        // 2. Проверяем тактические метки (TEAM, ENEMY, SUPPLY и т.д.)
         MarkerHit tacticalHit = checkTacticalMarkersHit(mouseX, mouseY, cx, cz, bpp, time);
         if (tacticalHit != null) return tacticalHit;
 
@@ -1387,7 +1389,7 @@ public class AASMapRenderer implements AutoCloseable {
         String myTeam = getPlayerTeamStrict(mc);
 
         for (AASWorldData.MapMarker m : ClientData.activeMarkers) {
-            if (!m.team.equalsIgnoreCase(myTeam)) continue; // Удалять можно только метки своей команды
+            if (!m.team.equalsIgnoreCase(myTeam)) continue;
             if (time >= m.expiryTick) continue;
 
             int mx = (int) (mapX + (mapSize / 2) + (m.pos.getX() - cx) / bpp);
@@ -1395,8 +1397,8 @@ public class AASMapRenderer implements AutoCloseable {
             if (!isPointOnMap(mx, my)) continue;
 
             double dist = Math.hypot(mouseX - mx, mouseY - my);
-            if (dist <= 8) { // Радиус попадания клика
-                return MarkerHit.tactical(m, mx, my);
+            if (dist <= 8) {
+                return MarkerHit.tactical(m, mx, my, m.pos.getX(), m.pos.getZ());
             }
         }
         return null;
@@ -1431,9 +1433,8 @@ public class AASMapRenderer implements AutoCloseable {
             if (!isPointOnMap(mx, my)) continue;
 
             double dist = Math.hypot(mouseX - mx, mouseY - my);
-            if (dist <= 8) { // радиус попадания примерно как у самой иконки метки (16x16)
-                // Используем фабричный метод вместо несуществующего конструктора
-                return MarkerHit.squad(squad, listName, rm, mx, my);
+            if (dist <= 8) {
+                return MarkerHit.squad(squad, listName, rm, mx, my, rm.x, rm.z);
             }
         }
         return null;
@@ -1542,22 +1543,36 @@ public class AASMapRenderer implements AutoCloseable {
      */
     public void renderMarkerDeleteMenu(GuiGraphics gui, int mouseX, int mouseY) {
         if (pendingDeleteHit == null) return;
-        int[] pos = getPendingDeleteHitScreenPos();
-        if (pos == null) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+
+        // ПЕРЕСЧЁТ ПОЗИЦИИ КАЖДЫЙ КАДР
+        double bpp = getBlocksPerPixel();
+        double cx = getCenterX(mc.player);
+        double cz = getCenterZ(mc.player);
+
+        double dx = (pendingDeleteHit.worldX - cx) / bpp;
+        double dy = (pendingDeleteHit.worldZ - cz) / bpp;
+        int currentScreenX = (int) (mapX + (mapSize / 2.0) + dx);
+        int currentScreenY = (int) (mapY + (mapSize / 2.0) + dy);
+
+        if (!isPointOnMap(currentScreenX, currentScreenY)) return;
 
         int size = Math.round(20 / 1.2f);
-        int x = pos[0] - size / 2;
-        int y = pos[1] + 10; // располагаем под меткой
+        int x = currentScreenX - size / 2;
+        int y = currentScreenY + 10;
 
         boolean hover = mouseX >= x && mouseX <= x + size && mouseY >= y && mouseY <= y + size;
 
-        // Серый квадратик-подложка контекстного меню
-        gui.fill(x, y, x + size, y + size, hover ? 0xFF6A6A6A : 0xFF4A4A4A);
+        // СВЕТЛЕЕ ПРИ НАВЕДЕНИИ: было 0xFF6A6A6A, стало 0xFF8A8A8A
+        gui.fill(x, y, x + size, y + size, hover ? 0xFF8A8A8A : 0xFF4A4A4A);
 
-        // Иконка удаления, окрашенная в красный
+        // Иконка удаления, окрашенная в красный (увеличена в 1.5 раза)
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(0.95f, 0.25f, 0.25f, 1.0f);
-        int iconSize = Math.round((size - 4) / 1.3f);
+        int baseIconSize = Math.round((size - 4) / 1.3f);
+        int iconSize = Math.round(baseIconSize * 1.5f);
         int iconOffset = (size - iconSize) / 2;
         gui.blit(MARKER_DELETE_ICON, x + iconOffset, y + iconOffset, 0, 0, iconSize, iconSize, iconSize, iconSize);
         RenderSystem.setShaderColor(1, 1, 1, 1);
@@ -1569,26 +1584,39 @@ public class AASMapRenderer implements AutoCloseable {
      */
     public boolean handleMarkerDeleteMenuClick(double mouseX, double mouseY, int button) {
         if (pendingDeleteHit == null) return false;
-        int[] pos = getPendingDeleteHitScreenPos();
-        if (pos == null) { pendingDeleteHit = null; return true; }
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) { pendingDeleteHit = null; return true; }
+
+        // ПЕРЕСЧЁТ ПОЗИЦИИ
+        double bpp = getBlocksPerPixel();
+        double cx = getCenterX(mc.player);
+        double cz = getCenterZ(mc.player);
+
+        double dx = (pendingDeleteHit.worldX - cx) / bpp;
+        double dy = (pendingDeleteHit.worldZ - cz) / bpp;
+        int currentScreenX = (int) (mapX + (mapSize / 2.0) + dx);
+        int currentScreenY = (int) (mapY + (mapSize / 2.0) + dy);
+
+        if (!isPointOnMap(currentScreenX, currentScreenY)) {
+            pendingDeleteHit = null;
+            return true;
+        }
 
         int size = Math.round(20 / 1.2f);
-        int x = pos[0] - size / 2;
-        int y = pos[1] + 10;
+        int x = currentScreenX - size / 2;
+        int y = currentScreenY + 10;
         boolean hitIcon = mouseX >= x && mouseX <= x + size && mouseY >= y && mouseY <= y + size;
 
-        // В методе handleMarkerDeleteMenuClick:
         if (button == 0 && hitIcon) {
             MarkerHit hit = pendingDeleteHit;
 
-            // Отправляем ЕДИНЫЙ пакет, конструктор сам поймет, что делать
             if (hit.category == MarkerHit.MarkerCategory.TACTICAL) {
                 PacketHandler.INSTANCE.sendToServer(new PacketDeleteMarker(hit.mapMarker.pos, hit.mapMarker.type));
             } else {
                 PacketHandler.INSTANCE.sendToServer(new PacketDeleteMarker(hit.squad.id, hit.list, hit.squadMarker.id));
             }
 
-            Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) mc.player.playSound(ModSounds.MAP_MARKER_PLACE.get(), 1.0f, 0.8f);
             pendingDeleteHit = null;
             return true;

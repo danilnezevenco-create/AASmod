@@ -737,6 +737,7 @@ public class AASWorldData extends SavedData {
         public String type;
         public String team;
         public long expiryTick;
+        public String placedBy = ""; // НОВОЕ: имя игрока, поставившего метку
 
         public MapMarker(BlockPos pos, String type, String team, long expiryTick) {
             this.pos = pos;
@@ -745,17 +746,34 @@ public class AASWorldData extends SavedData {
             this.expiryTick = expiryTick;
         }
 
+        // НОВЫЙ конструктор с placedBy
+        public MapMarker(BlockPos pos, String type, String team, long expiryTick, String placedBy) {
+            this.pos = pos;
+            this.type = type;
+            this.team = team;
+            this.expiryTick = expiryTick;
+            this.placedBy = placedBy;
+        }
+
         public CompoundTag save() {
             CompoundTag tag = new CompoundTag();
             tag.putLong("Pos", pos.asLong());
             tag.putString("Type", type);
             tag.putString("Team", team);
             tag.putLong("Expiry", expiryTick);
+            tag.putString("PlacedBy", placedBy); // НОВОЕ
             return tag;
         }
 
         public static MapMarker load(CompoundTag tag) {
-            return new MapMarker(BlockPos.of(tag.getLong("Pos")), tag.getString("Type"), tag.getString("Team"), tag.getLong("Expiry"));
+            MapMarker m = new MapMarker(
+                    BlockPos.of(tag.getLong("Pos")),
+                    tag.getString("Type"),
+                    tag.getString("Team"),
+                    tag.getLong("Expiry")
+            );
+            m.placedBy = tag.contains("PlacedBy") ? tag.getString("PlacedBy") : ""; // НОВОЕ
+            return m;
         }
     }
     public static class CapturePoint {

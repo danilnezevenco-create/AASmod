@@ -50,6 +50,7 @@ public class SquadPanelOverlay {
     // Реальные пути иконок статуса (те же, что используются в DownedScreen / StatisticsScreen).
     private static final ResourceLocation ICON_HEARTBEAT = new ResourceLocation("aas", "textures/gui/heartbeat.png");
     private static final ResourceLocation ICON_DEAD      = new ResourceLocation("aas", "textures/gui/stats/deaths.png");
+    private static final ResourceLocation ICON_DISCONNECT = new ResourceLocation("aas", "textures/gui/disconnect.png");
     // Тот же круглый значок, что используется для номера отряда в AASDeathScreen / SquadSelectionScreen / StatisticsScreen.
     private static final ResourceLocation CIRCLE_BADGE    = new ResourceLocation("aas", "textures/gui/map_icons/player_circle.png");
 
@@ -234,12 +235,18 @@ public class SquadPanelOverlay {
         int cursorX = x + STRIPE_W + 4;
 
         // Иконка кита игрока (вместо прежних ●/◆). Если кит не назначен — маленькая цветная точка-заглушка.
-        String kitName = ClientData.playerKits.getOrDefault(name, "Unassigned");
+                // Если игрок дисконектнулся — рисуем иконку дисконекта.
+                String kitName = ClientData.playerKits.getOrDefault(name, "Unassigned");
         boolean hasKit = kitName != null && !kitName.isEmpty() && !kitName.equalsIgnoreCase("Unassigned");
+        boolean isOnline = mc.getConnection() != null && mc.getConnection().getPlayerInfo(name) != null;
 
         int kitSize = 9;
         RenderSystem.enableBlend();
-        if (hasKit) {
+        if (!isOnline) {
+            // Игрок дисконектнулся — рисуем иконку дисконекта (без tint)
+            setAlpha(panelAlpha);
+            gui.blit(ICON_DISCONNECT, cursorX, y + 2, kitSize, kitSize, 0f, 0f, 10, 10, 10, 10);
+        } else if (hasKit) {
             ResourceLocation kitIcon = new ResourceLocation("aas", "textures/gui/kits/" + kitName.toLowerCase().replace(" ", "_") + ".png");
             setAlpha(panelAlpha);
             gui.blit(kitIcon, cursorX, y + 2, kitSize, kitSize, 0f, 0f, 10, 10, 10, 10);

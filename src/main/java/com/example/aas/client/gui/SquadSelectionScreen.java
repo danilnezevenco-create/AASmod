@@ -31,6 +31,7 @@ public class SquadSelectionScreen extends Screen {
     private static final ResourceLocation CIRCLE_BADGE = new ResourceLocation("aas", "textures/gui/map_icons/player_circle.png");
     private static final ResourceLocation ICON_DEAD      = new ResourceLocation("aas", "textures/gui/stats/deaths.png");
     private static final ResourceLocation ICON_HEARTBEAT = new ResourceLocation("aas", "textures/gui/heartbeat.png");
+    private static final ResourceLocation ICON_DISCONNECT = new ResourceLocation("aas", "textures/gui/disconnect.png");
 
     private static final ResourceLocation FLAG_UKRAINE = new ResourceLocation("aas", "textures/gui/flags/ukraine.png");
     private static final ResourceLocation FLAG_RUSSIA = new ResourceLocation("aas", "textures/gui/flags/russia.png");
@@ -925,7 +926,14 @@ public class SquadSelectionScreen extends Screen {
                     }
 
                     String kName = ClientData.playerKits.getOrDefault(member, "Unassigned");
-                    if (!kName.equals("Unassigned") && !kName.isEmpty()) {
+                    if (!isOnline) {
+                        // Игрок дисконектнулся — рисуем иконку дисконекта (без tint)
+                        RenderSystem.enableBlend();
+                        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 0.7f);
+                        gui.blit(ICON_DISCONNECT, xOffset, currentY, 0, 0, 10, 10, 10, 10);
+                        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+                        xOffset += 12;
+                    } else if (!kName.equals("Unassigned") && !kName.isEmpty()) {
                         ResourceLocation kitIcon = new ResourceLocation("aas", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
