@@ -103,6 +103,7 @@ public class PacketPlaceRadialMarker {
                 data.setDirty();
                 PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(player.level()::dimension),
                         new PacketSyncSquads(data.squads));
+                PacketHandler.playMarkerSoundForSquad(player.serverLevel(), s.members, player);
                 break;
             }
         });

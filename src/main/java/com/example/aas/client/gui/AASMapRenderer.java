@@ -1120,6 +1120,23 @@ public class AASMapRenderer implements AutoCloseable {
             // РљРѕСЌС„С„РёС†РёРµРЅС‚ РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё: РѕС‚ 1.0 (РЅРѕРІР°СЏ) РґРѕ 0.0 (РёСЃС‡РµР·Р°СЋС‰Р°СЏ)
             float alpha = Mth.clamp((float)timeLeft / totalLifetime, 0.0f, 1.0f);
 
+            // Стрелка: тип "Arrow:<x>:<z>", начало = m.pos, конец записан в типе
+            if (m.type.startsWith("Arrow:")) {
+                String[] p = m.type.split(":");
+                if (p.length == 3) {
+                    try {
+                        double hx = Double.parseDouble(p[1]);
+                        double hz = Double.parseDouble(p[2]);
+                        int tx = (int) (mapX + (mapSize / 2) + (m.pos.getX() - cx) / bpp);
+                        int ty = (int) (mapY + (mapSize / 2) + (m.pos.getZ() - cz) / bpp);
+                        int ex = (int) (mapX + (mapSize / 2) + (hx - cx) / bpp);
+                        int ey = (int) (mapY + (mapSize / 2) + (hz - cz) / bpp);
+                        drawArrow(gui, tx, ty, ex, ey, Math.max(alpha, 0.25f));
+                    } catch (NumberFormatException ignored) {}
+                }
+                continue;
+            }
+
             double dx = (m.pos.getX() - cx) / bpp;
             double dy = (m.pos.getZ() - cz) / bpp;
             int sx = (int) (mapX + (mapSize / 2) + dx);
@@ -1184,7 +1201,7 @@ public class AASMapRenderer implements AutoCloseable {
     }
 
     // Отрисовка одного списка свободных меток отряда (общая для SL / Bravo / Charlie).
-    // Параметр isCMDSquad определяет, какую текстуру использовать.
+// Параметр isCMDSquad определяет, какую текстуру использовать.
     private void drawRhombusMarkerList(GuiGraphics gui, Minecraft mc, List<AASWorldData.SquadMarker> markers,
                                        AASWorldData.Squad squad, List<AASWorldData.Squad> teamSquadsForNums,
                                        long time, double cx, double cz, double bpp, boolean isCMDSquad) {
@@ -1193,6 +1210,12 @@ public class AASMapRenderer implements AutoCloseable {
             if (timeLeft <= 0) continue;
 
             float alpha = Mth.clamp((float) timeLeft / 3600f, 0.1f, 1.0f);
+
+            // NEW: стрелка отряда (тип 7) — рисуем зелёную стрелку вместо ромбика
+            if (rm.type == 7) {
+                drawSquadArrow(gui, mc, rm, squad, alpha, cx, cz, bpp);
+                continue;
+            }
 
             int mx = (int) (mapX + (mapSize / 2) + (rm.x - cx) / bpp);
             int my = (int) (mapY + (mapSize / 2) + (rm.z - cz) / bpp);
@@ -1223,6 +1246,79 @@ public class AASMapRenderer implements AutoCloseable {
         }
     }
 
+    /** Зелёная стрелка отряда. Видят ТОЛЬКО участники этого отряда (лидеры других отрядов — нет). */
+    private void drawSquadArrow(GuiGraphics gui, Minecraft mc, AASWorldData.SquadMarker rm,
+                                AASWorldData.Squad squad, float alpha,
+                                double cx, double cz, double bpp) {
+        if (mc.player == null || !squad.members.contains(mc.player.getScoreboardName())) return;
+
+        int sx = (int) (mapX + (mapSize / 2) + (rm.x - cx) / bpp);
+        int sy = (int) (mapY + (mapSize / 2) + (rm.z - cz) / bpp);
+        int ex = (int) (mapX + (mapSize / 2) + (rm.endX - cx) / bpp);
+        int ey = (int) (mapY + (mapSize / 2) + (rm.endZ - cz) / bpp);
+
+        drawArrow(gui, sx, sy, ex, ey, Math.max(alpha, 0.25f), 0x33DD33);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+    }
+
+    /** Красная стрелка с чёрной обводкой (командная): от (x1,y1) до (x2,y2), конус на конце. */
+    public void drawArrow(GuiGraphics gui, int x1, int y1, int x2, int y2, float alpha) {
+        drawArrow(gui, x1, y1, x2, y2, alpha, 0xE02020);
+    }
+
+    /** Стрелка с чёрной обводкой и заливкой цвета rgb (0xRRGGBB). */
+    public void drawArrow(GuiGraphics gui, int x1, int y1, int x2, int y2, float alpha, int rgb) {
+        float dx = x2 - x1, dy = y2 - y1;
+        float len = (float) Math.sqrt(dx * dx + dy * dy);
+        if (len < 4) return;
+        float angle = (float) Math.toDegrees(Math.atan2(dy, dx));
+        int a = (int) (Mth.clamp(alpha, 0f, 1f) * 255f);
+        int black = (a << 24);
+        int fillCol = (a << 24) | (rgb & 0xFFFFFF);
+
+        float headLen = Math.min(7f, len * 0.6f);   // длина конуса
+        float baseX = len - headLen;
+        int shaftEnd = (int) (baseX + 1);
+        float cy = 1f;                              // ось стрелки (середина древка)
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        gui.pose().pushPose();
+        gui.pose().translate(x1, y1, 0);
+        gui.pose().mulPose(Axis.ZP.rotationDegrees(angle));
+
+        // чёрная обводка: древко (толщина 4) и конус
+        gui.fill(-1, -1, shaftEnd, 3, black);
+        fillTriangle(gui, len + 1.5f, cy, baseX - 0.75f, cy - 4.25f, baseX - 0.75f, cy + 4.25f, black);
+        // цветная заливка: древко (толщина 2) и конус
+        gui.fill(0, 0, shaftEnd, 2, fillCol);
+        fillTriangle(gui, len, cy, baseX, cy - 3f, baseX, cy + 3f, fillCol);
+
+        gui.pose().popPose();
+    }
+
+    private void fillTriangle(GuiGraphics gui, float x1, float y1, float x2, float y2,
+                              float x3, float y3, int argb) {
+        float a = (argb >> 24 & 255) / 255.0F;
+        float r = (argb >> 16 & 255) / 255.0F;
+        float g = (argb >> 8 & 255) / 255.0F;
+        float b = (argb & 255) / 255.0F;
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder bb = tesselator.getBuilder();
+        Matrix4f m = gui.pose().last().pose();
+        bb.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+        bb.vertex(m, x1, y1, 0f).color(r, g, b, a).endVertex();
+        bb.vertex(m, x2, y2, 0f).color(r, g, b, a).endVertex();
+        bb.vertex(m, x3, y3, 0f).color(r, g, b, a).endVertex();
+        tesselator.end();
+        RenderSystem.enableCull();
+    }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (isMouseOver(mouseX, mouseY)) {
@@ -1239,28 +1335,6 @@ public class AASMapRenderer implements AutoCloseable {
 
     public void mouseReleased(int button) {
         if (button == 0) isDraggingMap = false;
-    }
-    // Р’ С„Р°Р№Р»Рµ AASMapRenderer.java РёР·РјРµРЅРёС‚Рµ РјРµС‚РѕРґ:
-    private void handleMapRightClick(double mouseX, double mouseY) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-
-        // РџСЂРѕРІРµСЂРєР°, СЏРІР»СЏРµС‚СЃСЏ Р»Рё РёРіСЂРѕРє Р»РёРґРµСЂРѕРј
-        if (!isSquadLeaderOrFTL(mc.player)) {
-            mc.player.displayClientMessage(Component.translatable("aas.msg.sl_ftl_only").withStyle(net.minecraft.ChatFormatting.RED), true);
-            return;
-        }
-
-        double bpp = this.getBlocksPerPixel();
-        double centerX = this.getCenterX(mc.player);
-        double centerZ = this.getCenterZ(mc.player);
-
-        // Р Р°СЃС‡РµС‚ РјРёСЂРѕРІС‹С… РєРѕРѕСЂРґРёРЅР°С‚ РёР· РїРѕР·РёС†РёРё РјС‹С€Рё РЅР° РєР°СЂС‚Рµ
-        int targetX = (int) (centerX + ((mouseX - (mapX + mapSize / 2.0)) * bpp));
-        int targetZ = (int) (centerZ + ((mouseY - (mapY + mapSize / 2.0)) * bpp));
-
-        // РћС‚РєСЂС‹РІР°РµРј СЂР°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ С‚Р°РєС‚РёС‡РµСЃРєРёС… РјРµС‚РѕРє
-        mc.setScreen(new TacticalMapRadialScreen(targetX, targetZ));
     }
 
     // Р”РѕР±Р°РІРёС‚СЊ СЌС‚РѕС‚ РјРµС‚РѕРґ РІ Р»СЋР±РѕРµ РјРµСЃС‚Рѕ РІРЅСѓС‚СЂРё РєР»Р°СЃСЃР° AASMapRenderer (РЅР°РїСЂРёРјРµСЂ, РїРµСЂРµРґ СЃР°РјС‹Рј close()):
@@ -1420,8 +1494,13 @@ public class AASMapRenderer implements AutoCloseable {
 
     private MarkerHit checkMarkerListHit(AASWorldData.Squad squad, List<AASWorldData.SquadMarker> list, String listName,
                                          double mouseX, double mouseY, double cx, double cz, double bpp, long time) {
+        Minecraft mc = Minecraft.getInstance();   // NEW
         for (AASWorldData.SquadMarker rm : list) {
             if (time >= rm.expiryTick) continue;
+
+            // NEW: стрелку отряда видят и удаляют только члены этого отряда
+            if (rm.type == 7 && (mc.player == null
+                    || !squad.members.contains(mc.player.getScoreboardName()))) continue;
 
             int mx = (int) (mapX + (mapSize / 2) + (rm.x - cx) / bpp);
             int my = (int) (mapY + (mapSize / 2) + (rm.z - cz) / bpp);

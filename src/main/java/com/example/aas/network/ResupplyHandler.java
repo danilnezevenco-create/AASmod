@@ -104,70 +104,194 @@ public class ResupplyHandler {
     }
 
     /**
-     * РџРћРџРћР›РќР•РќРР• РљРРўРђ: РўРµРїРµСЂСЊ СѓС‡РёС‚С‹РІР°РµС‚ РІСЃРµ 49 СЃР»РѕС‚РѕРІ.
+     * ПОПОЛНЕНИЕ КИТА: работает СТРОГО по слотам кита (0..40 — инвентарь/броня/оффхенд).
+     * Каждый предмет попадает ровно в тот слот, куда его положили в редакторе кита,
+     * вместо поиска "куда влезет" через pInv.add().
      */
     public static boolean resupplyPlayer(ServerPlayer player, AASWorldData.KitInfo kit, boolean isAmmoBagSource) {
         boolean gaveSomething = false;
         Inventory pInv = player.getInventory();
-        List<ItemStack> processedItems = new ArrayList<>();
 
-        for (int i = 0; i < 49; i++) {
+        // 1. Заряд-предметы (магазины/короба с NBT-счётчиком) обрабатываем отдельно, как раньше —
+        //    у них своя логика "поймать заряд", т.к. Count у них всегда 1.
+        List<Integer> countBasedSlots = new ArrayList<>();
+        for (int i = 0; i < 41; i++) {
             if (!kit.resupplyFlags[i]) continue;
-
             ItemStack targetStack = kit.inventory.get(i);
             if (targetStack.isEmpty()) continue;
+            if (isAmmoBagSource && targetStack.getItem() == com.example.aas.item.ModItems.AMMO_BAG.get()) continue;
 
-            if (isAmmoBagSource && targetStack.getItem() == com.example.aas.item.ModItems.AMMO_BAG.get()) {
-                continue;
+            if (isChargeBasedAmmo(targetStack)) {
+                if (resupplyChargeItem(pInv, i, targetStack)) gaveSomething = true;
+            } else {
+                countBasedSlots.add(i);
             }
+        }
 
-            boolean alreadyProcessed = false;
-            for (ItemStack processed : processedItems) {
-                if (ItemStack.isSameItemSameTags(processed, targetStack)) {
-                    alreadyProcessed = true;
-                    break;
+        // 2. Обычные (Count-based) слоты группируем по типу предмета,
+        //    чтобы НЕСКОЛЬКО стопок одного и того же предмета в ките учитывались суммарно,
+        //    а не "забывали" друг про друга.
+        boolean[] grouped = new boolean[41];
+        for (int i : countBasedSlots) {
+            if (grouped[i]) continue;
+
+            ItemStack sample = kit.inventory.get(i);
+            List<Integer> slots = new ArrayList<>();
+            for (int j : countBasedSlots) {
+                if (!grouped[j] && ItemStack.isSameItemSameTags(kit.inventory.get(j), sample)) {
+                    slots.add(j);
+                    grouped[j] = true;
                 }
             }
-            if (alreadyProcessed) continue;
-            processedItems.add(targetStack);
 
-            int totalKitNeeds = 0;
-            for (int k = 0; k < 49; k++) {
-                if (kit.resupplyFlags[k]) {
-                    ItemStack kStack = kit.inventory.get(k);
-                    if (ItemStack.isSameItemSameTags(kStack, targetStack)) {
-                        totalKitNeeds += kStack.getCount();
-                    }
-                }
-            }
+            // Сколько всего нужно суммарно по ВСЕМ кит-слотам этого типа
+            int totalNeeded = 0;
+            for (int s : slots) totalNeeded += kit.inventory.get(s).getCount();
 
-            int totalPlayerHas = 0;
-            for (int j = 0; j < pInv.getContainerSize(); j++) {
+            // Сколько у игрока уже есть суммарно по всему инвентарю
+            int haveCount = 0;
+            for (int j = 0; j < 41; j++) {
                 ItemStack s = pInv.getItem(j);
-                if (ItemStack.isSameItemSameTags(s, targetStack)) {
-                    totalPlayerHas += s.getCount();
+                if (ItemStack.isSameItemSameTags(s, sample)) haveCount += s.getCount();
+            }
+
+            if (haveCount >= totalNeeded) continue; // по этому типу всё в порядке
+
+            int missing = totalNeeded - haveCount;
+
+            // Сначала закрываем недостачу в СВОИХ designated-слотах (по порядку кита) —
+            // приоритет пустым и своим же слотам с этим предметом.
+            for (int s : slots) {
+                if (missing <= 0) break;
+                ItemStack current = pInv.getItem(s);
+                int neededHere = kit.inventory.get(s).getCount();
+
+                if (current.isEmpty()) {
+                    int put = Math.min(missing, Math.min(neededHere, sample.getMaxStackSize()));
+                    ItemStack give = sample.copy();
+                    give.setCount(put);
+                    pInv.setItem(s, give);
+                    missing -= put;
+                    gaveSomething = true;
+                } else if (ItemStack.isSameItemSameTags(current, sample) && current.getCount() < current.getMaxStackSize()) {
+                    int add = Math.min(missing, current.getMaxStackSize() - current.getCount());
+                    if (add > 0) {
+                        current.setCount(current.getCount() + add);
+                        missing -= add;
+                        gaveSomething = true;
+                    }
                 }
             }
 
-            if (ModList.get().isLoaded("curios")) {
-                totalPlayerHas += countInCurios(player, targetStack);
-            }
-
-            int deficit = totalKitNeeds - totalPlayerHas;
-            if (deficit > 0) {
-                gaveSomething = true;
-                while (deficit > 0) {
-                    int toGive = Math.min(deficit, targetStack.getMaxStackSize());
-                    ItemStack addStack = targetStack.copy();
-                    addStack.setCount(toGive);
-                    if (!pInv.add(addStack)) {
-                        player.drop(addStack, false);
+            // Если недостача осталась (все designated-слоты заняты чужими предметами) —
+            // докладываем в любые другие подходящие слоты инвентаря.
+            if (missing > 0) {
+                for (int j = 0; j < 41 && missing > 0; j++) {
+                    if (slots.contains(j)) continue;
+                    ItemStack s = pInv.getItem(j);
+                    if (ItemStack.isSameItemSameTags(s, sample) && s.getCount() < s.getMaxStackSize()) {
+                        int add = Math.min(missing, s.getMaxStackSize() - s.getCount());
+                        s.setCount(s.getCount() + add);
+                        missing -= add;
+                        gaveSomething = true;
                     }
-                    deficit -= toGive;
+                }
+                for (int j = 0; j < 41 && missing > 0; j++) {
+                    if (slots.contains(j)) continue;
+                    if (pInv.getItem(j).isEmpty()) {
+                        ItemStack give = sample.copy();
+                        int put = Math.min(missing, sample.getMaxStackSize());
+                        give.setCount(put);
+                        pInv.setItem(j, give);
+                        missing -= put;
+                        gaveSomething = true;
+                    }
                 }
             }
         }
+
         return gaveSomething;
+    }
+
+    /** Предмет типа "магазин с зарядом в NBT" (AGSAmmoItem, M2AmmoItem и т.п.) */
+    private static boolean isChargeBasedAmmo(ItemStack stack) {
+        return stack.getItem() instanceof com.example.aas.item.AGSAmmoItem
+                || stack.getItem() instanceof com.example.aas.item.M2AmmoItem;
+    }
+
+    private static int getCurrentCharge(ItemStack stack) {
+        if (stack.getItem() instanceof com.example.aas.item.AGSAmmoItem) {
+            return com.example.aas.item.AGSAmmoItem.getAmmo(stack);
+        }
+        if (stack.getItem() instanceof com.example.aas.item.M2AmmoItem) {
+            return com.example.aas.item.M2AmmoItem.getAmmo(stack);
+        }
+        return 0;
+    }
+
+    private static int getMaxCharge(ItemStack stack) {
+        if (stack.getItem() instanceof com.example.aas.item.AGSAmmoItem) {
+            return com.example.aas.item.AGSAmmoItem.MAX_AMMO;
+        }
+        if (stack.getItem() instanceof com.example.aas.item.M2AmmoItem) {
+            return com.example.aas.item.M2AmmoItem.MAX_AMMO;
+        }
+        return 0;
+    }
+
+    private static void setFullCharge(ItemStack stack) {
+        if (stack.getItem() instanceof com.example.aas.item.AGSAmmoItem) {
+            com.example.aas.item.AGSAmmoItem.setAmmo(stack, com.example.aas.item.AGSAmmoItem.MAX_AMMO);
+        } else if (stack.getItem() instanceof com.example.aas.item.M2AmmoItem) {
+            com.example.aas.item.M2AmmoItem.setAmmo(stack, com.example.aas.item.M2AmmoItem.MAX_AMMO);
+        }
+    }
+
+    /**
+     * Пополнение заряд-предмета (магазин/короб). Сравнение по типу предмета,
+     * тег (текущий заряд) при сравнении игнорируется — иначе пустой магазин
+     * никогда не считается "тем же предметом", что и полный эталон в ките.
+     */
+    private static boolean resupplyChargeItem(Inventory pInv, int slotIndex, ItemStack targetStack) {
+        ItemStack current = pInv.getItem(slotIndex);
+
+        // 1. Целевой слот пуст — просто кладём полный магазин
+        if (current.isEmpty()) {
+            pInv.setItem(slotIndex, targetStack.copy());
+            return true;
+        }
+
+        // 2. В целевом слоте тот же тип предмета (не важно, сколько в нём заряда) — доливаем на месте
+        if (ItemStack.isSameItem(current, targetStack)) {
+            if (getCurrentCharge(current) < getMaxCharge(current)) {
+                setFullCharge(current);
+                return true;
+            }
+            return false; // уже полный, ничего не делаем — это НЕ "already full" для всего кита, просто по этому слоту
+        }
+
+        // 3. В целевом слоте лежит другой предмет — ищем такой же магазин в другом месте инвентаря
+        for (int j = 0; j < 41; j++) {
+            if (j == slotIndex) continue;
+            ItemStack s = pInv.getItem(j);
+            if (ItemStack.isSameItem(s, targetStack)) {
+                if (getCurrentCharge(s) < getMaxCharge(s)) {
+                    setFullCharge(s);
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        // 4. Такого предмета нигде нет — кладём новый в первый свободный слот
+        for (int j = 0; j < 41; j++) {
+            if (pInv.getItem(j).isEmpty()) {
+                pInv.setItem(j, targetStack.copy());
+                return true;
+            }
+        }
+
+        return false; // некуда положить
     }
 
     /**

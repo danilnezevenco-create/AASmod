@@ -199,7 +199,8 @@ public class InteractionEvents {
             GrindstoneBlock.class,
             SmithingTableBlock.class,
             LecternBlock.class,
-            BeaconBlock.class
+            BeaconBlock.class,
+            BedBlock.class
     );
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

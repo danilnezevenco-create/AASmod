@@ -28,6 +28,15 @@
       }
     ]
   },
+  "spawn_select": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "aas:spawn_select",
+        "stream": false
+      }
+    ]
+  },
   "radio_open": {
     "category": "player",
     "sounds": [

@@ -83,6 +83,9 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketSquadLeaderPlaytime.class, PacketSquadLeaderPlaytime::encode, PacketSquadLeaderPlaytime::decode, PacketSquadLeaderPlaytime::handle);
         INSTANCE.registerMessage(id++, PacketDeleteMarker.class, PacketDeleteMarker::encode, PacketDeleteMarker::decode, PacketDeleteMarker::handle);
         INSTANCE.registerMessage(id++, PacketPlaceRadialMarker.class, PacketPlaceRadialMarker::encode, PacketPlaceRadialMarker::decode, PacketPlaceRadialMarker::handle);
+        INSTANCE.registerMessage(id++, PacketPlayMarkerSound.class, PacketPlayMarkerSound::encode, PacketPlayMarkerSound::decode, PacketPlayMarkerSound::handle);
+        INSTANCE.registerMessage(id++, PacketRequestVehicleList.class, PacketRequestVehicleList::encode, PacketRequestVehicleList::decode, PacketRequestVehicleList::handle);
+        INSTANCE.registerMessage(id++, PacketSyncVehicleList.class, PacketSyncVehicleList::encode, PacketSyncVehicleList::decode, PacketSyncVehicleList::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
@@ -105,7 +108,22 @@ public class PacketHandler {
         }
         return pKits;
     }
-
+    /**
+     * Рассылает звук установки метки всем участникам отряда, КРОМЕ того, кто её поставил
+     * (у него звук уже проигрался локально в момент клика, без ожидания сервера).
+     */
+    public static void playMarkerSoundForSquad(ServerLevel level, List<String> memberNames, ServerPlayer exclude) {
+        MinecraftServer server = level.getServer();
+        if (server == null) return;
+        String excludeName = exclude != null ? exclude.getScoreboardName() : null;
+        for (String name : memberNames) {
+            if (name.equals(excludeName)) continue;
+            ServerPlayer p = server.getPlayerList().getPlayerByName(name);
+            if (p != null) {
+                INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), new PacketPlayMarkerSound());
+            }
+        }
+    }
     public static void sendToAllClients(int blue, int red, boolean hasBlue, boolean hasRed,
                                         boolean blueBleed, boolean redBleed, int respawnTime,
                                         boolean blueBlocked, boolean redBlocked,

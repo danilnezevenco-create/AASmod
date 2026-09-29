@@ -143,6 +143,9 @@ public class AASWorldData extends SavedData {
         for (VehicleRecord v : markedVehicles) {
             vehicleList.add(v.save());
         }
+        CompoundTag pendingRespawnsTag = new CompoundTag();
+        pendingSpawnerRespawns.forEach((p, t) -> pendingRespawnsTag.putLong(String.valueOf(p.asLong()), t));
+        tag.put("PendingSpawnerRespawns", pendingRespawnsTag);
         ListTag triggerList = new ListTag();
         for (BlockPos p : triggerBlocks) triggerList.add(LongTag.valueOf(p.asLong()));
         tag.put("TriggerBlocks", triggerList);
@@ -307,6 +310,13 @@ public class AASWorldData extends SavedData {
             ListTag list = tag.getList("MarkedVehicles", 10);
             for (int i = 0; i < list.size(); i++) {
                 data.markedVehicles.add(VehicleRecord.load(list.getCompound(i)));
+            }
+        }
+        if (tag.contains("PendingSpawnerRespawns")) {
+            CompoundTag pendingTag = tag.getCompound("PendingSpawnerRespawns");
+            for (String key : pendingTag.getAllKeys()) {
+                long posLong = Long.parseLong(key);
+                data.pendingSpawnerRespawns.put(BlockPos.of(posLong), pendingTag.getLong(key));
             }
         }
         if (tag.contains("BlueRallies")) {
@@ -492,7 +502,8 @@ public class AASWorldData extends SavedData {
         public long expiryTick;
         public boolean isPhysical;
         public UUID id; // Уникальный ID метки — нужен, чтобы удалить конкретную метку по клику на карте
-
+        // NEW: конец стрелки (используется только при type == 7)
+        public int endX, endZ;
         public SquadMarker(int x, int y, int z, int type, long expiryTick, boolean isPhysical) {
             this.x = x;
             this.y = y;
@@ -502,7 +513,13 @@ public class AASWorldData extends SavedData {
             this.isPhysical = isPhysical;
             this.id = UUID.randomUUID();
         }
-
+        // NEW
+        public static SquadMarker arrow(int startX, int startZ, int endX, int endZ, long expiryTick) {
+            SquadMarker m = new SquadMarker(startX, 64, startZ, 7, expiryTick, false);
+            m.endX = endX;
+            m.endZ = endZ;
+            return m;
+        }
         public CompoundTag save() {
             CompoundTag tag = new CompoundTag();
             tag.putInt("X", x);
@@ -512,6 +529,10 @@ public class AASWorldData extends SavedData {
             tag.putLong("Expiry", expiryTick);
             tag.putBoolean("IsPhysical", isPhysical);
             tag.putUUID("Id", id);
+            if (type == 7) {
+                tag.putInt("EndX", endX);
+                tag.putInt("EndZ", endZ);
+            }
             return tag;
         }
 
@@ -528,6 +549,10 @@ public class AASWorldData extends SavedData {
             // Старые сохранения могли не содержать Id — тогда оставляем сгенерированный в конструкторе
             if (tag.hasUUID("Id")) {
                 m.id = tag.getUUID("Id");
+            }
+            if (tag.contains("EndX")) {
+                m.endX = tag.getInt("EndX");
+                m.endZ = tag.getInt("EndZ");
             }
             return m;
         }
@@ -1101,19 +1126,20 @@ public class AASWorldData extends SavedData {
         public double x, y, z;
         public float yaw;
         public BlockPos spawnerPos;
+        public int respawnTimeSeconds = 60;
 
-        // === РђР’РўРћ-Р’РћР—Р’Р РђРў ===
         public boolean autoReturnEnabled = false;
         public int autoReturnTimeSeconds = 60;
         public boolean autoReturnDestroy = false;
-        public long emptySinceTick = -1; // -1 = РІ С‚РµС…РЅРёРєРµ РµСЃС‚СЊ РёРіСЂРѕРє / С‚Р°Р№РјРµСЂ РЅРµ Р·Р°РїСѓС‰РµРЅ
+        public long emptySinceTick = -1;
 
+        // === ВОТ ЭТОТ КОНСТРУКТОР НУЖНО ВЕРНУТЬ ===
         public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw, BlockPos spawnerPos) {
-            this(uuid, team, type, x, y, z, yaw, spawnerPos, false, 60, false);
+            this(uuid, team, type, x, y, z, yaw, spawnerPos, false, 60, false, 60);
         }
 
         public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw, BlockPos spawnerPos,
-                             boolean autoReturnEnabled, int autoReturnTimeSeconds, boolean autoReturnDestroy) {
+                             boolean autoReturnEnabled, int autoReturnTimeSeconds, boolean autoReturnDestroy, int respawnTimeSeconds) {
             this.uuid = uuid;
             this.team = team;
             this.type = type;
@@ -1123,6 +1149,12 @@ public class AASWorldData extends SavedData {
             this.autoReturnEnabled = autoReturnEnabled;
             this.autoReturnTimeSeconds = autoReturnTimeSeconds;
             this.autoReturnDestroy = autoReturnDestroy;
+            this.respawnTimeSeconds = respawnTimeSeconds;
+        }
+
+        public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw, BlockPos spawnerPos,
+                             boolean autoReturnEnabled, int autoReturnTimeSeconds, boolean autoReturnDestroy) {
+            this(uuid, team, type, x, y, z, yaw, spawnerPos, autoReturnEnabled, autoReturnTimeSeconds, autoReturnDestroy, 60);
         }
 
         public CompoundTag save() {
@@ -1136,17 +1168,19 @@ public class AASWorldData extends SavedData {
             tag.putBoolean("AutoReturnEnabled", autoReturnEnabled);
             tag.putInt("AutoReturnTime", autoReturnTimeSeconds);
             tag.putBoolean("AutoReturnDestroy", autoReturnDestroy);
+            tag.putInt("RespawnTimeSeconds", respawnTimeSeconds); // НОВОЕ
             return tag;
         }
 
         public static VehicleRecord load(CompoundTag tag) {
             BlockPos sPos = tag.contains("SpawnerPos") ? BlockPos.of(tag.getLong("SpawnerPos")) : null;
-            VehicleRecord v = new VehicleRecord(tag.getUUID("UUID"), tag.getString("Team"), tag.getString("Type"),
+            return new VehicleRecord(tag.getUUID("UUID"), tag.getString("Team"), tag.getString("Type"),
                     tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"), tag.getFloat("Yaw"), sPos,
                     tag.getBoolean("AutoReturnEnabled"),
                     tag.contains("AutoReturnTime") ? tag.getInt("AutoReturnTime") : 60,
-                    tag.getBoolean("AutoReturnDestroy"));
-            return v;
+                    tag.getBoolean("AutoReturnDestroy"),
+                    tag.contains("RespawnTimeSeconds") ? tag.getInt("RespawnTimeSeconds") : 60); // НОВОЕ
         }
     }
+    public Map<BlockPos, Long> pendingSpawnerRespawns = new HashMap<>();
 }

@@ -136,8 +136,7 @@ public class ClientEvents {
         if (mc.player.isAlive() && !mc.player.getPersistentData().getBoolean("AAS_IsDowned") && !(mc.screen instanceof AASDeathScreen)) {
             if (ClientData.globalDeathTimestamp != 0) {
                 // Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР°: РЅРµ СЃР±СЂР°СЃС‹РІР°РµРј, РµСЃР»Рё РјС‹ РїСЂРѕСЃС‚Рѕ РїРµСЂРµС…РѕРґРёРј РјРµР¶РґСѓ РјРµРЅСЋС€РєР°РјРё AAS
-                if (!(mc.screen instanceof com.example.aas.client.gui.PlayerKitSelectScreen) &&
-                        !(mc.screen instanceof com.example.aas.client.gui.MapMarkerGridScreen)) {
+                if (!(mc.screen instanceof com.example.aas.client.gui.PlayerKitSelectScreen)) {
                     ClientData.globalDeathTimestamp = 0;
                     ClientData.deathFadePlayed = false;
                 }
@@ -148,10 +147,15 @@ public class ClientEvents {
         if (radialKeyHeld && !radialScreenOpened && mc.screen == null) {
             long held = System.currentTimeMillis() - radialKeyPressTime;
             if (held >= RADIAL_HOLD_MS && pingKeyPhysicallyDown) {
-                radialScreenOpened = true;
                 int group = getMySquadGroup(mc);
-                mc.setScreen(new WorldMarkerRadialScreen(group < 0 ? 0 : group)); // если не лидер — покажем иконки SL как запасной вариант
-            } else if (!pingKeyPhysicallyDown) {                     // ← было !isDown()
+                if (group < 0) {
+                    // Не SL и не FTL — метки ставить нельзя, меню вообще не открываем
+                    radialKeyHeld = false;
+                } else {
+                    radialScreenOpened = true;
+                    mc.setScreen(new WorldMarkerRadialScreen(group));
+                }
+            } else if (!pingKeyPhysicallyDown) {
                 radialKeyHeld = false;
             }
         }

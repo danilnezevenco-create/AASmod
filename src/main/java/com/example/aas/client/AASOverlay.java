@@ -364,6 +364,7 @@ public class AASOverlay {
         String myTeam = (mc.player.getTeam() != null) ? mc.player.getTeam().getName().toUpperCase() : "NEUTRAL";
 
         for (AASWorldData.MapMarker m : ClientData.activeMarkers) {
+            if (m.type.startsWith("Arrow:")) continue;   // стрелки на компасе не показываем
             if (!m.team.equalsIgnoreCase(myTeam) && !mc.player.isCreative()) continue;
 
             double dist = Math.sqrt(mc.player.distanceToSqr(m.pos.getX() + 0.5, mc.player.getY(), m.pos.getZ() + 0.5));

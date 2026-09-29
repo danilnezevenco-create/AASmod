@@ -86,6 +86,7 @@ public class PacketPlacePing {
                         // Синхронизируем отряды (чтобы нужные люди увидели метку)
                         PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(player.level()::dimension),
                                 new PacketSyncSquads(data.squads));
+                        PacketHandler.playMarkerSoundForSquad(player.serverLevel(), s.members, player);
                         break;
                     }
                 }

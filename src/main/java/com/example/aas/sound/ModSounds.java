@@ -25,6 +25,7 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> AGS_SHOOT = registerSoundEvent("ags_shoot");
     public static final RegistryObject<SoundEvent> HELP_SCREAM = registerSoundEvent("help_scream");
     public static final RegistryObject<SoundEvent> RADIO_OPEN = registerSoundEvent("radio_open");
+    public static final RegistryObject<SoundEvent> SPAWN_SELECT = registerSoundEvent("spawn_select");
     public static final RegistryObject<SoundEvent> M2_SHOOT = registerSoundEvent("m2_shoot");
     public static final RegistryObject<SoundEvent> SHOVEL_DIG = registerSoundEvent("shovel_dig");
     // Добавьте в список существующих RegistryObject

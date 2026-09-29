@@ -61,8 +61,8 @@ public class SquadSelectionScreen extends Screen {
     private final Set<Integer> expandedSquads = new HashSet<>();
     private int lastOwnSquadId = -1; // РѕС‚СЃР»РµР¶РёРІР°РµРј СЃРІРѕР№ РѕС‚СЂСЏРґ, С‡С‚РѕР±С‹ Р°РІС‚РѕСЂР°Р·РІРѕСЂР°С‡РёРІР°С‚СЊ РµРіРѕ РїСЂРё СЃРѕР·РґР°РЅРёРё/РІС…РѕРґРµ Р±РµР· РїРµСЂРµРѕС‚РєСЂС‹С‚РёСЏ СЌРєСЂР°РЅР°
     private final AASMapRenderer mapRenderer = new AASMapRenderer();
-
-
+    private final MarkerPanelOverlay markerPanel = new MarkerPanelOverlay();
+    private final VehicleListPanel vehiclePanel = new VehicleListPanel();
     public SquadSelectionScreen() {
         super(Component.literal("Squad Selection"));
     }
@@ -193,6 +193,9 @@ public class SquadSelectionScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (vehiclePanel.handleEscapePressed(keyCode)) return true;
+        if (markerPanel.handleEscapePressed(keyCode)) return true;   // <-- ВСТАВИТЬ ЭТУ СТРОКУ
+
         if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
             if (chatInput.isFocused()) {
                 String msg = chatInput.getValue().trim();
@@ -277,6 +280,9 @@ public class SquadSelectionScreen extends Screen {
         if (isDowned) {
             renderDownedTimerHUD(gui);
         }
+
+        markerPanel.render(gui, mouseX, mouseY);
+        vehiclePanel.render(gui, mouseX, mouseY);
     }
 
     private void renderDownedTimerHUD(GuiGraphics gui) {
@@ -309,15 +315,18 @@ public class SquadSelectionScreen extends Screen {
     }
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (vehiclePanel.mouseScrolled(mouseX, mouseY, delta)) return true;
         if (mapRenderer.mouseScrolled(mouseX, mouseY, delta)) return true;
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     // PATH: src\main\java\com\example\aas\client\gui\SquadSelectionScreen.java
-
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // --- Меню удаления метки на карте (если оно открыто - забирает клик на себя) ---
+        if (vehiclePanel.mouseClicked(mouseX, mouseY, button)) return true;
+        if (markerPanel.mouseClicked(mouseX, mouseY, button)) return true;   // <-- ВСТАВИТЬ ЭТУ СТРОКУ
+
+        // --- Меню удаления метки на карте ...
         if (mapRenderer.isMarkerDeleteMenuOpen()) {
             if (mapRenderer.handleMarkerDeleteMenuClick(mouseX, mouseY, button)) return true;
         }
@@ -693,7 +702,7 @@ public class SquadSelectionScreen extends Screen {
 
         // === Р вЂ™Р С›Р Сћ Р СћР Р€Р Сћ Р вЂњР вЂєР С’Р вЂ™Р СњР С›Р вЂў Р ВР вЂ”Р СљР вЂўР СњР вЂўР СњР ВР вЂў ===
         // Р вЂ™Р СР ВµРЎРѓРЎвЂљР С• SquadMarkerRadialScreen Р С•РЎвЂљР С”РЎР‚РЎвЂ№Р Р†Р В°Р ВµР С Р Р…Р В°РЎв‚¬Р Вµ Р Р…Р С•Р Р†Р С•Р Вµ Р вЂњР вЂєР С’Р вЂ™Р СњР С›Р вЂў РЎвЂљР В°Р С”РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С•Р Вµ Р СР ВµР Р…РЎР‹
-        this.minecraft.setScreen(new TacticalMapRadialScreen(targetX, targetZ));
+        markerPanel.openAt(targetX, targetZ, mouseX, mouseY, mapRenderer);
     }
 
     @Override
@@ -704,6 +713,7 @@ public class SquadSelectionScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+
         if (mapRenderer.mouseDragged(mouseX, mouseY, button, dragX, dragY)) return true;
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }

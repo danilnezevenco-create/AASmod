@@ -198,5 +198,13 @@ public class ClientData {
         for (String o : options) w = Math.max(w, font.width(squadMenuOption(o)) + 8);
         return w;
     }
+    // 15. NEW: vehicle list panel (last summary received from the server; countdown is computed on the client)
+    public static volatile com.example.aas.network.PacketSyncVehicleList vehicleList = null;
+    public static volatile long vehicleListReceivedAtMs = 0L;
+
+    public static void applyVehicleList(com.example.aas.network.PacketSyncVehicleList msg) {
+        vehicleListReceivedAtMs = System.currentTimeMillis();
+        vehicleList = msg;
+    }
 }
 

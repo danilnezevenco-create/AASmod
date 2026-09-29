@@ -4,6 +4,7 @@ import com.example.aas.item.SupplyTruckMarkerItem;
 import com.example.aas.item.VehicleMarkerItem;
 import com.example.aas.menu.VehicleSpawnerMenu;
 import com.example.aas.world.AASWorldData;
+import com.example.aas.world.VehicleSpawnerRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -74,12 +75,16 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public void onLoad() {
         super.onLoad();
         this.loadTimer = 60;
+
+        // Register this spawner in the persistent registry used by the vehicle list panel
+        if (level instanceof ServerLevel serverLevel) {
+            VehicleSpawnerRegistry.get(serverLevel).put(worldPosition, VehicleSpawnerRegistry.Snapshot.of(this));
+        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
         if (level.isClientSide) return;
 
-        // === КАМУФЛЯЖ: единоразовое сканирование блоков вокруг ===
         if (!be.camoScanned) {
             be.camoScanned = true;
             VehicleSpawnerBlock.CamoType camo = VehicleSpawnerBlock.computeCamoType(level, pos);
@@ -96,12 +101,12 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
 
         AASWorldData data = AASWorldData.get((ServerLevel) level);
 
-        // Если игра не начата — сбрасываем всё
         if (!data.isGameStarted) {
             if (be.hasSpawnedOnce || be.targetSpawnTick != 0 || be.lastVehicleUUID != null) {
                 be.hasSpawnedOnce = false;
                 be.targetSpawnTick = 0;
                 be.lastVehicleUUID = null;
+                data.pendingSpawnerRespawns.remove(pos);
                 be.setChanged();
                 be.syncToClient();
             }
@@ -109,24 +114,22 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
         }
 
         long currentTick = level.getGameTime();
-        // --- ДОБАВИТЬ ЭТОТ БЛОК ---
         String spawnerTeam = "NEUTRAL";
         ItemStack modifier = be.inventory.getStackInSlot(0);
         if (modifier.getItem() instanceof VehicleMarkerItem vm) spawnerTeam = vm.getTeam();
         if (modifier.getItem() instanceof SupplyTruckMarkerItem stm) spawnerTeam = stm.getTeam();
 
-        // Замораживаем спавнер (таймер не начнет отсчет), пока идет подготовка в Invasion
         if (data.gameMode.equalsIgnoreCase("INVASION") && data.invasionPrepTicks > 0) {
             if (!spawnerTeam.equals(data.invasionDefender) && !spawnerTeam.equals("NEUTRAL")) {
-                return; // Прерываем тик! Таймер инициализируется только когда закончится prepTicks
+                return;
             }
         }
-        // 1. Проверяем, жива ли техника этого спавнера в мире
+
+        // 1. Жива ли техника этого спавнера
         boolean vehicleExistsGlobally = data.markedVehicles.stream()
                 .anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
 
         if (vehicleExistsGlobally) {
-            // Техника жива — таймер должен быть сброшен в 0 (не отображаться)
             if (be.targetSpawnTick != 0) {
                 be.targetSpawnTick = 0;
                 be.setChanged();
@@ -135,26 +138,28 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
             return;
         }
 
-        // 2. Если техники нет, но UUID еще остался — значит её только что уничтожили
-        if (be.lastVehicleUUID != null) {
-            be.lastVehicleUUID = null;
-            int delay = be.respawnTimeSettings * 20; // Переводим секунды в тики
-            be.targetSpawnTick = currentTick + delay;
-            be.setChanged();
-            be.syncToClient();
-        }
-
-        // 3. Инициализация самого первого спавна
-        if (be.targetSpawnTick == 0 && !be.hasSpawnedOnce) {
+        // 2. Техники нет — подтягиваем ГЛОБАЛЬНЫЙ дедлайн, который считается независимо от прогрузки чанка.
+        //    Он проставляется мгновенно в момент смерти техники, в GameLogicEvents#processEntityLoss.
+        Long globalDeadline = data.pendingSpawnerRespawns.get(pos);
+        if (globalDeadline != null) {
+            if (be.targetSpawnTick != globalDeadline) {
+                be.targetSpawnTick = globalDeadline;
+                be.setChanged();
+                be.syncToClient();
+            }
+        } else if (be.targetSpawnTick == 0 && !be.hasSpawnedOnce) {
+            // 3. Инициализация самого первого спавна (техника ещё ни разу не спавнилась)
             int delay = be.initialTimeSettings * 20;
             be.targetSpawnTick = currentTick + delay;
             be.setChanged();
             be.syncToClient();
         }
-        // 4. САМ СПАВН ТЕХНИКИ (Этого куска у вас сейчас нет)
+
+        // 4. САМ СПАВН ТЕХНИКИ
         if (be.targetSpawnTick != 0 && currentTick >= be.targetSpawnTick) {
             be.spawnVehicle();
-            be.targetSpawnTick = 0; // Сбрасываем после спавна
+            data.pendingSpawnerRespawns.remove(pos);
+            be.targetSpawnTick = 0;
             be.setChanged();
             be.syncToClient();
         }
@@ -233,17 +238,11 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
 
             // === Передаём настройки авто-возврата в запись техники ===
             worldData.markedVehicles.add(new AASWorldData.VehicleRecord(
-                    entity.getUUID(),
-                    vTeam,
-                    vType,
-                    entity.getX(),
-                    entity.getY(),
-                    entity.getZ(),
-                    entity.getYRot(),
+                    entity.getUUID(), vTeam, vType,
+                    entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(),
                     this.worldPosition,
-                    this.autoReturnEnabled,
-                    this.autoReturnTimeSettings,
-                    this.autoReturnDestroy
+                    this.autoReturnEnabled, this.autoReturnTimeSettings, this.autoReturnDestroy,
+                    this.respawnTimeSettings // <-- НОВОЕ
             ));
             worldData.setDirty();
             PacketHandler.sendToAllClients((ServerLevel)level, worldData);

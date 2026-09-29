@@ -117,7 +117,11 @@ public class PacketPlaceMapMarker {
 
                 // Только SL и FTL могут ставить тактические метки
                 if (role.equals("NONE")) return;
-
+                // Стрелка: только SL и только корректный формат "Arrow:<x>:<z>"
+                if (msg.type.startsWith("Arrow:")) {
+                    if (!role.equals("SL")) return;
+                    if (!msg.type.matches("Arrow:-?\\d+:-?\\d+")) return;
+                }
                 // Определяем лимит для этого игрока
                 int limit = role.equals("SL") ? SL_MARKER_LIMIT : FTL_MARKER_LIMIT;
 

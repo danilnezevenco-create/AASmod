@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import com.example.aas.client.KitKeyUtil;
 
 public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
@@ -127,6 +128,15 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         }).bounds(x + LEFT_COL_X + 56, y + ROW4_Y, 52, ROW_H).build();
         pasteBtn.active = (AASClipboard.kitData != null);
         addRenderableWidget(pasteBtn);
+
+        // --- Key for this kit (current variant): generate / paste ---
+        addRenderableWidget(Button.builder(Component.literal("Get Key"), b ->
+                        KitKeyUtil.requestCopy("KIT", menu.team, menu.kitName, menu.isAlt))
+                .bounds(x + NUM_LABEL_X, y + ROW4_Y, 42, ROW_H).build());
+
+        addRenderableWidget(Button.builder(Component.literal("Set Key"), b ->
+                        KitKeyUtil.importForEditor(menu.team, menu.kitName, menu.isAlt))
+                .bounds(x + NUM_LABEL_X + 44, y + ROW4_Y, 42, ROW_H).build());
 
         addRenderableWidget(Button.builder(Component.literal("SAVE"), b -> {
             saveKit();

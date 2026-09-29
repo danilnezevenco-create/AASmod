@@ -1036,11 +1036,12 @@ public class GameLogicEvents {
             // Р В РІР‚СњР В РЎвЂўР В Р’В±Р В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎВ Р В РЎВР В Р’В°Р РЋР вЂљР В РЎвЂќР В Р’ВµР РЋР вЂљ Р В РўвЂР В Р’В»Р РЋР РЏ Р РЋР С“Р В РЎвЂўР РЋР вЂ№Р В Р’В·Р В Р вЂ¦Р В РЎвЂР В РЎвЂќР В РЎвЂўР В Р вЂ 
             if (!team.equals("NEUTRAL")) {
                 data.markedVehicles.add(new AASWorldData.VehicleRecord(
-                        entity.getUUID(), team, "Mine", entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), null
+                        entity.getUUID(), team,
+                        entity.getPersistentData().getString("AAS_VehicleType"),
+                        entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(),
+                        null // у мины нет спавнера
                 ));
                 data.setDirty();
-
-                // Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎВ Р В РЎвЂ”Р В Р’В°Р В РЎвЂќР В Р’ВµР РЋРІР‚С™ Р РЋР С“Р В РЎвЂР В Р вЂ¦Р РЋРІР‚В¦Р РЋР вЂљР В РЎвЂўР В Р вЂ¦Р В РЎвЂР В Р’В·Р В Р’В°Р РЋРІР‚В Р В РЎвЂР В РЎвЂ Р В РЎвЂќР В Р’В»Р В РЎвЂР В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р В Р’В°Р В РЎВ
                 PacketHandler.sendToAllClients(serverLevel, data);
             }
         }
@@ -1092,8 +1093,26 @@ public class GameLogicEvents {
                 alliesOnPoint = redOnPointLiving;
             }
 
+            // Считаем онлайн команды (живые, не спектаторы) на этом уровне
+            int teamOnline = 0;
+            for (ServerPlayer sp : level.players()) {
+                if (!sp.isAlive() || sp.isSpectator()) continue;
+                if (sp.getTeam() != null && sp.getTeam().getName().equalsIgnoreCase(dominantTeam)) {
+                    teamOnline++;
+                }
+            }
+
             float multiplier = 1.0f;
-            if (alliesOnPoint > 1) multiplier += (alliesOnPoint - 1) * 0.5f;
+            if (teamOnline > 0) {
+                float share = (float) alliesOnPoint / teamOnline;              // доля команды на точке
+                float shareMultiplier = 1.0f + Math.min(share, 0.5f) / 0.5f * 3.0f;
+
+                float absoluteMultiplier = 1.0f;
+                if (alliesOnPoint > 1) absoluteMultiplier += (alliesOnPoint - 1) * 0.5f;
+                if (absoluteMultiplier > 4.0f) absoluteMultiplier = 4.0f;
+
+                multiplier = Math.min(shareMultiplier, absoluteMultiplier); // берём минимум — это и есть "исключение" для маленьких команд
+            }
             if (multiplier > 4.0f) multiplier = 4.0f;
 
             // --- Р В РІР‚С”Р В РЎвЂєР В РІР‚СљР В Р’ВР В РЎв„ўР В РЎвЂ™ Р В Р Р‹Р В РЎС›Р В Р’В Р В РІР‚СћР В РІР‚С”Р В РЎвЂєР В РЎв„ў Р В Р’В Р В Р’В¦Р В РІР‚в„ўР В РІР‚СћР В РЎС›Р В РЎвЂ™ ---
@@ -1675,13 +1694,27 @@ public class GameLogicEvents {
         ServerLevel level = (ServerLevel) entity.level();
         AASWorldData data = AASWorldData.get(level);
 
-        // === 1. Р В РЎС™Р В РІР‚СљР В РЎСљР В РЎвЂєР В РІР‚в„ўР В РІР‚СћР В РЎСљР В РЎСљР В РЎвЂєР В РІР‚Сћ Р В Р в‚¬Р В РІР‚СњР В РЎвЂ™Р В РІР‚С”Р В РІР‚СћР В РЎСљР В Р’ВР В РІР‚Сћ Р В Р’ВР В РЎв„ўР В РЎвЂєР В РЎСљР В РЎв„ўР В Р’В Р В Р Р‹ Р В РЎв„ўР В РЎвЂ™Р В Р’В Р В РЎС›Р В Р’В« ===
-        // Р В РІР‚СћР РЋР С“Р В Р’В»Р В РЎвЂ UUID Р РЋР РЉР РЋРІР‚С™Р В РЎвЂўР В РІвЂћвЂ“ Р РЋР С“Р РЋРЎвЂњР РЋРІР‚В°Р В Р вЂ¦Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В РЎвЂ Р В Р’ВµР РЋР С“Р РЋРІР‚С™Р РЋР Р‰ Р В Р вЂ  Р РЋР С“Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В РЎвЂќР В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В РЎВР В Р’ВµР РЋРІР‚РЋР В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р РЋРІР‚В¦ Р Р†Р вЂљРІР‚Сњ Р РЋРЎвЂњР В РўвЂР В Р’В°Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎВ Р В Р’В·Р В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р РЋР Р‰
+        // === 1. Удаление маркера техники из списка живых ===
+        // Перед удалением находим саму запись, чтобы достать позицию спавнера и время респавна —
+        // это нужно для НОВОЙ логики глобального таймера ниже.
+        AASWorldData.VehicleRecord deadRecord = data.markedVehicles.stream()
+                .filter(v -> v.uuid.equals(entity.getUUID()))
+                .findFirst()
+                .orElse(null);
+
         boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
 
-        // Р В РІР‚СћР РЋР С“Р В Р’В»Р В РЎвЂ Р В Р’В±Р В РЎвЂР В Р’В»Р В Р’ВµР РЋРІР‚С™Р В РЎвЂўР В Р вЂ  Р РЋРЎвЂњР В Р’В¶Р В Р’Вµ 0, Р В РЎВР РЋРІР‚в„– Р В Р вЂ Р РЋР С“Р РЋРІР‚В Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р вЂ¦Р В РЎвЂў Р В РўвЂР В РЎвЂўР В Р’В»Р В Р’В¶Р В Р вЂ¦Р РЋРІР‚в„– Р РЋР С“Р В РЎвЂР В Р вЂ¦Р РЋРІР‚В¦Р РЋР вЂљР В РЎвЂўР В Р вЂ¦Р В РЎвЂР В Р’В·Р В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р РЋРЎвЂњР В РўвЂР В Р’В°Р В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ Р В РЎВР В Р’В°Р РЋР вЂљР В РЎвЂќР В Р’ВµР РЋР вЂљР В Р’В°
+        // === НОВОЕ: сразу же, независимо от того, прогружен ли чанк со спавнером,
+        // выставляем глобальный дедлайн следующего респавна ===
+        if (deadRecord != null && deadRecord.spawnerPos != null) {
+            long delayTicks = deadRecord.respawnTimeSeconds * 20L;
+            long targetTick = level.getGameTime() + delayTicks;
+            data.pendingSpawnerRespawns.put(deadRecord.spawnerPos, targetTick);
+        }
+
+        // Если билетов уже нет — досрочный выход, кроме сохранения снятого маркера
         if (data.blueTickets <= 0 || data.redTickets <= 0) {
-            if (markerRemoved) {
+            if (markerRemoved || deadRecord != null) {
                 data.setDirty();
                 sendSyncPacket(level, data);
             }
@@ -1690,7 +1723,7 @@ public class GameLogicEvents {
 
         boolean ticketsChanged = false;
 
-        // === 2. Р В РІР‚С”Р В РЎвЂєР В РІР‚СљР В Р’ВР В РЎв„ўР В РЎвЂ™ Р В Р Р‹Р В РЎС™Р В РІР‚СћР В Р’В Р В РЎС›Р В Р’В Р В Р’ВР В РІР‚СљР В Р’В Р В РЎвЂєР В РЎв„ўР В РЎвЂ™ (Р В Р РѓР В РЎС›Р В Р’В Р В РЎвЂ™Р В Р’В¤Р В Р’В«) ===
+        // === 2. Списание билетов за смерть игрока ===
         if (entity instanceof ServerPlayer player) {
             if (player.getTeam() != null) {
                 String teamName = player.getTeam().getName();
@@ -1706,7 +1739,7 @@ public class GameLogicEvents {
             }
         }
 
-        // === 3. Р В РІР‚С”Р В РЎвЂєР В РІР‚СљР В Р’ВР В РЎв„ўР В РЎвЂ™ Р В РЎСџР В РЎвЂєР В РЎС›Р В РІР‚СћР В Р’В Р В Р’В Р В РЎС›Р В РІР‚СћР В РўС’Р В РЎСљР В Р’ВР В РЎв„ўР В Р’В (Р В Р РѓР В РЎС›Р В Р’В Р В РЎвЂ™Р В Р’В¤Р В Р’В«) ===
+        // === 3. Списание билетов за потерю техники ===
         if (entity.getPersistentData().contains("AAS_TicketPenalty")) {
             int penalty = entity.getPersistentData().getInt("AAS_TicketPenalty");
             String vTeam = entity.getPersistentData().getString("AAS_VehicleTeam");
@@ -1723,7 +1756,7 @@ public class GameLogicEvents {
                     ticketsChanged = true;
                 }
 
-                // Р В РЎСљР В Р’В°Р РЋРІР‚РЋР В РЎвЂР РЋР С“Р В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ Р В РЎвЂўР РЋРІР‚РЋР В РЎвЂќР В РЎвЂўР В Р вЂ  Р РЋРЎвЂњР В Р’В±Р В РЎвЂР В РІвЂћвЂ“Р РЋРІР‚В Р В Р’Вµ
+                // Начисление очков убийце
                 Entity lastAttacker = null;
                 if (entity instanceof LivingEntity living) {
                     lastAttacker = living.getLastHurtByMob();
@@ -1739,12 +1772,13 @@ public class GameLogicEvents {
             entity.getPersistentData().remove("AAS_TicketPenalty");
         }
 
-        // === 4. Р В Р Р‹Р В Р’ВР В РЎСљР В РўС’Р В Р’В Р В РЎвЂєР В РЎСљР В Р’ВР В РІР‚вЂќР В РЎвЂ™Р В Р’В¦Р В Р’ВР В Р вЂЎ ===
-        // Р В РІР‚СћР РЋР С“Р В Р’В»Р В РЎвЂ Р В РЎвЂР В Р’В·Р В РЎВР В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’В»Р В РЎвЂР РЋР С“Р РЋР Р‰ Р РЋРІР‚С™Р В РЎвЂР В РЎвЂќР В Р’ВµР РЋРІР‚С™Р РЋРІР‚в„– Р В Р’ВР В РІР‚С”Р В Р’В Р В Р’В±Р РЋРІР‚в„–Р В Р’В» Р РЋРЎвЂњР В РўвЂР В Р’В°Р В Р’В»Р В Р’ВµР В Р вЂ¦ Р В РЎВР В Р’В°Р РЋР вЂљР В РЎвЂќР В Р’ВµР РЋР вЂљ Р РЋРІР‚С™Р В Р’ВµР РЋРІР‚В¦Р В Р вЂ¦Р В РЎвЂР В РЎвЂќР В РЎвЂ
-        if (ticketsChanged || markerRemoved) {
+        // === 4. Синхронизация ===
+        // Добавили deadRecord != null в условие, чтобы синк ушёл клиентам и в случае,
+        // когда изменился только pendingSpawnerRespawns (билеты не тронуты, маркер уже мог быть снят раньше).
+        if (ticketsChanged || markerRemoved || deadRecord != null) {
             if (ticketsChanged) checkGameOver(level, data);
             data.setDirty();
-            sendSyncPacket(level, data); // Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎВ Р В РЎвЂўР В Р’В±Р В Р вЂ¦Р В РЎвЂўР В Р вЂ Р В Р’В»Р В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В РўвЂР В Р’В°Р В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В Р вЂ Р РЋР С“Р В Р’ВµР В РЎВ Р В РЎвЂР В РЎвЂ“Р РЋР вЂљР В РЎвЂўР В РЎвЂќР В Р’В°Р В РЎВ
+            sendSyncPacket(level, data); // отправляем обновлённые данные всем клиентам
         }
     }
 
@@ -1979,12 +2013,13 @@ public class GameLogicEvents {
     }
 
     private static int getEnemyCount(ServerLevel level, BlockPos pos, String allyTeamName, int radius) {
-        // Р В Р’ВР РЋР С“Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В Р’В·Р РЋРЎвЂњР В Р’ВµР В РЎВ Р В РЎвЂ”Р В Р’ВµР РЋР вЂљР В Р’ВµР В РўвЂР В Р’В°Р В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В РІвЂћвЂ“ Р РЋР вЂљР В Р’В°Р В РўвЂР В РЎвЂР РЋРЎвЂњР РЋР С“
         AABB checkArea = new AABB(pos).inflate(radius);
         List<ServerPlayer> enemies = level.getEntitiesOfClass(ServerPlayer.class, checkArea);
         int count = 0;
         for (ServerPlayer p : enemies) {
             if (p.isSpectator()) continue;
+            // Раненый (downed) игрок не может воевать и не должен блокировать рали/хаб
+            if (p.getPersistentData().getBoolean("AAS_IsDowned")) continue;
             if (p.getTeam() == null || !p.getTeam().getName().equalsIgnoreCase(allyTeamName)) count++;
         }
         return count;
@@ -1996,6 +2031,8 @@ public class GameLogicEvents {
         int count = 0;
         for (ServerPlayer p : enemies) {
             if (p.isSpectator()) continue;
+            // Раненый (downed) игрок не может воевать и не должен блокировать рали/хаб
+            if (p.getPersistentData().getBoolean("AAS_IsDowned")) continue;
             if (p.getTeam() == null || !p.getTeam().getName().equalsIgnoreCase(allyTeamName)) count++;
         }
         return count;

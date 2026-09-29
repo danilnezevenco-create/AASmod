@@ -166,6 +166,7 @@ public class ClientHooks {
                 mc.setScreen(new com.example.aas.client.gui.DownedScreen());
             }
         } else {
+
             com.example.aas.client.ClientData.DOWNED_PLAYERS.remove(entityId);
 
             if (mc.player != null && mc.player.getId() == entityId) {

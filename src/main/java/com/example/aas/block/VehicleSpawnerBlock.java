@@ -7,6 +7,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -22,6 +24,7 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
+import com.example.aas.world.VehicleSpawnerRegistry;
 
 import java.util.EnumMap;
 import java.util.Locale;
@@ -57,7 +60,14 @@ public class VehicleSpawnerBlock extends BaseEntityBlock {
 
     @Override
     public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
-
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        // Block really removed/replaced (a CAMO state change keeps the same block, so it is ignored)
+        if (!level.isClientSide && !state.is(newState.getBlock()) && level instanceof ServerLevel serverLevel) {
+            VehicleSpawnerRegistry.get(serverLevel).unregister(pos);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
