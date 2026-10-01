@@ -30,8 +30,8 @@ import java.util.List;
 public class ClientHooks {
     public static void handleRecoil(float pitch, float yaw) {
         com.example.aas.client.RecoilHandler.addRecoil(pitch);
-        if (yaw != 0 && net.minecraft.client.Minecraft.getInstance().player != null) {
-            net.minecraft.client.Minecraft.getInstance().player.turn(yaw, 0);
+        if (yaw != 0 && Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.turn(yaw, 0);
         }
     }
     // === ДЛЯ РАЛЛИКА ===
@@ -40,15 +40,15 @@ public class ClientHooks {
         if (currentSound != null && mc.getSoundManager().isActive((net.minecraft.client.resources.sounds.SoundInstance) currentSound)) {
             return currentSound;
         }
-        com.example.aas.client.sound.RallyLoopingSound newSound = new com.example.aas.client.sound.RallyLoopingSound(entity);
+        RallyLoopingSound newSound = new RallyLoopingSound(entity);
         mc.getSoundManager().play(newSound);
         return newSound;
     }
     public static void openPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
-        if (net.minecraft.client.Minecraft.getInstance().screen instanceof PlayerKitSelectScreen screen) {
+        if (Minecraft.getInstance().screen instanceof PlayerKitSelectScreen screen) {
             screen.updateKits(kits); // Обновляем в реальном времени
         } else {
-            net.minecraft.client.Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
+            Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
         }
     }
     public static void stopRallySound(Object sound) {
@@ -64,7 +64,7 @@ public class ClientHooks {
         if (currentSound != null && mc.getSoundManager().isActive((net.minecraft.client.resources.sounds.SoundInstance) currentSound)) {
             return currentSound;
         }
-        com.example.aas.client.sound.HubLoopingSound newSound = new com.example.aas.client.sound.HubLoopingSound(entity);
+        HubLoopingSound newSound = new HubLoopingSound(entity);
         mc.getSoundManager().play(newSound);
         return newSound;
     }
@@ -81,7 +81,7 @@ public class ClientHooks {
         }
     }
     public static void openKitTeamSelect() {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
+        Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
     }
     // ... (старые методы openRadioMenu, openHubMenu и звуки без изменений) ...
     public static void openRadioMenu() {
@@ -93,7 +93,7 @@ public class ClientHooks {
     }
     // Внутри класса ClientHooks:
     public static void openCrateMenu(int entityId) {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new com.example.aas.client.gui.CrateRadialScreen(entityId));
+        Minecraft.getInstance().setScreen(new com.example.aas.client.gui.CrateRadialScreen(entityId));
     }
     // В файле src/main/java/com/example/aas/client/ClientHooks.java
 
@@ -113,7 +113,7 @@ public class ClientHooks {
         boolean isLeader = false;
 
         // Здесь безопасно используем ClientData, так как мы в клиентском классе
-        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
+        for (AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.members.contains(playerName)) {
                 isInSquad = true;
                 if (s.leader.equals(playerName)) {
@@ -151,23 +151,23 @@ public class ClientHooks {
         }
     }
     public static void handleDownedState(int entityId, boolean isDowned, boolean died) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
         if (isDowned) {
-            com.example.aas.client.ClientData.DOWNED_PLAYERS.add(entityId);
+            ClientData.DOWNED_PLAYERS.add(entityId);
             if (mc.player != null && mc.player.getId() == entityId) {
                 mc.player.getPersistentData().putBoolean("AAS_IsDowned", true);
 
                 // ФИКС: Устанавливаем время только если оно еще не установлено
-                if (com.example.aas.client.ClientData.globalDeathTimestamp == 0) {
-                    com.example.aas.client.ClientData.globalDeathTimestamp = System.currentTimeMillis();
+                if (ClientData.globalDeathTimestamp == 0) {
+                    ClientData.globalDeathTimestamp = System.currentTimeMillis();
                 }
                 mc.setScreen(new com.example.aas.client.gui.DownedScreen());
             }
         } else {
 
-            com.example.aas.client.ClientData.DOWNED_PLAYERS.remove(entityId);
+            ClientData.DOWNED_PLAYERS.remove(entityId);
 
             if (mc.player != null && mc.player.getId() == entityId) {
                 mc.player.getPersistentData().putBoolean("AAS_IsDowned", false);
@@ -180,20 +180,20 @@ public class ClientHooks {
                 // Если это Give Up/авто-бидаут (died = true) — не трогаем,
                 // время в ноке должно донестись до экрана смерти.
                 if (!died) { // Если реально подняли, а не убили окончательно
-                    com.example.aas.client.ClientData.globalDeathTimestamp = 0;
+                    ClientData.globalDeathTimestamp = 0;
                 }
             }
         }
     }
 
     public static void handleDragState(boolean isDragging) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         mc.player.getPersistentData().putBoolean("AAS_IsDraggingAlly", isDragging);
     }
 
     public static void handleSyncGameData(PacketSyncGameData msg) {
-        java.util.Map<String, String> oldKits = new java.util.HashMap<>(ClientData.playerKits);
+        java.util.Map<String, String> oldKits = new HashMap<>(ClientData.playerKits);
         ClientData.BLUE_TICKETS = msg.blueTickets;
         ClientData.RED_TICKETS = msg.redTickets;
         ClientData.hasBlueRally = msg.hasBlueRally;
@@ -211,6 +211,7 @@ public class ClientHooks {
         ClientData.invasionDefender = msg.invasionDefender;
         ClientData.invasionPrepTicks = msg.invasionPrepTicks;
         ClientData.isGameStarted = msg.isGameStarted;
+        if (msg.isGameStarted) ClientData.lastVictory = null; // новый матч — старый экран победы больше не нужен
         ClientData.allCapturePoints = new ArrayList<>(msg.capturePoints);
         ClientData.customBlueName = msg.blueCustomName;
         ClientData.customRedName = msg.redCustomName;
@@ -260,7 +261,7 @@ public class ClientHooks {
         ClientData.blueArtReqName = msg.blueArtReqName;
         ClientData.redArtReqName = msg.redArtReqName;
         if (!oldKits.equals(ClientData.playerKits)) {
-            if (net.minecraft.client.Minecraft.getInstance().screen instanceof PlayerKitSelectScreen) {
+            if (Minecraft.getInstance().screen instanceof PlayerKitSelectScreen) {
                 com.example.aas.network.PacketHandler.INSTANCE.sendToServer(new com.example.aas.network.PacketRequestKitMenu());
             }
         }
@@ -302,16 +303,25 @@ public class ClientHooks {
         }
     }
     public static void openPointEditor(com.example.aas.network.PacketOpenPointEditor msg) {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new com.example.aas.client.gui.PointEditorScreen(msg));
+        Minecraft.getInstance().setScreen(new com.example.aas.client.gui.PointEditorScreen(msg));
     }
-    public static void openVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner) {
-        net.minecraft.client.Minecraft.getInstance().setScreen(
-                new com.example.aas.client.gui.VictoryScreen(winnerName, winnerFaction, subText, isBlueWinner)
+    public static void openVictoryScreen(com.example.aas.network.VictoryData data) {
+        ClientData.lastVictory = data;
+        Minecraft.getInstance().setScreen(
+                new com.example.aas.client.gui.VictoryScreen(data, false)
         );
+    }
+    public static void resetVictoryScreen() {
+        ClientData.lastVictory = null;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof com.example.aas.client.gui.VictoryScreen
+                || (mc.screen instanceof com.example.aas.client.gui.StatisticsScreen st && st.isOpenedFromVictory())) {
+            mc.setScreen(null);
+        }
     }
     // === ДЛЯ СТАНЦИИ ===
     public static Object playStationSound(VehicleStationBlockEntity entity, Object currentSound) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         System.out.println("[AAS DEBUG] playStationSound called, currentSound=" + currentSound);
 
         if (currentSound != null && mc.getSoundManager().isActive((net.minecraft.client.resources.sounds.SoundInstance) currentSound)) {
@@ -319,7 +329,7 @@ public class ClientHooks {
             return currentSound;
         }
 
-        com.example.aas.client.sound.StationLoopingSound newSound = new com.example.aas.client.sound.StationLoopingSound(entity);
+        StationLoopingSound newSound = new StationLoopingSound(entity);
         System.out.println("[AAS DEBUG] creating new StationLoopingSound and calling play()");
         mc.getSoundManager().play(newSound);
         return newSound;
@@ -338,16 +348,16 @@ public class ClientHooks {
 
         // Если игрок только начал говорить - проигрываем пип (код выполняется строго на клиенте)
         if (isNewSpeaker) {
-            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(
+            Minecraft.getInstance().getSoundManager().play(
                     net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(com.example.aas.sound.ModSounds.RADIO_BEEP.get(), 1.0F)
             );
         }
     }
     public static void handleReviveProgress(float progress, boolean isBeingRevived) {
         if (isBeingRevived) {
-            com.example.aas.client.ClientData.reviveProgressSelf = progress;
+            ClientData.reviveProgressSelf = progress;
         } else {
-            com.example.aas.client.ClientData.reviveProgressOther = progress;
+            ClientData.reviveProgressOther = progress;
         }
     }
 }

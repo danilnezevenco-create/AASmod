@@ -97,6 +97,12 @@ public class VehicleStationBlockEntity extends BlockEntity {
                 if (entity.currentProgress >= MAX_PROGRESS) {
                     entity.currentProgress = MAX_PROGRESS;
                     level.setBlock(pos, state.setValue(VehicleStationBlock.CONSTRUCTED, true).setValue(VehicleStationBlock.BUILD_STAGE, 2), 3);
+
+                    // Очки за постройку станции
+                    com.example.aas.events.ConstructionScoring.complete(
+                            (net.minecraft.server.level.ServerLevel) level,
+                            pos.asLong(),
+                            com.example.aas.events.ScoreType.BUILD_STATION);
                 } else {
                     int stage = (entity.currentProgress >= MAX_PROGRESS / 2) ? 2 : 1;
                     if (state.getValue(VehicleStationBlock.BUILD_STAGE) != stage) {

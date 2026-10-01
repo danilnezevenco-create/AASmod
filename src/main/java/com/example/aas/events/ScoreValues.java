@@ -55,6 +55,7 @@ public final class ScoreValues {
     public static final int BUILD_WEAPON_TP = 100;       // AGS-30, M2 Browning, миномёт, TOW
     public static final int BUILD_CONTRIBUTOR_PERCENT = 50; // те, кто вложился, но не завершил
     public static final long BUILD_ENTRY_TTL_TICKS = 20L * 60L * 20L; // сколько хранить недостроенные записи вкладчиков
+    public static final int BUILD_STATION_TP = 200;
 
     // ================= ПЕРЕВОЗКА КОМАНДЫ =================
     public static final int TRANSPORT_TP_PER_PASSENGER = 20; // за пассажира за минуту вождения

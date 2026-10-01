@@ -111,7 +111,11 @@ public class ClientEvents {
         ClientData.addChatMessage(event.getMessage());
     }
     @SubscribeEvent
-    public static void onLoggingIn(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientData.lastVictory = null;
+    }
+    @SubscribeEvent
+    public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
         teamHintShown = false;
         squadHintShown = false;
         kitHintShown = false;
@@ -210,7 +214,7 @@ public class ClientEvents {
 
 
     @SubscribeEvent
-    public static void onMovementInput(net.minecraftforge.client.event.MovementInputUpdateEvent event) {
+    public static void onMovementInput(MovementInputUpdateEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
@@ -251,7 +255,7 @@ public class ClientEvents {
         String myName = mc.player.getScoreboardName();
         com.example.aas.world.AASWorldData.Squad mySquad = null;
 
-        for (com.example.aas.world.AASWorldData.Squad s : com.example.aas.client.ClientData.clientSquads) {
+        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.members.contains(myName)) {
                 mySquad = s;
                 break;
@@ -374,7 +378,7 @@ public class ClientEvents {
         boolean canPing = false;
 
         // РџСЂРѕРІРµСЂСЏРµРј СЂРѕР»СЊ: С‚РѕР»СЊРєРѕ SL РёР»Рё FTL РјРѕРіСѓС‚ СЃС‚Р°РІРёС‚СЊ РјРµС‚РєСѓ
-        for (com.example.aas.world.AASWorldData.Squad s : com.example.aas.client.ClientData.clientSquads) {
+        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.leader.equals(myName) || s.bravoLeader.equals(myName) || s.charlieLeader.equals(myName)) {
                 canPing = true;
                 break;
@@ -450,15 +454,15 @@ public class ClientEvents {
         Matrix4f matrix = poseStack.last().pose();
 
         // Р РµРЅРґРµСЂРёРј С‡РµСЂРµР· Tesselator РЅР°РїСЂСЏРјСѓСЋ вЂ” disableDepthTest СЂР°Р±РѕС‚Р°РµС‚ Р·РґРµСЃСЊ
-        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
-        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
-        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();  // С‚РµРїРµСЂСЊ СЂРµР°Р»СЊРЅРѕ СЂР°Р±РѕС‚Р°РµС‚
-        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, texture);
-        com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();  // С‚РµРїРµСЂСЊ СЂРµР°Р»СЊРЅРѕ СЂР°Р±РѕС‚Р°РµС‚
+        RenderSystem.setShaderTexture(0, texture);
+        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
 
-        com.mojang.blaze3d.vertex.Tesselator tesselator = com.mojang.blaze3d.vertex.Tesselator.getInstance();
-        com.mojang.blaze3d.vertex.BufferBuilder buf = tesselator.getBuilder();
-        buf.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR);
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buf = tesselator.getBuilder();
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
         int a = (int)(alpha * 255);
         buf.vertex(matrix, -8, -8, 0).uv(0, 0).color(255, 255, 255, a).endVertex();
@@ -468,8 +472,8 @@ public class ClientEvents {
 
         tesselator.end();
 
-        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
-        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1, 1, 1, 1);
+        RenderSystem.enableDepthTest();
+        RenderSystem.setShaderColor(1, 1, 1, 1);
 
         poseStack.popPose();
     }
@@ -662,7 +666,7 @@ public class ClientEvents {
         // 3. РњР•РќР® РћРўР РЇР”РћР’ (K)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(event.getKey(), event.getScanCode())) {
             // Р РђР—Р Р•РЁРђР•Рњ РѕС‚РєСЂС‹С‚РёРµ, РµСЃР»Рё СЌРєСЂР°РЅ РїСѓСЃС‚РѕР№ РР›Р РµСЃР»Рё РѕС‚РєСЂС‹С‚ СЌРєСЂР°РЅ РЅРѕРєР°
-            if (mc.screen == null || mc.screen instanceof com.example.aas.client.gui.DownedScreen) {
+            if (mc.screen == null || mc.screen instanceof DownedScreen) {
                 String teamName = (mc.player.getTeam() != null) ? mc.player.getTeam().getName() : "";
                 boolean isValidTeam = teamName.equalsIgnoreCase("Blue") || teamName.equalsIgnoreCase("Red");
 
@@ -692,7 +696,14 @@ public class ClientEvents {
         // 5. РЎРўРђРўРРЎРўРРљРђ (Caps Lock, РїРµСЂРµР±РёРЅРґРёС‚СЃСЏ РІ РЅР°СЃС‚СЂРѕР№РєР°С… СѓРїСЂР°РІР»РµРЅРёСЏ)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_STATS_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.screen == null) {
-                mc.setScreen(new com.example.aas.client.gui.StatisticsScreen());
+                if (ClientData.lastVictory != null) {
+                    // После конца матча CAPS снова открывает экран победы (до /aas resetvictoryscreen или нового матча)
+                    mc.setScreen(new com.example.aas.client.gui.VictoryScreen(ClientData.lastVictory, true));
+                } else {
+                    mc.setScreen(new com.example.aas.client.gui.StatisticsScreen());
+                }
+            } else if (mc.screen instanceof com.example.aas.client.gui.VictoryScreen) {
+                mc.setScreen(null);
             } else if (mc.screen instanceof com.example.aas.client.gui.StatisticsScreen) {
                 mc.setScreen(null); // РїРѕРІС‚РѕСЂРЅРѕРµ РЅР°Р¶Р°С‚РёРµ Р·Р°РєСЂС‹РІР°РµС‚ СЌРєСЂР°РЅ
             }
@@ -700,11 +711,11 @@ public class ClientEvents {
     }
 
     @SubscribeEvent
-    public static void onGuiOpen(net.minecraftforge.client.event.ScreenEvent.Opening event) {
+    public static void onGuiOpen(ScreenEvent.Opening event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        if (com.example.aas.config.AASConfig.PREVENT_VEHICLE_INVENTORY_ACCESS.get() &&
+        if (AASConfig.PREVENT_VEHICLE_INVENTORY_ACCESS.get() &&
                 !mc.player.isCreative() && mc.player.getVehicle() != null) {
 
             if (event.getScreen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen ||
@@ -817,7 +828,7 @@ public class ClientEvents {
         double bestDistSq = REVIVE_RANGE * REVIVE_RANGE;
 
         for (Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(REVIVE_RANGE))) {
-            if (!(e instanceof net.minecraft.world.entity.player.Player p) || p == mc.player) continue;
+            if (!(e instanceof Player p) || p == mc.player) continue;
             // Р’РђР–РќРћ: persistentData("AAS_IsDowned") РЅР° РєР»РёРµРЅС‚Рµ РїСЂРѕСЃС‚Р°РІР»СЏРµС‚СЃСЏ РўРћР›Р¬РљРћ РґР»СЏ
             // Р›РћРљРђР›Р¬РќРћР“Рћ РёРіСЂРѕРєР° (СЃРј. ClientHooks.handleDownedState). Р”Р»СЏ Р’РЎР•РҐ РѕСЃС‚Р°Р»СЊРЅС‹С…
             // РёРіСЂРѕРєРѕРІ СЃС‚Р°С‚СѓСЃ "РІ РЅРѕРєРµ" СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ С‡РµСЂРµР· ClientData.DOWNED_PLAYERS,
@@ -964,10 +975,10 @@ public class ClientEvents {
 
         if (key.getType() == InputConstants.Type.KEYSYM) {
             int v = key.getValue();
-            if (v >= org.lwjgl.glfw.GLFW.GLFW_KEY_A && v <= org.lwjgl.glfw.GLFW.GLFW_KEY_Z) {
+            if (v >= GLFW.GLFW_KEY_A && v <= GLFW.GLFW_KEY_Z) {
                 return String.valueOf((char) v); // GLFW_KEY_A..Z СЃРѕРІРїР°РґР°СЋС‚ СЃ ASCII 'A'..'Z'
             }
-            if (v >= org.lwjgl.glfw.GLFW.GLFW_KEY_0 && v <= org.lwjgl.glfw.GLFW.GLFW_KEY_9) {
+            if (v >= GLFW.GLFW_KEY_0 && v <= GLFW.GLFW_KEY_9) {
                 return String.valueOf((char) v); // GLFW_KEY_0..9 СЃРѕРІРїР°РґР°СЋС‚ СЃ ASCII '0'..'9'
             }
         }

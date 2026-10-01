@@ -40,6 +40,10 @@ public class ModCommands {
                 .then(Commands.literal("gamestart")
                         .then(Commands.argument("active", BoolArgumentType.bool())
                                 .executes(ctx -> setGameStart(ctx.getSource(), BoolArgumentType.getBool(ctx, "active")))))
+                // --- СБРОС ЭКРАНА ПОБЕДЫ (CAPS снова открывает обычную статистику) ---
+                .then(Commands.literal("resetvictoryscreen")
+                        .executes(ctx -> resetVictoryScreen(ctx.getSource())))
+
                 .then(Commands.literal("gamemode")
                         .then(Commands.argument("mode", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("aas", "invasion"), builder))
@@ -392,6 +396,13 @@ public class ModCommands {
     }
 
     // === ЛОГИКА КОМАНД ===
+
+    private static int resetVictoryScreen(CommandSourceStack source) {
+        PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(),
+                new com.example.aas.network.PacketResetVictoryScreen());
+        source.sendSuccess(() -> Component.translatable("aas.command.resetvictoryscreen").withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
 
     private static int setGameStart(CommandSourceStack source, boolean active) {
         ServerLevel level = source.getLevel();

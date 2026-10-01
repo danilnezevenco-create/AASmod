@@ -17,6 +17,8 @@ public class StatsHandler {
     public static final String KEY_DEATHS = "AAS_Stats_Deaths";
     public static final String KEY_VEH_TOTAL = "AAS_Stats_VehKills_TOTAL";
     public static final String KEY_REVIVES = "AAS_Stats_Revives";
+    /** Очки только за постройку (HUB_PLACED) и пополнение (HUB_RESUPPLY) хабов — для «Лучшего логиста». */
+    public static final String KEY_LOGISTICS = "AAS_Stats_LogisticsPoints";
     private static final String KEY_VEH_PREFIX = "AAS_Stats_VehKills_";
 
     // Кулдауны анти-фарма: ключ -> тик последнего начисления
@@ -77,6 +79,10 @@ public class StatsHandler {
         CompoundTag data = player.getPersistentData();
         if (teamPoints > 0) data.putInt(KEY_TP, data.getInt(KEY_TP) + teamPoints);
         if (squadPoints > 0) data.putInt(KEY_SP, data.getInt(KEY_SP) + squadPoints);
+        // Отдельный счётчик очков логиста: только постройка и пополнение хабов
+        if (teamPoints > 0 && (type == ScoreType.HUB_PLACED || type == ScoreType.HUB_RESUPPLY)) {
+            data.putInt(KEY_LOGISTICS, data.getInt(KEY_LOGISTICS) + teamPoints);
+        }
         // Уведомления о начислении отключены - очки даются молча
     }
 
@@ -117,6 +123,10 @@ public class StatsHandler {
         data.putInt(KEY_REVIVES, data.getInt(KEY_REVIVES) + 1);
     }
 
+    public static int getLogisticsPoints(ServerPlayer player) {
+        return player.getPersistentData().getInt(KEY_LOGISTICS);
+    }
+
     public static int getRevives(ServerPlayer player) {
         return player.getPersistentData().getInt(KEY_REVIVES);
     }
@@ -153,6 +163,7 @@ public class StatsHandler {
         data.putInt(KEY_DEATHS, 0);
         data.putInt(KEY_VEH_TOTAL, 0);
         data.putInt(KEY_REVIVES, 0);
+        data.putInt(KEY_LOGISTICS, 0);
         for (VehicleCatalog.Category c : VehicleCatalog.Category.values()) data.putInt(vehKey(c), 0);
     }
 
@@ -164,6 +175,7 @@ public class StatsHandler {
         copyInt(oldData, newData, KEY_DEATHS);
         copyInt(oldData, newData, KEY_VEH_TOTAL);
         copyInt(oldData, newData, KEY_REVIVES);
+        copyInt(oldData, newData, KEY_LOGISTICS);
         for (VehicleCatalog.Category c : VehicleCatalog.Category.values()) copyInt(oldData, newData, vehKey(c));
     }
 

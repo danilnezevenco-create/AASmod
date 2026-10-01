@@ -41,7 +41,8 @@ public final class ConstructionScoring {
                 || be instanceof com.example.aas.block.AGSConstructionBlockEntity
                 || be instanceof com.example.aas.block.M2ConstructionBlockEntity
                 || be instanceof com.example.aas.block.MortarConstructionBlockEntity
-                || be instanceof com.example.aas.block.TOWConstructionBlockEntity) {
+                || be instanceof com.example.aas.block.TOWConstructionBlockEntity
+                || be instanceof com.example.aas.block.VehicleStationBlockEntity) {   // <-- добавлено
             return be.getBlockPos().asLong();
         }
         return null;

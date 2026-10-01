@@ -398,10 +398,7 @@ public class GameLogicEvents {
                         // Р В РІР‚СњР В Р’В»Р РЋР РЏ Р В Р вЂ Р РЋР вЂљР В Р’В°Р В РЎвЂ“Р В РЎвЂўР В Р вЂ 
                         if (!pData.isGameStarted) {
                             // Р В РІР‚СњР В РЎвЂў Р РЋР С“Р РЋРІР‚С™Р В Р’В°Р РЋР вЂљР РЋРІР‚С™Р В Р’В° Р В РЎвЂР В РЎвЂ“Р РЋР вЂљР РЋРІР‚в„–: Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎВ K/D, Р В Р вЂ¦Р В РЎвЂў Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР В РЎВ Р В РЎвЂўР РЋРІР‚С™Р РЋР вЂљР РЋР РЏР В РўвЂР РЋРІР‚в„– (-1)
-                            toSend.add(new PlayerStatInfo(
-                                    info.name, info.team, -1, false, false, info.kills, info.deaths,
-                                    info.tp, info.sp, info.revives, info.vehKillsTotal, info.vehKillsByCategory, info.ping
-                            ));
+                            toSend.add(info); // вне матча (в т.ч. после победы) отряды и статистика врагов открыты полностью
                         } else {
                             // Р В РІР‚в„ўР В РЎвЂў Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎВР РЋР РЏ Р В РЎвЂР В РЎвЂ“Р РЋР вЂљР РЋРІР‚в„–: Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР В РЎВ Р В РЎвЂўР РЋРІР‚С™Р РЋР вЂљР РЋР РЏР В РўвЂР РЋРІР‚в„– Р В РЎвЂ K/D (K/D Р В Р’В·Р В Р’В°Р В РЎВР В Р’ВµР В Р вЂ¦Р РЋР РЏР В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ¦Р В Р’В° -1 Р В Р вЂ  stripped)
                             toSend.add(info.stripped());
@@ -2055,25 +2052,13 @@ public class GameLogicEvents {
         data.setDirty();
 
         // 1. Р В РЎвЂєР В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В Р’ВµР В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В Р’В±Р В Р’ВµР В РўвЂР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР РЏ
-        String winnerName;
-        String winnerFaction;
-        if (blueWon) {
-            winnerFaction = data.blueFaction;
-            winnerName = (winnerFaction == null || winnerFaction.equals("none") || winnerFaction.equals("bluefor"))
-                    ? AASConfig.BLUE_TEAM_CUSTOM_NAME.get() : formatFactionName(winnerFaction);
-            if (winnerName.isEmpty()) winnerName = "BLUE TEAM";
-        } else {
-            winnerFaction = data.redFaction;
-            winnerName = (winnerFaction == null || winnerFaction.equals("none") || winnerFaction.equals("redfor"))
-                    ? AASConfig.RED_TEAM_CUSTOM_NAME.get() : formatFactionName(winnerFaction);
-            if (winnerName.isEmpty()) winnerName = "RED TEAM";
-        }
+        String blueDisplayName = teamDisplayName(data, true);
+        String redDisplayName = teamDisplayName(data, false);
 
-        String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
-
-        // 2. Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В РЎвЂќР В Р’В° Р В Р вЂ¦Р В РЎвЂўР В Р вЂ Р В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р В РЎвЂќР РЋР вЂљР В Р’В°Р РЋР С“Р В РЎвЂР В Р вЂ Р В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р РЋР РЉР В РЎвЂќР РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р’В° Р В Р вЂ Р РЋР С“Р В Р’ВµР В РЎВ
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon));
+        // 2. Снимок итогов (тикеты, лучший отряд/медик/логист, таблица счёта) — всем клиентам
+        VictoryData victoryData =
+                VictoryStats.build(level, data, blueWon, blueDisplayName, redDisplayName);
+        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketOpenVictoryScreen(victoryData));
 
         // 3. Р В РІР‚в„ўР РЋРІР‚в„–Р В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ Friendly Fire Р В РўвЂР В Р’В»Р РЋР РЏ Р В РЎвЂќР В РЎвЂўР В РЎВР В Р’В°Р В Р вЂ¦Р В РўвЂ (Р В Р вЂ¦Р В РЎвЂР В РЎвЂќР РЋРІР‚С™Р В РЎвЂў Р В Р вЂ¦Р В Р’Вµ Р РЋР С“Р В РЎВР В РЎвЂўР В Р’В¶Р В Р’ВµР РЋРІР‚С™ Р РЋРЎвЂњР В Р’В±Р В РЎвЂР РЋРІР‚С™Р РЋР Р‰ Р РЋР С“Р В Р вЂ Р В РЎвЂўР В РЎвЂР РЋРІР‚В¦)
         Scoreboard scoreboard = level.getScoreboard();
@@ -2122,6 +2107,17 @@ public class GameLogicEvents {
                 }
             }
         }
+    }
+
+    /** Отображаемое имя команды (то же правило, что раньше использовалось для победителя). */
+    private static String teamDisplayName(AASWorldData data, boolean blue) {
+        String faction = blue ? data.blueFaction : data.redFaction;
+        String defaultFaction = blue ? "bluefor" : "redfor";
+        String name = (faction == null || faction.equals("none") || faction.equals(defaultFaction))
+                ? (blue ? AASConfig.BLUE_TEAM_CUSTOM_NAME.get() : AASConfig.RED_TEAM_CUSTOM_NAME.get())
+                : formatFactionName(faction);
+        if (name == null || name.isEmpty()) name = blue ? "BLUE TEAM" : "RED TEAM";
+        return name;
     }
 
     private static String formatFactionName(String faction) {

@@ -143,8 +143,33 @@ public class StatisticsScreen extends Screen {
     private int tipColumn = -1;
     private PlayerStatInfo tipStat = null;
 
+    // Режим «Счёт» с экрана победы: показываем всё, как админу-наблюдателю (враги, их отряды и статистика),
+    // а закрытие (ESC) возвращает на экран победы.
+    private final boolean revealAll;
+    private final Screen parent;
+
     public StatisticsScreen() {
+        this(null, false);
+    }
+
+    public StatisticsScreen(Screen parent, boolean revealAll) {
         super(Component.literal("Statistics"));
+        this.parent = parent;
+        this.revealAll = revealAll;
+    }
+
+    /** true, если экран открыт кнопкой «Счёт» с экрана победы. */
+    public boolean isOpenedFromVictory() {
+        return parent instanceof VictoryScreen;
+    }
+
+    @Override
+    public void onClose() {
+        if (parent != null) {
+            this.minecraft.setScreen(parent);
+        } else {
+            super.onClose();
+        }
     }
 
     @Override
@@ -408,6 +433,7 @@ public class StatisticsScreen extends Screen {
 
     private boolean isTeamRevealed(boolean isMine) {
         if (isMine) return true;
+        if (revealAll) return true;
         if (this.minecraft.player == null) return false;
         boolean isAdminObserver = this.minecraft.player.hasPermissions(2)
                 && (this.minecraft.player.isSpectator() || this.minecraft.player.isCreative());

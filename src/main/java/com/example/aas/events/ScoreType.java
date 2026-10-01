@@ -30,6 +30,7 @@ public enum ScoreType {
     BUILD_LIGHT       (ScoreValues.BUILD_LIGHT_TP, 0, "aas.score.build_light"),
     BUILD_BUNKER      (ScoreValues.BUILD_BUNKER_TP, 0, "aas.score.build_bunker"),
     BUILD_WEAPON      (ScoreValues.BUILD_WEAPON_TP, 0, "aas.score.build_weapon"),
+    BUILD_STATION     (ScoreValues.BUILD_STATION_TP, 0, "aas.score.build_station"),
 
     TRANSPORT         (0, 0, "aas.score.transport");
 

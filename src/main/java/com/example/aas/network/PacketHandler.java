@@ -73,6 +73,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketVoiceActivity.class, PacketVoiceActivity::encode, PacketVoiceActivity::decode, PacketVoiceActivity::handle);
         INSTANCE.registerMessage(id++, PacketRadioVoiceActivity.class, PacketRadioVoiceActivity::encode, PacketRadioVoiceActivity::decode, PacketRadioVoiceActivity::handle); // РќРћР’РћР•
         INSTANCE.registerMessage(id++, PacketOpenVictoryScreen.class, PacketOpenVictoryScreen::encode, PacketOpenVictoryScreen::decode, PacketOpenVictoryScreen::handle);
+        INSTANCE.registerMessage(id++, PacketResetVictoryScreen.class, PacketResetVictoryScreen::encode, PacketResetVictoryScreen::decode, PacketResetVictoryScreen::handle);
         INSTANCE.registerMessage(id++, PacketSyncServerConfig.class, PacketSyncServerConfig::encode, PacketSyncServerConfig::decode, PacketSyncServerConfig::handle);
         INSTANCE.registerMessage(id++, PacketOpenPointEditor.class, PacketOpenPointEditor::encode, PacketOpenPointEditor::decode, PacketOpenPointEditor::handle);
         INSTANCE.registerMessage(id++, PacketSavePoint.class, PacketSavePoint::encode, PacketSavePoint::decode, PacketSavePoint::handle);

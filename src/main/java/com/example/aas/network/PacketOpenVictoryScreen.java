@@ -8,34 +8,25 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class PacketOpenVictoryScreen {
-    public final String winnerName;
-    public final String winnerFaction;
-    public final String subText;
-    public final boolean isBlueWinner;
+    public final VictoryData data;
 
-    public PacketOpenVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner) {
-        this.winnerName = winnerName;
-        this.winnerFaction = winnerFaction;
-        this.subText = subText;
-        this.isBlueWinner = isBlueWinner;
+    public PacketOpenVictoryScreen(VictoryData data) {
+        this.data = data;
     }
 
     public static void encode(PacketOpenVictoryScreen msg, FriendlyByteBuf buf) {
-        buf.writeUtf(msg.winnerName);
-        buf.writeUtf(msg.winnerFaction);
-        buf.writeUtf(msg.subText);
-        buf.writeBoolean(msg.isBlueWinner);
+        msg.data.encode(buf);
     }
 
     public static PacketOpenVictoryScreen decode(FriendlyByteBuf buf) {
-        return new PacketOpenVictoryScreen(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readBoolean());
+        return new PacketOpenVictoryScreen(VictoryData.decode(buf));
     }
 
     public static void handle(PacketOpenVictoryScreen msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             // ИСПОЛЬЗУЕМ ПРОСЛОЙКУ ClientHooks
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                com.example.aas.client.ClientHooks.openVictoryScreen(msg.winnerName, msg.winnerFaction, msg.subText, msg.isBlueWinner);
+                com.example.aas.client.ClientHooks.openVictoryScreen(msg.data);
             });
         });
         ctx.get().setPacketHandled(true);

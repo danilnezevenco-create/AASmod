@@ -409,14 +409,14 @@ public class AGSConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, AGSConstructionBlockEntity entity) {
+    public static void tick(Level level, BlockPos pos, BlockState state, AGSConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
                 if (entity.sapperBoost) speed *= 2.0f;
-                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
@@ -427,6 +427,8 @@ public class AGSConstructionBlockEntity extends BlockEntity {
                     ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
                             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                             25, 0.6, 0.4, 0.6, 0.05);
+                    // РћР§РљР Р—Рђ РЎРўР РћРРўР•Р›Р¬РЎРўР’Рћ: РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РїРѕСЃС‚СЂРѕР№РєРё
+                    com.example.aas.events.ConstructionScoring.complete((ServerLevel) level, pos.asLong(), com.example.aas.events.ScoreType.BUILD_WEAPON);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }
@@ -1049,6 +1051,13 @@ public class BarbedWireBlockEntity extends BlockEntity {
         super(ModBlocks.WIRE_BE.get(), pos, state);
     }
 
+    // РћР±С‰РёР№ РєР»СЋС‡ РїРѕСЃС‚СЂРѕР№РєРё РґР»СЏ РѕС‡РєРѕРІ: РјРёРЅРёРјР°Р»СЊРЅР°СЏ РїРѕР·РёС†РёСЏ СЃСЂРµРґРё СЃРІСЏР·Р°РЅРЅС‹С… Р±Р»РѕРєРѕРІ (РёР»Рё СЃРІРѕСЏ, РµСЃР»Рё Р±Р»РѕРє РѕРґРёРЅРѕС‡РЅС‹Р№)
+    public long getStructureKey() {
+        long key = this.worldPosition.asLong();
+        for (BlockPos p : linkedWires) key = Math.min(key, p.asLong());
+        return key;
+    }
+
     public void setTeam(String team) { this.teamOwner = team; setChanged(); }
     public void setLinkedWires(List<BlockPos> links) { this.linkedWires = new ArrayList<>(links); this.isMultiWire = true; setChanged(); }
     public String getTeam() { return teamOwner; }
@@ -1117,13 +1126,16 @@ public class BarbedWireBlockEntity extends BlockEntity {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 3) ? 2.0f : 1.0f;
                 if (entity.sapperBoost) speed *= 2.0f;
-                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
 
             if (entity.currentProgress >= MAX_PROGRESS) {
                 entity.currentProgress = MAX_PROGRESS;
+
+                // РћР§РљР Р—Рђ РЎРўР РћРРўР•Р›Р¬РЎРўР’Рћ: РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё (РѕРґРёРЅ СЂР°Р· РЅР° РІСЃСЋ СЃРІСЏР·Р°РЅРЅСѓСЋ РїРѕСЃС‚СЂРѕР№РєСѓ)
+                com.example.aas.events.ConstructionScoring.complete((net.minecraft.server.level.ServerLevel) level, entity.getStructureKey(), com.example.aas.events.ScoreType.BUILD_LIGHT);
                 level.setBlock(pos, state.setValue(BarbedWireBlock.CONSTRUCTED, true).setValue(BarbedWireBlock.BUILD_STAGE, 2), 3);
 
                 if (!level.isClientSide) {
@@ -1290,6 +1302,7 @@ public class BunkerBlockEntity extends BlockEntity {
             entity.currentProgress += (int) Math.ceil(entity.activeDiggers * multiplier);
 
             if (entity.currentProgress >= MAX_PROGRESS) {
+                com.example.aas.events.ConstructionScoring.complete((ServerLevel) level, pos.asLong(), com.example.aas.events.ScoreType.BUILD_BUNKER);
                 entity.finishConstruction((ServerLevel) level, pos, state);
             }
             setChanged(level, pos, state);
@@ -1562,7 +1575,7 @@ public class HubBlock extends BaseEntityBlock {
     public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
 
     public HubBlock() {
-        super(BlockBehaviour.Properties.of()
+        super(Properties.of()
                 .mapColor(MapColor.METAL)
                 .strength(3.0f, 9.0f)
                 .noOcclusion());
@@ -1691,7 +1704,7 @@ public class HubBlock extends BaseEntityBlock {
                 // 2. Р СњР С›Р вЂ™Р С›Р вЂў: Р вЂўРЎРѓР В»Р С‘ Р В»Р С•Р СР В°Р ВµРЎвЂљ Р вЂ™Р В Р С’Р вЂњ (Р СњР В°РЎвЂЎР С‘РЎРѓР В»Р ВµР Р…Р С‘Р Вµ Р С•РЎвЂЎР С”Р С•Р Р†)
                 else if (!hubTeam.equals("NEUTRAL")) {
                     // Р вЂќР В°Р ВµР С 30 Р С•РЎвЂЎР С”Р С•Р Р† Р С‘Р С–РЎР‚Р С•Р С”РЎС“ Р Р† Team Points Р В·Р В° РЎС“Р Р…Р С‘РЎвЂЎРЎвЂљР С•Р В¶Р ВµР Р…Р С‘Р Вµ Р Р†РЎР‚Р В°Р В¶Р ВµРЎРѓР С”Р С•Р С–Р С• Р ТђР С’Р вЂР В°
-                    com.example.aas.events.StatsHandler.addStats((net.minecraft.server.level.ServerPlayer) player, 30, 0, "Enemy HUB Destroyed");
+                    com.example.aas.events.StatsHandler.addScore((net.minecraft.server.level.ServerPlayer) player, com.example.aas.events.ScoreType.HUB_DESTROYED);
                 }
             }
         }
@@ -2399,7 +2412,7 @@ public class M2ConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, M2ConstructionBlockEntity entity) {
+    public static void tick(Level level, BlockPos pos, BlockState state, M2ConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
@@ -2417,6 +2430,8 @@ public class M2ConstructionBlockEntity extends BlockEntity {
                     ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
                             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                             25, 0.6, 0.4, 0.6, 0.05);
+                    // РћР§РљР Р—Рђ РЎРўР РћРРўР•Р›Р¬РЎРўР’Рћ: РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РїРѕСЃС‚СЂРѕР№РєРё
+                    com.example.aas.events.ConstructionScoring.complete((ServerLevel) level, pos.asLong(), com.example.aas.events.ScoreType.BUILD_WEAPON);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }
@@ -3009,14 +3024,14 @@ public class MortarConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, MortarConstructionBlockEntity entity) {
+    public static void tick(Level level, BlockPos pos, BlockState state, MortarConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
                 if (entity.sapperBoost) speed *= 2.0f;
-                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
@@ -3027,6 +3042,8 @@ public class MortarConstructionBlockEntity extends BlockEntity {
                     ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
                             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                             25, 0.6, 0.4, 0.6, 0.05);
+                    // РћР§РљР Р—Рђ РЎРўР РћРРўР•Р›Р¬РЎРўР’Рћ: РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РїРѕСЃС‚СЂРѕР№РєРё
+                    com.example.aas.events.ConstructionScoring.complete((ServerLevel) level, pos.asLong(), com.example.aas.events.ScoreType.BUILD_WEAPON);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }
@@ -3254,7 +3271,7 @@ public class RallyPointBlock extends BaseEntityBlock {
     public static final VoxelShape SHAPE = Shapes.block();
 
     public RallyPointBlock() {
-        super(BlockBehaviour.Properties.of()
+        super(Properties.of()
                 .strength(1.0f)
                 .noOcclusion()
         );
@@ -3324,12 +3341,12 @@ public class RallyPointBlock extends BaseEntityBlock {
 
                     data.setDirty();
                     PacketHandler.sendToAllClients(serverLevel, data);
-                    PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.DIMENSION.with(level::dimension), new com.example.aas.network.PacketSyncSquads(data.squads));
+                    PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
                 }
                 // 2. Р СњР С›Р вЂ™Р С›Р вЂў: Р вЂўРЎРѓР В»Р С‘ Р В»Р С•Р СР В°Р ВµРЎвЂљ Р вЂ™Р В Р С’Р вЂњ (Р СњР В°РЎвЂЎР С‘РЎРѓР В»Р ВµР Р…Р С‘Р Вµ Р С•РЎвЂЎР С”Р С•Р Р†)
                 else if (!rallyTeam.equals("NEUTRAL")) {
                     // Р вЂќР В°Р ВµР С 20 Р С•РЎвЂЎР С”Р С•Р Р† Р В·Р В° РЎС“Р Р…Р С‘РЎвЂЎРЎвЂљР С•Р В¶Р ВµР Р…Р С‘Р Вµ Р Р†РЎР‚Р В°Р В¶Р ВµРЎРѓР С”Р С•Р С–Р С• РЎР‚Р В°Р В»Р В»Р С‘-Р С—Р С•Р С‘Р Р…РЎвЂљР В°
-                    com.example.aas.events.StatsHandler.addStats((net.minecraft.server.level.ServerPlayer) player, 20, 0, "Enemy Rally Destroyed");
+                    com.example.aas.events.StatsHandler.addScore((net.minecraft.server.level.ServerPlayer) player, com.example.aas.events.ScoreType.RALLY_DESTROYED);
                 }
             }
         }
@@ -3398,6 +3415,7 @@ public class RallyPointBlockEntity extends BlockEntity {
     public boolean wasDismantled = false;
     private int squadId = -1;
     private long expiryTick = -1;
+    private String ownerName = ""; // РєС‚Рѕ РїРѕСЃС‚Р°РІРёР» СЂР°Р»Р»Рё (РїРѕР»СѓС‡Р°РµС‚ SP Р·Р° СЃРїР°РІРЅС‹ РѕС‚СЂСЏРґР°)
     private Object clientSoundRef = null; // РСЃРїРѕР»СЊР·СѓРµРј Object, СЌС‚Рѕ Р±РµР·РѕРїР°СЃРЅРѕ РґР»СЏ СЃРµСЂРІРµСЂР°
 
     public RallyPointBlockEntity(BlockPos pos, BlockState state) {
@@ -3406,6 +3424,9 @@ public class RallyPointBlockEntity extends BlockEntity {
 
     public void setSquadId(int id) { this.squadId = id; setChanged(); }
     public int getSquadId() { return squadId; }
+
+    public void setOwnerName(String name) { this.ownerName = (name == null) ? "" : name; setChanged(); }
+    public String getOwnerName() { return ownerName; }
 
     public void setExpiryTick(long tick) { this.expiryTick = tick; setChanged(); }
 
@@ -3457,6 +3478,7 @@ public class RallyPointBlockEntity extends BlockEntity {
         super.saveAdditional(tag);
         tag.putInt("SquadID", squadId);
         tag.putBoolean("IsDecay", isDecay);
+        tag.putString("OwnerName", ownerName);
     }
 
     @Override
@@ -3464,6 +3486,7 @@ public class RallyPointBlockEntity extends BlockEntity {
         super.load(tag);
         squadId = tag.getInt("SquadID");
         isDecay = tag.getBoolean("IsDecay");
+        ownerName = tag.contains("OwnerName") ? tag.getString("OwnerName") : "";
     }
 }
 ==========================================
@@ -3591,14 +3614,14 @@ public class TOWConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, TOWConstructionBlockEntity entity) {
+    public static void tick(Level level, BlockPos pos, BlockState state, TOWConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
                 if (entity.sapperBoost) speed *= 2.0f;
-                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
@@ -3609,6 +3632,8 @@ public class TOWConstructionBlockEntity extends BlockEntity {
                     ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
                             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                             30, 0.7, 0.4, 0.7, 0.05);
+                    // РћР§РљР Р—Рђ РЎРўР РћРРўР•Р›Р¬РЎРўР’Рћ: РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РїРѕСЃС‚СЂРѕР№РєРё
+                    com.example.aas.events.ConstructionScoring.complete((ServerLevel) level, pos.asLong(), com.example.aas.events.ScoreType.BUILD_WEAPON);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }
@@ -4943,6 +4968,20 @@ public class WallBlockEntity extends BlockEntity {
         return 300; // РћРґРёРЅРѕС‡РЅР°СЏ СЃС‚РµРЅР°
     }
 
+    // РћР±С‰РёР№ РєР»СЋС‡ РїРѕСЃС‚СЂРѕР№РєРё РґР»СЏ РѕС‡РєРѕРІ: РјРёРЅРёРјР°Р»СЊРЅР°СЏ РїРѕР·РёС†РёСЏ СЃСЂРµРґРё СЃРІСЏР·Р°РЅРЅС‹С… Р±Р»РѕРєРѕРІ (РёР»Рё СЃРІРѕСЏ, РµСЃР»Рё Р±Р»РѕРє РѕРґРёРЅРѕС‡РЅС‹Р№)
+    public long getStructureKey() {
+        long key = this.worldPosition.asLong();
+        for (BlockPos p : linkedWalls) key = Math.min(key, p.asLong());
+        return key;
+    }
+
+    // РўРёРї РѕС‡РєРѕРІ Р·Р° Р·Р°РІРµСЂС€РµРЅРёРµ: Р±РѕР»СЊС€Р°СЏ СЃРІСЏР·РєР° (>15 Р±Р»РѕРєРѕРІ) - Р±СѓРЅРєРµСЂ, РѕСЃС‚Р°Р»СЊРЅРѕРµ - СЃС‚РµРЅР°/СЃРµС‚РєР°
+    public com.example.aas.events.ScoreType getScoreType() {
+        return (linkedWalls.size() > 15)
+                ? com.example.aas.events.ScoreType.BUILD_BUNKER
+                : com.example.aas.events.ScoreType.BUILD_LIGHT;
+    }
+
     public void setTeam(String team) { this.teamOwner = team; setChanged(); }
     public void setLinkedWalls(List<BlockPos> links) { this.linkedWalls = new ArrayList<>(links); this.isMultiWall = true; setChanged(); }
     public String getTeam() { return teamOwner; }
@@ -5030,6 +5069,9 @@ public class WallBlockEntity extends BlockEntity {
 
             if (entity.currentProgress >= max) {
                 entity.currentProgress = max;
+
+                // РћР§РљР Р—Рђ РЎРўР РћРРўР•Р›Р¬РЎРўР’Рћ: РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё (РѕРґРёРЅ СЂР°Р· РЅР° РІСЃСЋ СЃРІСЏР·Р°РЅРЅСѓСЋ РїРѕСЃС‚СЂРѕР№РєСѓ)
+                com.example.aas.events.ConstructionScoring.complete((net.minecraft.server.level.ServerLevel) level, entity.getStructureKey(), entity.getScoreType());
 
                 // Р›РћР“РРљРђ Р—РђР’Р•Р РЁР•РќРРЇ / РўР РђРќРЎР¤РћР РњРђР¦РР
                 if (!entity.transformTo.isEmpty()) {
@@ -12425,7 +12467,9 @@ package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientData;
 import com.example.aas.network.PlayerStatInfo;
+import com.example.aas.util.VehicleCatalog;
 import com.example.aas.world.AASWorldData;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -12434,6 +12478,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -12456,20 +12502,159 @@ public class StatisticsScreen extends Screen {
     private static final ResourceLocation KILL_ICON = new ResourceLocation("aas", "textures/gui/stats/kills.png");
     private static final ResourceLocation DEATH_ICON = new ResourceLocation("aas", "textures/gui/stats/deaths.png");
 
+    // РРљРћРќРљР РћР§РљРћР’ Р РўР•РҐРќРРљР вЂ” PNG 10x10 (assets/aas/textures/gui/stats/). Р•СЃР»Рё С„Р°Р№Р»Р° РЅРµС‚, СЂРёСЃСѓРµС‚СЃСЏ С†РІРµС‚РЅРѕР№ РєРІР°РґСЂР°С‚
+    private static final ResourceLocation TP_ICON = new ResourceLocation("aas", "textures/gui/stats/team_points.png");
+    private static final ResourceLocation SP_ICON = new ResourceLocation("aas", "textures/gui/stats/squad_points.png");
+    private static final ResourceLocation VEH_ICON = new ResourceLocation("aas", "textures/gui/stats/vehicle_kills.png");
+    private static final ResourceLocation REV_ICON = new ResourceLocation("aas", "textures/gui/stats/revives.png"); // РёРєРѕРЅРєСѓ СЂРёСЃСѓРµС‚ Р°РІС‚РѕСЂ РјРѕРґР°
+
+    // РРєРѕРЅРєРё РєР°С‚РµРіРѕСЂРёР№ С‚РµС…РЅРёРєРё РґР»СЏ РїРѕРґСЃРєР°Р·РєРё - С‚Рµ Р¶Рµ, С‡С‚Рѕ РІ РїР°РЅРµР»Рё СЃРїРёСЃРєР° С‚РµС…РЅРёРєРё (textures/gui/map_icons/*.png)
+    private static final ResourceLocation[] VEH_CATEGORY_ICONS;
+    static {
+        VehicleCatalog.Category[] cats = VehicleCatalog.Category.values();
+        VEH_CATEGORY_ICONS = new ResourceLocation[cats.length];
+        for (int i = 0; i < cats.length; i++) {
+            String file = switch (cats[i]) {
+                case LOGISTICS -> "supply_truck";
+                case TRANSPORT -> "infantry_vehicle";
+                case APC -> "apc";
+                case IFV -> "combat_vehicle";
+                case TANK -> "tank";
+                case SPG -> "spg";
+                case AIR_DEFENSE -> "mobile_zu";
+                case HELICOPTER -> "helicopter";
+                case AIRCRAFT -> "cas_fighter";
+                default -> "default";
+            };
+            VEH_CATEGORY_ICONS[i] = new ResourceLocation("aas", "textures/gui/map_icons/" + file + ".png");
+        }
+    }
+    private static final int VEH_TIP_ICON = 12;   // СЂР°Р·РјРµСЂ РёРєРѕРЅРєРё С‚РµС…РЅРёРєРё РІ РїРѕРґСЃРєР°Р·РєРµ
+    // Р Р°Р·РјРµСЂ С‚РµРєСЃС‚СѓСЂС‹ (РґР»СЏ РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ РёРєРѕРЅРѕРє СЂР°Р·РЅРѕРіРѕ СЂР°Р·РјРµСЂР°), РєСЌС€
+    private static final Map<ResourceLocation, int[]> TEX_SIZE = new HashMap<>();
+    private static final int[] TEX_MISSING = new int[0];
+    // РљСЌС€ "РµСЃС‚СЊ Р»Рё С‚Р°РєР°СЏ С‚РµРєСЃС‚СѓСЂР°" (С‡С‚РѕР±С‹ РЅРµ СЂРёСЃРѕРІР°С‚СЊ С„РёРѕР»РµС‚РѕРІРѕ-С‡С‘СЂРЅСѓСЋ Р·Р°РіР»СѓС€РєСѓ Рё РЅРµ РїР°РґР°С‚СЊ)
+    private static final Map<ResourceLocation, Boolean> ICON_PRESENT = new HashMap<>();
+
     private static final int ROW_HEIGHT = 12;
     private static final int TOP_MARGIN = 34;   // РѕС‚СЃС‚СѓРї РїРѕРґ Р·Р°РіРѕР»РѕРІРѕРє СЌРєСЂР°РЅР°
     private static final int BOTTOM_MARGIN = 8;
 
+    // ================= РЎРўРР›Р¬ РўРђР‘Р›РР¦Р« (РІСЃРµ С†РІРµС‚Р° Рё СЂР°Р·РјРµСЂС‹ Р·РґРµСЃСЊ, РїСЂР°РІСЏС‚СЃСЏ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ) =================
+    // РљРѕР»РѕРЅРєРё СЃР»РµРІР° РЅР°РїСЂР°РІРѕ: TP | SP | РїРѕРґРЅСЏС‚Рѕ | С‚РµС…РЅРёРєР° | РєРёР»Р»С‹ | СЃРјРµСЂС‚Рё
+    private static final int COL_TP = 0;
+    private static final int COL_SP = 1;
+    private static final int COL_REV = 2;
+    private static final int COL_VEH = 3;
+    private static final int COL_KILLS = 4;
+    private static final int COL_DEATHS = 5;
+    private static final int COL_COUNT = 6;
+    // РЎРєРѕР»СЊРєРѕ С†РёС„СЂ СЂРµР·РµСЂРІРёСЂСѓРµРј РїРѕРґ С‡РёСЃР»Рѕ РІ РєРѕР»РѕРЅРєРµ (С„РёРєСЃРёСЂРѕРІР°РЅРЅР°СЏ С€РёСЂРёРЅР°, TP Рё SP РґРѕ 5 С†РёС„СЂ)
+    private static final int[] COL_DIGITS = {5, 5, 3, 3, 4, 4};
+    private static final int[] COL_CAP = {99999, 99999, 999, 999, 9999, 9999};
+    private static final int ICON_SIZE = 10;
+    private static final int COL_GAP = 8;       // РјРµР¶РґСѓ РєРѕР»РѕРЅРєР°РјРё
+
+    private static final int COLOR_TP = 0xFFFFFFFF;
+    private static final int COLOR_SP = 0xFFFFFFFF;
+    private static final int COLOR_VEH = 0xFFFFFFFF;
+    private static final int COLOR_KILLS = 0xFFFFFFFF;
+    private static final int COLOR_DEATHS = 0xFFFFFFFF;
+    private static final int COLOR_REV = 0xFFFFFFFF;
+
+    // РРєРѕРЅРєРё Рё С†РІРµС‚Р° РєРѕР»РѕРЅРѕРє РїРѕ РёРЅРґРµРєСЃСѓ (РёРєРѕРЅРєРё СЂРёСЃСѓСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ С€Р°РїРєРµ С‚Р°Р±Р»РёС†С‹, РІ СЃС‚СЂРѕРєР°С… РёРіСЂРѕРєРѕРІ - С‚РѕР»СЊРєРѕ С‡РёСЃР»Р°)
+    private static final ResourceLocation[] COL_ICONS = {TP_ICON, SP_ICON, REV_ICON, VEH_ICON, KILL_ICON, DEATH_ICON};
+    private static final int[] COL_COLORS = {COLOR_TP, COLOR_SP, COLOR_REV, COLOR_VEH, COLOR_KILLS, COLOR_DEATHS};
+
+    // РЁР°РїРєР° СЃ РёРєРѕРЅРєР°РјРё РєРѕР»РѕРЅРѕРє
+    private static final int HEADER_BG = 0x33000000;
+    private static final int HEADER_LIFT = 4;   // РЅР° СЃРєРѕР»СЊРєРѕ РїРёРєСЃРµР»РµР№ С€Р°РїРєР° РїРѕРґРЅСЏС‚Р° РІРІРµСЂС…
+
+    private static final int ROW_BG_EVEN = 0x22FFFFFF;      // Р·РµР±СЂР°: С‡С‘С‚РЅС‹Рµ СЃС‚СЂРѕРєРё
+    private static final int ROW_BG_ODD = 0x11000000;       // Р·РµР±СЂР°: РЅРµС‡С‘С‚РЅС‹Рµ СЃС‚СЂРѕРєРё
+    private static final int ROW_SEPARATOR = 0x15FFFFFF;    // С‚РѕРЅРєР°СЏ Р»РёРЅРёСЏ РјРµР¶РґСѓ СЃС‚СЂРѕРєР°РјРё (1px)
+    private static final int ROW_HOVER = 0x33FFFFFF;        // СЃС‚СЂРѕРєР° РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј
+    private static final int ROW_SELF_BG_BLUE = 0x593B82F6; // СЃРІРѕСЏ СЃС‚СЂРѕРєР°, СЃРёРЅСЏСЏ РєРѕРјР°РЅРґР° (~35%)
+    private static final int ROW_SELF_BG_RED = 0x59E0383E;  // СЃРІРѕСЏ СЃС‚СЂРѕРєР°, РєСЂР°СЃРЅР°СЏ РєРѕРјР°РЅРґР° (~35%)
+    private static final int ROW_SELF_BG_NEUTRAL = 0x59AAAAAA;
+    private static final int ROW_SELF_STRIPE_BLUE = 0xFF3B82F6;
+    private static final int ROW_SELF_STRIPE_RED = 0xFFE0383E;
+    private static final int ROW_SELF_STRIPE_NEUTRAL = 0xFFCCCCCC;
+    private static final int ROW_SELF_STRIPE_WIDTH = 2;
+    private static final int GUIDE_COLOR = 0x40FFFFFF;      // РІРµСЂС‚РёРєР°Р»СЊРЅС‹Рµ РЅР°РїСЂР°РІР»СЏСЋС‰РёРµ РјРµР¶РґСѓ РєРѕР»РѕРЅРєР°РјРё (1px)
+    private static final int COL_TINT = 0x1AFFFFFF;         // Р»С‘РіРєР°СЏ Р·Р°Р»РёРІРєР° РєР°Р¶РґРѕР№ РІС‚РѕСЂРѕР№ РєРѕР»РѕРЅРєРё (РІС‹РґРµР»РµРЅРёРµ СЃС‚РѕР»Р±С†РѕРІ)
+
+    private static final int TOOLTIP_BG = 0xF0100010;
+    private static final int TOOLTIP_BORDER = 0xF05000FF;
+
+    private static final String[] COL_LANG_KEYS = {
+            "aas.gui.stats.col.tp", "aas.gui.stats.col.sp", "aas.gui.stats.col.revives", "aas.gui.stats.col.vehicles",
+            "aas.gui.stats.col.kills", "aas.gui.stats.col.deaths"
+    };
+
     private int scrollOffset = 0;
     private int maxScroll = 0;
 
+    // Р Р°СЃРєР»Р°РґРєР° РєРѕР»РѕРЅРѕРє (СЃС‡РёС‚Р°РµС‚СЃСЏ РѕРґРёРЅ СЂР°Р· РІ init, РЅРµ РІ render)
+    private final int[] colWidth = new int[COL_COUNT];
+    private final int[] colLeftOffset = new int[COL_COUNT];   // СЂР°СЃСЃС‚РѕСЏРЅРёРµ РѕС‚ РїСЂР°РІРѕРіРѕ РєСЂР°СЏ РґРѕ Р»РµРІРѕРіРѕ РєСЂР°СЏ РєРѕР»РѕРЅРєРё
+    private final int[] guideOffset = new int[COL_COUNT - 1]; // СЂР°СЃСЃС‚РѕСЏРЅРёРµ РѕС‚ РїСЂР°РІРѕРіРѕ РєСЂР°СЏ РґРѕ РІРµСЂС‚РёРєР°Р»СЊРЅРѕР№ Р»РёРЅРёРё
+    private int statsTotalWidth = 0;
+
+    // РЎРѕСЃС‚РѕСЏРЅРёРµ РјС‹С€Рё/РїРѕРґСЃРєР°Р·РєРё С‚РµРєСѓС‰РµРіРѕ РєР°РґСЂР°
+    private int frameMouseX = 0;
+    private int frameMouseContentY = 0;   // Y РјС‹С€Рё РІ РєРѕРѕСЂРґРёРЅР°С‚Р°С… РєРѕРЅС‚РµРЅС‚Р° (СЃ СѓС‡С‘С‚РѕРј РїСЂРѕРєСЂСѓС‚РєРё)
+    private boolean mouseInViewport = false;
+    private int tipColumn = -1;
+    private PlayerStatInfo tipStat = null;
+
+    // Р РµР¶РёРј В«РЎС‡С‘С‚В» СЃ СЌРєСЂР°РЅР° РїРѕР±РµРґС‹: РїРѕРєР°Р·С‹РІР°РµРј РІСЃС‘, РєР°Рє Р°РґРјРёРЅСѓ-РЅР°Р±Р»СЋРґР°С‚РµР»СЋ (РІСЂР°РіРё, РёС… РѕС‚СЂСЏРґС‹ Рё СЃС‚Р°С‚РёСЃС‚РёРєР°),
+    // Р° Р·Р°РєСЂС‹С‚РёРµ (ESC) РІРѕР·РІСЂР°С‰Р°РµС‚ РЅР° СЌРєСЂР°РЅ РїРѕР±РµРґС‹.
+    private final boolean revealAll;
+    private final Screen parent;
+
     public StatisticsScreen() {
+        this(null, false);
+    }
+
+    public StatisticsScreen(Screen parent, boolean revealAll) {
         super(Component.literal("Statistics"));
+        this.parent = parent;
+        this.revealAll = revealAll;
+    }
+
+    /** true, РµСЃР»Рё СЌРєСЂР°РЅ РѕС‚РєСЂС‹С‚ РєРЅРѕРїРєРѕР№ В«РЎС‡С‘С‚В» СЃ СЌРєСЂР°РЅР° РїРѕР±РµРґС‹. */
+    public boolean isOpenedFromVictory() {
+        return parent instanceof VictoryScreen;
+    }
+
+    @Override
+    public void onClose() {
+        if (parent != null) {
+            this.minecraft.setScreen(parent);
+        } else {
+            super.onClose();
+        }
     }
 
     @Override
     protected void init() {
         // СѓРїСЂР°РІР»СЏСЋС‰РёС… РІРёРґР¶РµС‚РѕРІ РїРѕРєР° РЅРµС‚ вЂ” СЌРєСЂР°РЅ РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅС‹Р№
+
+        // Р Р°СЃРєР»Р°РґРєР° РєРѕР»РѕРЅРѕРє СЃС‚Р°С‚РёСЃС‚РёРєРё: СЃРїСЂР°РІР° РЅР°Р»РµРІРѕ, С„РёРєСЃРёСЂРѕРІР°РЅРЅР°СЏ С€РёСЂРёРЅР° РїРѕРґ РјР°РєСЃРёРјСѓРј С†РёС„СЂ
+        ICON_PRESENT.clear();
+        int offset = 0;
+        for (int i = COL_COUNT - 1; i >= 0; i--) {
+            int numW = this.font.width("9".repeat(COL_DIGITS[i]));
+            colWidth[i] = Math.max(ICON_SIZE, numW); // РёРєРѕРЅРєР° РІ С€Р°РїРєРµ РїРѕ С†РµРЅС‚СЂСѓ РєРѕР»РѕРЅРєРё, С‡РёСЃР»Р° РІ СЃС‚СЂРѕРєР°С… - РїРѕ С†РµРЅС‚СЂСѓ РєР»РµС‚РєРё
+            offset += colWidth[i];
+            colLeftOffset[i] = offset;
+            offset += COL_GAP;
+        }
+        statsTotalWidth = offset - COL_GAP;
+        for (int i = 0; i < COL_COUNT - 1; i++) {
+            guideOffset[i] = colLeftOffset[i + 1] + COL_GAP / 2;
+        }
     }
 
     @Override
@@ -12485,6 +12670,13 @@ public class StatisticsScreen extends Screen {
 
         int contentTop = TOP_MARGIN;
         int contentBottom = this.height - BOTTOM_MARGIN;
+
+        // РњС‹С€СЊ РІ РєРѕРѕСЂРґРёРЅР°С‚Р°С… РєРѕРЅС‚РµРЅС‚Р° (СЌРєСЂР°РЅ РїСЂРѕРєСЂСѓС‡РёРІР°РµС‚СЃСЏ translate'РѕРј)
+        frameMouseX = mouseX;
+        frameMouseContentY = mouseY + scrollOffset;
+        mouseInViewport = mouseY >= contentTop && mouseY < contentBottom;
+        tipColumn = -1;
+        tipStat = null;
 
         String myTeam = getMyTeamKey();
         // РџСѓРЅРєС‚ 2: РµСЃР»Рё РёРіСЂРѕРє РЅРµ РІ РєРѕРјР°РЅРґРµ РёР»Рё РЅРµ BLUE/RED вЂ” СЃР»РµРІР° BLUE, СЃРїСЂР°РІР° RED
@@ -12511,6 +12703,9 @@ public class StatisticsScreen extends Screen {
         if (scrollOffset > maxScroll) scrollOffset = maxScroll;
 
         super.render(gui, mouseX, mouseY, partialTicks);
+
+        // РџРѕРґСЃРєР°Р·РєР° РєРѕР»РѕРЅРєРё СЂРёСЃСѓРµС‚СЃСЏ РїРѕРІРµСЂС… РІСЃРµРіРѕ, РІРЅРµ РїСЂРѕРєСЂСѓС‚РєРё Рё scissor
+        if (tipColumn >= 0) renderColumnTooltip(gui, mouseX, mouseY);
     }
 
     @Override
@@ -12530,16 +12725,27 @@ public class StatisticsScreen extends Screen {
 
         int y = drawTeamHeader(gui, x, width, teamKey, teamPlayers.size(), startY);
 
+        // РЁР°РїРєР° СЃ РёРєРѕРЅРєР°РјРё РєРѕР»РѕРЅРѕРє - РѕРґРёРЅ СЂР°Р· РґР»СЏ РєРѕРјР°РЅРґС‹ (РµСЃР»Рё РµСЃС‚СЊ РІРёРґРёРјР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР°)
+        if (teamPlayers.stream().anyMatch(pl -> !pl.isHidden())) {
+            y = drawColumnHeader(gui, x, width, y);
+        }
+
         boolean isMine = !getMyTeamKey().isEmpty() && teamKey.equalsIgnoreCase(getMyTeamKey());
         boolean revealed = isTeamRevealed(isMine);
 
         if (!revealed) {
             // РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЂРµР¶РёРј РґР»СЏ РІСЂР°РіРѕРІ: РЅРёРє + РїРёРЅРі. РЎС‚Р°С‚РёСЃС‚РёРєР° (K/D) СЂРёСЃСѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РµСЃР»Рё СЃРµСЂРІРµСЂ РµС‘ РїСЂРёСЃР»Р°Р»
+            int enemyRow = 0;
+            String enemyMyName = (this.minecraft.player != null) ? this.minecraft.player.getScoreboardName() : "";
             for (PlayerStatInfo p : teamPlayers) {
+                boolean hasStats = !p.isHidden();
+                // РџРѕСЂСЏРґРѕРє: С„РѕРЅ СЃС‚СЂРѕРєРё -> СЂР°Р·РґРµР»РёС‚РµР»Рё -> С‚РµРєСЃС‚ Рё РёРєРѕРЅРєРё
+                drawRowBackground(gui, x, y, width, ROW_HEIGHT, enemyRow, p.name.equals(enemyMyName), isRowHovered(x, y, width), teamKey, !hasStats);
                 int nameX = drawPingBars(gui, x, y + 2, p.ping);
-                gui.drawString(this.font, p.name, nameX, y + 2, 0xFFDDDDDD, false);
-                drawKD(gui, x + width, y + 2, p.kills, p.deaths); // <-- Р”РѕР±Р°РІР»РµРЅР° РѕС‚СЂРёСЃРѕРІРєР° K/D
+                drawNameTruncated(gui, p.name, nameX, y + 2, 0xFFDDDDDD, nameMaxRight(x, width, hasStats));
+                drawStats(gui, x + width, y + 2, p); // <-- Р”РѕР±Р°РІР»РµРЅР° РѕС‚СЂРёСЃРѕРІРєР° РІСЃРµС… 6 РєРѕР»РѕРЅРѕРє (СЃРєСЂС‹С‚Рѕ, РµСЃР»Рё СЃРµСЂРІРµСЂ РїСЂРёСЃР»Р°Р» -1)
                 y += ROW_HEIGHT;
+                enemyRow++;
             }
             return y;
         }
@@ -12581,19 +12787,25 @@ public class StatisticsScreen extends Screen {
             if (!squad.leader.isEmpty()) ordered.add(squad.leader);
             for (String m : squad.members) if (!m.equals(squad.leader)) ordered.add(m);
 
+            int memberRow = 0; // Р·РµР±СЂР° РЅР°С‡РёРЅР°РµС‚СЃСЏ Р·Р°РЅРѕРІРѕ РІ РєР°Р¶РґРѕРј РѕС‚СЂСЏРґРµ
             for (String member : ordered) {
                 PlayerStatInfo stat = byName.get(member);
                 boolean isLeaderRow = member.equals(squad.leader);
+                boolean hasStats = stat != null && !stat.isHidden();
+
+                // РџРѕСЂСЏРґРѕРє: С„РѕРЅ СЃС‚СЂРѕРєРё -> СЂР°Р·РґРµР»РёС‚РµР»Рё -> С‚РµРєСЃС‚ Рё РёРєРѕРЅРєРё
+                drawRowBackground(gui, x, y, width, ROW_HEIGHT, memberRow, member.equals(myName), isRowHovered(x, y, width), teamKey, !hasStats);
 
                 int nameX = drawPingBars(gui, x + 6, y + 2, stat != null ? stat.ping : -1);
 
                 int nameColor = isLeaderRow ? 0xFFFFD700 : 0xFFFFFFFF;
-                gui.drawString(this.font, (isLeaderRow ? "SL " : "   ") + member, nameX, y + 2, nameColor, false);
+                drawNameTruncated(gui, (isLeaderRow ? "SL " : "   ") + member, nameX, y + 2, nameColor, nameMaxRight(x, width, hasStats));
 
                 if (stat != null) {
-                    drawKD(gui, x + width, y + 2, stat.kills, stat.deaths);
+                    drawStats(gui, x + width, y + 2, stat);
                 }
                 y += ROW_HEIGHT;
+                memberRow++;
             }
             y += 4;
             index++;
@@ -12604,11 +12816,15 @@ public class StatisticsScreen extends Screen {
         if (!noSquad.isEmpty()) {
             gui.drawString(this.font, Component.translatable("aas.gui.stats.unassigned_players").getString(), x, y, 0xFF888888, false);
             y += ROW_HEIGHT;
+            int noSquadRow = 0; // Р·РµР±СЂР° РЅР°С‡РёРЅР°РµС‚СЃСЏ Р·Р°РЅРѕРІРѕ РІ Р±Р»РѕРєРµ "Р±РµР· РѕС‚СЂСЏРґР°"
             for (PlayerStatInfo p : noSquad) {
+                boolean hasStats = !p.isHidden();
+                drawRowBackground(gui, x, y, width, ROW_HEIGHT, noSquadRow, p.name.equals(myName), isRowHovered(x, y, width), teamKey, !hasStats);
                 int nameX = drawPingBars(gui, x + 6, y + 2, p.ping);
-                gui.drawString(this.font, p.name, nameX, y + 2, 0xFFFFFFFF, false);
-                drawKD(gui, x + width, y + 2, p.kills, p.deaths);
+                drawNameTruncated(gui, p.name, nameX, y + 2, 0xFFFFFFFF, nameMaxRight(x, width, hasStats));
+                drawStats(gui, x + width, y + 2, p);
                 y += ROW_HEIGHT;
+                noSquadRow++;
             }
         }
 
@@ -12655,12 +12871,20 @@ public class StatisticsScreen extends Screen {
         y += 6;
         gui.drawString(this.font, Component.translatable("aas.gui.stats.no_team_players").getString(), x, y, 0xFFAAAAAA, false);
         y += ROW_HEIGHT;
+        if (noTeam.stream().anyMatch(pl -> !pl.isHidden())) {
+            y = drawColumnHeader(gui, x, width, y);
+        }
 
+        String noTeamMyName = (this.minecraft.player != null) ? this.minecraft.player.getScoreboardName() : "";
+        int noTeamRow = 0;
         for (PlayerStatInfo p : noTeam) {
+            boolean hasStats = !p.isHidden();
+            drawRowBackground(gui, x, y, width, ROW_HEIGHT, noTeamRow, p.name.equals(noTeamMyName), isRowHovered(x, y, width), "", !hasStats);
             int nameX = drawPingBars(gui, x, y + 2, p.ping);
-            gui.drawString(this.font, p.name, nameX, y + 2, 0xFFFFFFFF, false);
-            drawKD(gui, x + width, y + 2, p.kills, p.deaths);
+            drawNameTruncated(gui, p.name, nameX, y + 2, 0xFFFFFFFF, nameMaxRight(x, width, hasStats));
+            drawStats(gui, x + width, y + 2, p);
             y += ROW_HEIGHT;
+            noTeamRow++;
         }
         return y;
     }
@@ -12674,6 +12898,7 @@ public class StatisticsScreen extends Screen {
 
     private boolean isTeamRevealed(boolean isMine) {
         if (isMine) return true;
+        if (revealAll) return true;
         if (this.minecraft.player == null) return false;
         boolean isAdminObserver = this.minecraft.player.hasPermissions(2)
                 && (this.minecraft.player.isSpectator() || this.minecraft.player.isCreative());
@@ -12722,24 +12947,252 @@ public class StatisticsScreen extends Screen {
         return textX + this.font.width(pingText) + 4; // РѕС‚СЃС‚СѓРї РїРѕРґ СЃР»РµРґСѓСЋС‰РёР№ СЌР»РµРјРµРЅС‚ (РЅРёРє)
     }
 
-    // РРєРѕРЅРєРё РєРёР»Р»РѕРІ/СЃРјРµСЂС‚РµР№ + С‡РёСЃР»Р°, РІС‹СЂРѕРІРЅРµРЅРЅС‹Рµ РїРѕ РїСЂР°РІРѕРјСѓ РєСЂР°СЋ (rightEdgeX)
-    private void drawKD(GuiGraphics gui, int rightEdgeX, int y, int kills, int deaths) {
-        if (kills < 0 || deaths < 0) return; // СЃРєСЂС‹С‚Р°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР° РІСЂР°РіР°
+    // ================= РЎРўРђРўРРЎРўРРљРђ: 6 РљРћР›РћРќРћРљ (TP | SP | РїРѕРґРЅСЏС‚Рѕ | С‚РµС…РЅРёРєР° | РєРёР»Р»С‹ | СЃРјРµСЂС‚Рё) =================
 
-        String killsText = String.valueOf(kills);
-        String deathsText = String.valueOf(deaths);
+    // Р§РёСЃР»Р° РїРѕ С†РµРЅС‚СЂСѓ РєР»РµС‚РѕРє. РљРѕР»РѕРЅРєРё СЃС‡РёС‚Р°СЋС‚СЃСЏ СЃРїСЂР°РІР° РЅР°Р»РµРІРѕ РѕС‚ rightEdgeX
+    // СЃ С„РёРєСЃРёСЂРѕРІР°РЅРЅРѕР№ С€РёСЂРёРЅРѕР№, РїРѕСЌС‚РѕРјСѓ РІС‹СЂР°РІРЅРёРІР°СЋС‚СЃСЏ РјРµР¶РґСѓ СЃС‚СЂРѕРєР°РјРё. РРєРѕРЅРєРё СЂРёСЃСѓСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ С€Р°РїРєРµ.
+    // y - РєРѕРѕСЂРґРёРЅР°С‚Р° С‚РµРєСЃС‚Р° (РІРµСЂС… СЃС‚СЂРѕРєРё + 2). РЎРєСЂС‹С‚Р°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР° РІСЂР°РіР° (Р·РЅР°С‡РµРЅРёСЏ -1) РЅРµ СЂРёСЃСѓРµС‚СЃСЏ СЃРѕРІСЃРµРј.
+    private void drawStats(GuiGraphics gui, int rightEdgeX, int y, PlayerStatInfo p) {
+        if (p == null || p.isHidden()) return; // СЃРєСЂС‹С‚Р°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР° РІСЂР°РіР°
 
-        int cursorX = rightEdgeX - this.font.width(deathsText);
-        gui.drawString(this.font, deathsText, cursorX, y, 0xFFFF6666, false);
-        cursorX -= 12;
-        RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        gui.blit(DEATH_ICON, cursorX, y - 1, 0, 0, 10, 10, 10, 10);
+        int rowTop = y - 2;
+        boolean rowUnderMouse = mouseInViewport && frameMouseContentY >= rowTop && frameMouseContentY < rowTop + ROW_HEIGHT;
 
-        cursorX -= 6 + this.font.width(killsText);
-        gui.drawString(this.font, killsText, cursorX, y, 0xFF66FF66, false);
-        cursorX -= 12;
-        gui.blit(KILL_ICON, cursorX, y - 1, 0, 0, 10, 10, 10, 10);
+        for (int c = COL_COUNT - 1; c >= 0; c--) { // СЃРїСЂР°РІР° РЅР°Р»РµРІРѕ: СЃРјРµСЂС‚Рё, РєРёР»Р»С‹, С‚РµС…РЅРёРєР°, РїРѕРґРЅСЏС‚Рѕ, SP, TP
+            int value;
+            switch (c) {
+                case COL_TP:     value = p.tp;            break;
+                case COL_SP:     value = p.sp;            break;
+                case COL_REV:    value = p.revives;       break;
+                case COL_VEH:    value = p.vehKillsTotal; break;
+                case COL_KILLS:  value = p.kills;         break;
+                default:         value = p.deaths;        break;
+            }
+            int color = COL_COLORS[c];
+
+            int colLeft = rightEdgeX - colLeftOffset[c];
+            int colRight = colLeft + colWidth[c];
+
+            // РўРѕР»СЊРєРѕ С‡РёСЃР»Рѕ РїРѕ С†РµРЅС‚СЂСѓ РєР»РµС‚РєРё (РёРєРѕРЅРєРё С‚РµРїРµСЂСЊ РІ С€Р°РїРєРµ)
+            String text = String.valueOf(Math.min(value, COL_CAP[c]));
+            gui.drawString(this.font, text, colLeft + (colWidth[c] - this.font.width(text)) / 2, y, color, false);
+
+            // РџРѕРґСЃРєР°Р·РєР°: РЅР°РІРµРґРµРЅРёРµ РЅР° С‡РёСЃР»Рѕ РєРѕР»РѕРЅРєРё (РЅРµ Р·Р°РІРёСЃРёС‚ РѕС‚ РїРѕРґСЃРІРµС‚РєРё СЃС‚СЂРѕРєРё, РїРѕСЌС‚РѕРјСѓ РЅРµ РјРёРіР°РµС‚)
+            if (rowUnderMouse && frameMouseX >= colLeft - COL_GAP / 2 && frameMouseX < colRight + COL_GAP / 2) {
+                tipColumn = c;
+                tipStat = p;
+            }
+        }
+    }
+
+    // РЁР°РїРєР° С‚Р°Р±Р»РёС†С‹: РёРєРѕРЅРєРё РєРѕР»РѕРЅРѕРє СЂРёСЃСѓСЋС‚СЃСЏ РѕРґРёРЅ СЂР°Р· РЅР°Рґ РІСЃРµРјРё СЃС‚СЂРѕРєР°РјРё РєРѕРјР°РЅРґС‹.
+    // Р’РѕР·РІСЂР°С‰Р°РµС‚ РЅРѕРІС‹Р№ Y (РїРѕСЃР»Рµ С€Р°РїРєРё). РќР°РІРµРґРµРЅРёРµ РЅР° РёРєРѕРЅРєСѓ РїРѕРєР°Р·С‹РІР°РµС‚ РЅР°Р·РІР°РЅРёРµ РєРѕР»РѕРЅРєРё.
+    private int drawColumnHeader(GuiGraphics gui, int x, int width, int y) {
+        int right = x + width;
+        int h = ROW_HEIGHT;
+        int returnY = y + h + 1;
+        y -= HEADER_LIFT; // С€Р°РїРєР° С‡СѓС‚СЊ РІС‹С€Рµ, С‡С‚РѕР±С‹ РЅРµ Р·Р°Р»РµР·Р°С‚СЊ РЅР° РєСЂСѓР¶РѕРє РѕС‚СЂСЏРґР°
+
+        gui.fill(x, y, right, y + h, HEADER_BG);
+        drawColumnTints(gui, right, y, h);
+        drawColumnGuides(gui, right, y, h);
+
+        boolean rowUnderMouse = mouseInViewport && frameMouseContentY >= y && frameMouseContentY < y + h;
+        for (int c = 0; c < COL_COUNT; c++) {
+            int colLeft = right - colLeftOffset[c];
+            int iconX = colLeft + (colWidth[c] - ICON_SIZE) / 2;
+            drawIcon(gui, COL_ICONS[c], iconX, y + 1, COL_COLORS[c]);
+
+            if (rowUnderMouse && frameMouseX >= colLeft - COL_GAP / 2 && frameMouseX < colLeft + colWidth[c] + COL_GAP / 2) {
+                tipColumn = c;
+                tipStat = null; // С€Р°РїРєР°: С‚РѕР»СЊРєРѕ РЅР°Р·РІР°РЅРёРµ РєРѕР»РѕРЅРєРё
+            }
+        }
+        return returnY;
+    }
+
+    // Р›С‘РіРєР°СЏ Р·Р°Р»РёРІРєР° РєР°Р¶РґРѕР№ РІС‚РѕСЂРѕР№ РєРѕР»РѕРЅРєРё (С‡С‚РѕР±С‹ СЃС‚РѕР»Р±С†С‹ С‡РёС‚Р°Р»РёСЃСЊ РєР°Рє СЃС‚РѕР»Р±С†С‹)
+    private void drawColumnTints(GuiGraphics gui, int right, int y, int h) {
+        for (int c = 1; c < COL_COUNT; c += 2) {
+            int x0 = right - colLeftOffset[c] - COL_GAP / 2;
+            int x1 = Math.min(right, right - colLeftOffset[c] + colWidth[c] + COL_GAP / 2);
+            gui.fill(x0, y, x1, y + h, COL_TINT);
+        }
+    }
+
+    // Р’РµСЂС‚РёРєР°Р»СЊРЅС‹Рµ РЅР°РїСЂР°РІР»СЏСЋС‰РёРµ РјРµР¶РґСѓ РєРѕР»РѕРЅРєР°РјРё (1px)
+    private void drawColumnGuides(GuiGraphics gui, int right, int y, int h) {
+        for (int i = 0; i < guideOffset.length; i++) {
+            int gx = right - guideOffset[i];
+            gui.fill(gx, y, gx + 1, y + h, GUIDE_COLOR);
+        }
+    }
+
+    // РРєРѕРЅРєР° 10x10. Р•СЃР»Рё С‚РµРєСЃС‚СѓСЂС‹ РЅРµС‚ РІ СЂРµСЃСѓСЂСЃР°С…, СЂРёСЃСѓРµРј С†РІРµС‚РЅРѕР№ РєРІР°РґСЂР°С‚ РІРјРµСЃС‚Рѕ Р·Р°РіР»СѓС€РєРё
+    private void drawIcon(GuiGraphics gui, ResourceLocation icon, int x, int y, int fallbackColor) {
+        if (iconExists(icon)) {
+            RenderSystem.enableBlend();
+            // Р‘РµР»Р°СЏ РёРєРѕРЅРєР° РѕРєСЂР°С€РёРІР°РµС‚СЃСЏ РІ С†РІРµС‚ РєРѕР»РѕРЅРєРё
+            RenderSystem.setShaderColor(((fallbackColor >> 16) & 0xFF) / 255f, ((fallbackColor >> 8) & 0xFF) / 255f, (fallbackColor & 0xFF) / 255f, 1f);
+            gui.blit(icon, x, y, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        } else {
+            gui.fill(x + 1, y + 1, x + ICON_SIZE - 1, y + ICON_SIZE - 1, fallbackColor);
+        }
+    }
+
+    private boolean iconExists(ResourceLocation icon) {
+        Boolean cached = ICON_PRESENT.get(icon);
+        if (cached == null) {
+            cached = this.minecraft.getResourceManager().getResource(icon).isPresent();
+            ICON_PRESENT.put(icon, cached);
+        }
+        return cached;
+    }
+
+    // РћР±СЂРµР·РєР° РґР»РёРЅРЅРѕРіРѕ РЅРёРєР° СЃ "вЂ¦", С‡С‚РѕР±С‹ РёРјСЏ РЅРµ Р·Р°Р»РµР·Р°Р»Рѕ РЅР° РєРѕР»РѕРЅРєРё
+    private void drawNameTruncated(GuiGraphics gui, String text, int x, int y, int color, int maxRight) {
+        int avail = maxRight - x;
+        if (avail <= 0) return;
+        if (this.font.width(text) <= avail) {
+            gui.drawString(this.font, text, x, y, color, false);
+        } else {
+            String cut = this.font.plainSubstrByWidth(text, Math.max(0, avail - this.font.width("\u2026"))) + "\u2026";
+            gui.drawString(this.font, cut, x, y, color, false);
+        }
+    }
+
+    // РџСЂР°РІР°СЏ РіСЂР°РЅРёС†Р° РѕР±Р»Р°СЃС‚Рё РЅРёРєР°: СЃР»РµРІР° РѕС‚ РєРѕР»РѕРЅРѕРє СЃС‚Р°С‚РёСЃС‚РёРєРё (РµСЃР»Рё РѕРЅРё СЂРёСЃСѓСЋС‚СЃСЏ)
+    private int nameMaxRight(int x, int width, boolean hasStats) {
+        return hasStats ? x + width - statsTotalWidth - 4 : x + width - 2;
+    }
+
+    private boolean isRowHovered(int x, int y, int width) {
+        return mouseInViewport && frameMouseX >= x && frameMouseX < x + width
+                && frameMouseContentY >= y && frameMouseContentY < y + ROW_HEIGHT;
+    }
+
+    // ================= Р¤РћРќ РЎРўР РћРљР =================
+
+    // Р•РґРёРЅС‹Р№ РјРµС‚РѕРґ С„РѕРЅР° СЃС‚СЂРѕРєРё РёРіСЂРѕРєР°. Р’С‹Р·С‹РІР°РµС‚СЃСЏ Р”Рћ С‚РµРєСЃС‚Р° Рё РёРєРѕРЅРѕРє.
+    // РџРѕСЂСЏРґРѕРє: Р·РµР±СЂР° -> РїРѕРґСЃРІРµС‚РєР° СЃРІРѕРµР№ СЃС‚СЂРѕРєРё -> РЅР°РІРµРґРµРЅРёРµ -> СЂР°Р·РґРµР»РёС‚РµР»СЊ -> РІРµСЂС‚РёРєР°Р»СЊРЅС‹Рµ РЅР°РїСЂР°РІР»СЏСЋС‰РёРµ.
+    // dimmed = true (СЃРєСЂС‹С‚С‹Рµ РґР°РЅРЅС‹Рµ РІСЂР°РіР° / РЅРµС‚ РґР°РЅРЅС‹С…): С‚РѕР»СЊРєРѕ Р·РµР±СЂР° Рё СЂР°Р·РґРµР»РёС‚РµР»СЊ, Р±РµР· СЏСЂРєРѕР№ РїРѕРґСЃРІРµС‚РєРё Рё РЅР°РїСЂР°РІР»СЏСЋС‰РёС….
+    private void drawRowBackground(GuiGraphics gui, int x, int y, int width, int rowHeight, int rowIndex,
+                                   boolean isSelf, boolean isHovered, String teamKey, boolean dimmed) {
+        int right = x + width;
+
+        // 1. Р—РµР±СЂР°
+        gui.fill(x, y, right, y + rowHeight, (rowIndex & 1) == 0 ? ROW_BG_EVEN : ROW_BG_ODD);
+        // 1.1. Р—Р°Р»РёРІРєР° РєР°Р¶РґРѕР№ РІС‚РѕСЂРѕР№ РєРѕР»РѕРЅРєРё (С‚РѕР»СЊРєРѕ РґР»СЏ СЃС‚СЂРѕРє СЃ РґР°РЅРЅС‹РјРё)
+        if (!dimmed) drawColumnTints(gui, right, y, rowHeight);
+
+        if (!dimmed) {
+            // 2. РЎРІРѕСЏ СЃС‚СЂРѕРєР°: С„РѕРЅ С†РІРµС‚Р° РєРѕРјР°РЅРґС‹ (~35%) + РїРѕР»РѕСЃРєР° 2px СЃР»РµРІР°
+            if (isSelf) {
+                int bg;
+                int stripe;
+                if ("BLUE".equalsIgnoreCase(teamKey)) { bg = ROW_SELF_BG_BLUE; stripe = ROW_SELF_STRIPE_BLUE; }
+                else if ("RED".equalsIgnoreCase(teamKey)) { bg = ROW_SELF_BG_RED; stripe = ROW_SELF_STRIPE_RED; }
+                else { bg = ROW_SELF_BG_NEUTRAL; stripe = ROW_SELF_STRIPE_NEUTRAL; }
+                gui.fill(x, y, right, y + rowHeight, bg);
+                gui.fill(x, y, x + ROW_SELF_STRIPE_WIDTH, y + rowHeight, stripe);
+            }
+            // 3. РќР°РІРµРґРµРЅРёРµ РјС‹С€Рё
+            if (isHovered) {
+                gui.fill(x, y, right, y + rowHeight, ROW_HOVER);
+            }
+        }
+
+        // 4. РўРѕРЅРєРёР№ СЂР°Р·РґРµР»РёС‚РµР»СЊ РјРµР¶РґСѓ СЃС‚СЂРѕРєР°РјРё
+        gui.fill(x, y + rowHeight - 1, right, y + rowHeight, ROW_SEPARATOR);
+
+        // 5. Р’РµСЂС‚РёРєР°Р»СЊРЅС‹Рµ РЅР°РїСЂР°РІР»СЏСЋС‰РёРµ РјРµР¶РґСѓ РєРѕР»РѕРЅРєР°РјРё (С‚РѕР»СЊРєРѕ РІ РѕР±Р»Р°СЃС‚Рё РєРѕР»РѕРЅРѕРє, РЅР° РЅРёРє РЅРµ Р·Р°С…РѕРґСЏС‚)
+        if (!dimmed) {
+            drawColumnGuides(gui, right, y, rowHeight);
+        }
+    }
+
+    // ================= РџРћР”РЎРљРђР—РљР РљРћР›РћРќРћРљ =================
+
+    private void renderColumnTooltip(GuiGraphics gui, int mouseX, int mouseY) {
+        Component title = Component.translatable(COL_LANG_KEYS[tipColumn]);
+
+        if (tipColumn != COL_VEH || tipStat == null) {
+            gui.renderTooltip(this.font, title, mouseX, mouseY);
+            return;
+        }
+
+        // РљРѕР»РѕРЅРєР° С‚РµС…РЅРёРєРё: РЅР°Р·РІР°РЅРёРµ + СЂР°Р·Р±РёРІРєР° РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј: [РёРєРѕРЅРєР°] [РєР»Р°СЃСЃ С‚РµС…РЅРёРєРё] [СЃРєРѕР»СЊРєРѕ СѓРЅРёС‡С‚РѕР¶РµРЅРѕ]
+        VehicleCatalog.Category[] cats = VehicleCatalog.Category.values();
+        int[] counts = tipStat.vehKillsByCategory;
+
+        int rows = 0;
+        int nameW = 0;
+        int numW = 0;
+        for (int i = 0; i < cats.length && i < counts.length; i++) {
+            if (counts[i] <= 0) continue;
+            rows++;
+            nameW = Math.max(nameW, this.font.width(Component.translatable(cats[i].langKey)));
+            numW = Math.max(numW, this.font.width(String.valueOf(counts[i])));
+        }
+        int rowH = VEH_TIP_ICON + 2;
+        int textW = Math.max(this.font.width(title), rows > 0 ? VEH_TIP_ICON + 4 + nameW + 10 + numW : 0);
+
+        int boxW = textW + 8;
+        int boxH = 8 + 10 + (rows > 0 ? rows * rowH + 2 : 0);
+        int bx = mouseX + 12;
+        int by = mouseY - 12;
+        if (bx + boxW > this.width) bx = mouseX - boxW - 12;
+        if (bx < 0) bx = 0;
+        if (by + boxH > this.height) by = this.height - boxH;
+        if (by < 0) by = 0;
+
+        gui.pose().pushPose();
+        gui.pose().translate(0, 0, 400);
+        gui.fill(bx - 1, by - 1, bx + boxW + 1, by + boxH + 1, TOOLTIP_BORDER);
+        gui.fill(bx, by, bx + boxW, by + boxH, TOOLTIP_BG);
+        gui.drawString(this.font, title, bx + 4, by + 4, 0xFFFFFFFF, false);
+
+        int ry = by + 4 + 10 + 2;
+        for (int i = 0; i < cats.length && i < counts.length; i++) {
+            if (counts[i] <= 0) continue;
+            drawScaledTexture(gui, VEH_CATEGORY_ICONS[i], bx + 4, ry, VEH_TIP_ICON);
+            gui.drawString(this.font, Component.translatable(cats[i].langKey), bx + 4 + VEH_TIP_ICON + 4, ry + 2, 0xFFFFFFFF, false);
+            String num = String.valueOf(counts[i]);
+            gui.drawString(this.font, num, bx + boxW - 4 - this.font.width(num), ry + 2, 0xFFFFFFFF, false);
+            ry += rowH;
+        }
+        gui.pose().popPose();
+    }
+
+    // РРєРѕРЅРєР° Р»СЋР±РѕРіРѕ СЂР°Р·РјРµСЂР°, РјР°СЃС€С‚Р°Р±РёСЂСѓРµС‚СЃСЏ РґРѕ size x size (РєР°Рє РІ РїР°РЅРµР»Рё СЃРїРёСЃРєР° С‚РµС…РЅРёРєРё); РµСЃР»Рё С„Р°Р№Р»Р° РЅРµС‚ - СЃРµСЂР°СЏ Р·Р°РіР»СѓС€РєР°
+    private void drawScaledTexture(GuiGraphics gui, ResourceLocation tex, int x, int y, int size) {
+        int[] info = texSize(tex);
+        if (info != null) {
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+            gui.blit(tex, x, y, size, size, 0f, 0f, info[0], info[1], info[0], info[1]);
+        } else {
+            gui.fill(x, y, x + size, y + size, 0xFF3A3A3A);
+            gui.renderOutline(x, y, size, size, 0xFF888888);
+        }
+    }
+
+    private int[] texSize(ResourceLocation tex) {
+        int[] cached = TEX_SIZE.get(tex);
+        if (cached != null) return cached == TEX_MISSING ? null : cached;
+        int[] info = TEX_MISSING;
+        var res = this.minecraft.getResourceManager().getResource(tex);
+        if (res.isPresent()) {
+            info = new int[]{16, 16};
+            try (InputStream in = res.get().open(); NativeImage img = NativeImage.read(in)) {
+                info = new int[]{img.getWidth(), img.getHeight()};
+            } catch (IOException ignored) {
+                // РѕСЃС‚Р°РІР»СЏРµРј 16x16
+            }
+        }
+        TEX_SIZE.put(tex, info);
+        return info == TEX_MISSING ? null : info;
     }
 
     private ResourceLocation getFlagTexture(String faction) {
@@ -13850,6 +14303,9 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\gui\Vi
 ==========================================
 package com.example.aas.client.gui;
 
+import com.example.aas.client.ClientData;
+import com.example.aas.network.VictoryData;
+import com.example.aas.util.VictoryTitles;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13859,16 +14315,42 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
+import java.util.List;
+
+/**
+ * Р­РєСЂР°РЅ РїРѕР±РµРґС‹: Р·Р°РіРѕР»РѕРІРѕРє РїРѕ РёС‚РѕРіСѓ, РєРЅРѕРїРєР° В«РЎС‡С‘С‚В», С„Р»Р°РіРё РїРѕР±РµРґРёС‚РµР»РµР№/РїСЂРѕРёРіСЂР°РІС€РёС… СЃ С‚РёРєРµС‚Р°РјРё
+ * Рё С‚СЂРё РіР»РѕР±Р°Р»СЊРЅС‹Рµ РїР°РЅРµР»Рё (Р»СѓС‡С€РёР№ РѕС‚СЂСЏРґ / РјРµРґРёРє / Р»РѕРіРёСЃС‚).
+ * Р”Р°РЅРЅС‹Рµ РїСЂРёС…РѕРґСЏС‚ СЃРЅРёРјРєРѕРј VictoryData (РѕРґРёРЅР°РєРѕРІС‹Рј РґР»СЏ РІСЃРµС… РєР»РёРµРЅС‚РѕРІ).
+ */
 public class VictoryScreen extends Screen {
 
-    private final String winnerName;
-    private final String winnerFaction;
-    private final String subText;
-    private final boolean isBlueWinner;
+    private final VictoryData data;
 
-    // Р’СЂРµРјСЏ РѕС‚РєСЂС‹С‚РёСЏ СЌРєСЂР°РЅР° РґР»СЏ Р°РЅРёРјР°С†РёРё
+    // Р’СЂРµРјСЏ РѕС‚РєСЂС‹С‚РёСЏ СЌРєСЂР°РЅР° РґР»СЏ Р°РЅРёРјР°С†РёРё (РїСЂРё РїРѕРІС‚РѕСЂРЅРѕРј РѕС‚РєСЂС‹С‚РёРё РїРѕ CAPS Р°РЅРёРјР°С†РёСЏ РїСЂРѕРїСѓСЃРєР°РµС‚СЃСЏ)
     private final long openTime;
     private SquadButton continueButton;
+    private SquadButton scoreButton;
+
+    // Р’РµСЂС‚РёРєР°Р»СЊРЅР°СЏ СЂР°СЃРєР»Р°РґРєР° (СЃС‡РёС‚Р°РµС‚СЃСЏ РІ computeLayout): РІРµСЃСЊ РєРѕРЅС‚РµРЅС‚ вЂ” РµРґРёРЅС‹Р№ Р±Р»РѕРє РїРѕ С†РµРЅС‚СЂСѓ СЌРєСЂР°РЅР°
+    private static final int TITLE_H = 20;
+    private static final int FLAG_W = 128;
+    private static final int FLAG_H = 72;
+    private static final int BUTTON_H = 20;
+    private int titleY, flagY, panelsY, buttonY;
+
+    // Р Р°Р·РјРµСЂС‹ РїР°РЅРµР»РµР№
+    private static final int PANEL_W = 150;
+    private static final int PANEL_H = 72;
+    private static final int HEADER_H = 20;
+    private static final int PANEL_GAP = 14;
+    private static final int BADGE_SIZE = 24;
+
+    // Р¦РІРµС‚Р° РєСЂСѓР¶РєР° РЅРѕРјРµСЂР° РѕС‚СЂСЏРґР° (РєР°Рє РІ SquadSelectionScreen / StatisticsScreen)
+    private static final int BADGE_CMD = 0xFF4CD964;    // РѕС‚СЂСЏРґ РєРѕРјР°РЅРґРёСЂР° вЂ” Р·РµР»С‘РЅС‹Р№
+    private static final int BADGE_MINE = 0xFF00FF00;   // СЃРІРѕР№ РѕС‚СЂСЏРґ вЂ” Р·РµР»С‘РЅС‹Р№
+    private static final int BADGE_OTHER = 0xFF3399FF;  // С‡СѓР¶РѕР№ РѕС‚СЂСЏРґ вЂ” СЃРёРЅРёР№
+
+    private static final ResourceLocation CIRCLE_BADGE = new ResourceLocation("aas", "textures/gui/map_icons/player_circle.png");
 
     // РЎСЃС‹Р»РєРё РЅР° С„Р»Р°РіРё
     private static final ResourceLocation FLAG_UKRAINE = new ResourceLocation("aas", "textures/gui/flags/ukraine.png");
@@ -13882,26 +14364,59 @@ public class VictoryScreen extends Screen {
     private static final ResourceLocation FLAG_GERMANY = new ResourceLocation("aas", "textures/gui/flags/germany.png");
     private static final ResourceLocation FLAG_MILITIA = new ResourceLocation("aas", "textures/gui/flags/militia.png");
 
-    public VictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner) {
+    public VictoryScreen(VictoryData data, boolean replay) {
         super(Component.literal("Victory Screen"));
-        this.winnerName = winnerName;
-        this.winnerFaction = winnerFaction;
-        this.subText = subText;
-        this.isBlueWinner = isBlueWinner;
-        this.openTime = System.currentTimeMillis();
+        this.data = data;
+        this.openTime = replay ? System.currentTimeMillis() - 10_000L : System.currentTimeMillis();
     }
 
     @Override
     protected void init() {
         int cx = this.width / 2;
-        int cy = this.height / 2;
+        computeLayout();
 
-        this.continueButton = new SquadButton(cx - 70, cy + 65, 140, 24, Component.literal("CONTINUE"), b -> {
-            this.onClose();
-        });
-
+        this.continueButton = new SquadButton(cx - 60, buttonY, 120, BUTTON_H,
+                Component.translatable("aas.victory.continue"), b -> this.onClose());
         this.continueButton.active = false;
         this.addRenderableWidget(this.continueButton);
+
+        // РљРЅРѕРїРєР° В«РЎС‡С‘С‚В» вЂ” СЃРїСЂР°РІР° СЃРІРµСЂС…Сѓ. РћС‚РєСЂС‹РІР°РµС‚ РѕР±С‹С‡РЅС‹Р№ СЌРєСЂР°РЅ СЃС‚Р°С‚РёСЃС‚РёРєРё РІ СЂРµР¶РёРјРµ В«РІРёРґРЅРѕ РІСЃС‘В»
+        // (РІСЂР°РіРё, РёС… РѕС‚СЂСЏРґС‹ Рё РЅР°Р·РІР°РЅРёСЏ), РєР°Рє Сѓ РёРіСЂРѕРєР° РІ РєСЂРµР°С‚РёРІРµ; ESC РІРѕР·РІСЂР°С‰Р°РµС‚ СЃСЋРґР°.
+        this.scoreButton = new SquadButton(this.width - 90, 10, 80, 20,
+                Component.translatable("aas.victory.score"),
+                b -> this.minecraft.setScreen(new StatisticsScreen(this, true)));
+        this.scoreButton.active = false;
+        this.addRenderableWidget(this.scoreButton);
+    }
+
+    /** Р Р°СЃРєР»Р°РґС‹РІР°РµС‚ Р·Р°РіРѕР»РѕРІРѕРє, С„Р»Р°РіРё, РїР°РЅРµР»Рё Рё РєРЅРѕРїРєСѓ РѕРґРЅРёРј Р±Р»РѕРєРѕРј РїРѕ С†РµРЅС‚СЂСѓ СЌРєСЂР°РЅР° РїРѕ РІРµСЂС‚РёРєР°Р»Рё. */
+    private void computeLayout() {
+        int captionH = 12;                       // РЅР°Р·РІР°РЅРёРµ РєРѕРјР°РЅРґС‹ РЅР°Рґ С„Р»Р°РіРѕРј
+        int ticketsH = 6 + 9;                    // РѕС‚СЃС‚СѓРї + СЃС‚СЂРѕРєР° В«РћСЃС‚Р°Р»РѕСЃСЊ С‚РёРєРµС‚РѕРІВ»
+        int flagsBlock = captionH + FLAG_H + ticketsH;
+        int fixed = TITLE_H + flagsBlock + PANEL_H + BUTTON_H;
+        int gapsBase = 22 + 30 + 16;             // РјРµР¶РґСѓ: Р·Р°РіРѕР»РѕРІРѕРє/С„Р»Р°РіРё, С„Р»Р°РіРё/РїР°РЅРµР»Рё, РїР°РЅРµР»Рё/РєРЅРѕРїРєР°
+
+        // Р•СЃР»Рё СЌРєСЂР°РЅ СЃРІРѕР±РѕРґРЅС‹Р№ вЂ” СЃР»РµРіРєР° СЂР°СЃС‚СЏРіРёРІР°РµРј РѕС‚СЃС‚СѓРїС‹, РµСЃР»Рё С‚РµСЃРЅС‹Р№ вЂ” СЃР¶РёРјР°РµРј
+        float g = Mth.clamp((this.height - 16 - fixed) / (float) gapsBase, 0.3f, 1.6f);
+        int gap1 = Math.round(22 * g), gap2 = Math.round(30 * g), gap3 = Math.round(16 * g);
+
+        int total = fixed + gap1 + gap2 + gap3;
+        int top = Math.max(4, (this.height - total) / 2);
+
+        this.titleY = top;
+        this.flagY = titleY + TITLE_H + gap1 + captionH;
+        this.panelsY = flagY + FLAG_H + ticketsH + gap2;
+        this.buttonY = panelsY + PANEL_H + gap3;
+    }
+
+    /** РџРѕР±РµРґРёР» Р»Рё Р»РѕРєР°Р»СЊРЅС‹Р№ РёРіСЂРѕРє. РРіСЂРѕРє Р±РµР· РєРѕРјР°РЅРґС‹ (РЅР°Р±Р»СЋРґР°С‚РµР»СЊ) РІРёРґРёС‚ Р·Р°РіРѕР»РѕРІРѕРє РїРѕР±РµРґРёС‚РµР»РµР№. */
+    private boolean localPlayerWon() {
+        if (this.minecraft == null || this.minecraft.player == null || this.minecraft.player.getTeam() == null) return true;
+        String team = this.minecraft.player.getTeam().getName();
+        if (team.equalsIgnoreCase("BLUE")) return data.blueWon;
+        if (team.equalsIgnoreCase("RED")) return !data.blueWon;
+        return true;
     }
 
     @Override
@@ -13910,71 +14425,144 @@ public class VictoryScreen extends Screen {
 
         // 1. РђРќРРњРђР¦РРЇ Р¤РћРќРђ (0 -> 1.5 СЃРµРє)
         float bgAlpha = Mth.clamp(elapsed / 1500.0f, 0.0f, 1.0f);
-
         // 2. РђРќРРњРђР¦РРЇ РљРћРќРўР•РќРўРђ (1.5 -> 3.5 СЃРµРє)
         float contentAlpha = Mth.clamp((elapsed - 1500) / 2000.0f, 0.0f, 1.0f);
 
         // === РџРћР›РЈРџР РћР—Р РђР§РќР«Р™ Р¤РћРќ ===
-        // 100 Рё 140 вЂ” СЌС‚Рѕ СѓСЂРѕРІРµРЅСЊ РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё (РёР· 255). РњРёСЂ РїРѕР·Р°РґРё Р±СѓРґРµС‚ РѕС‚Р»РёС‡РЅРѕ РІРёРґРµРЅ!
         int topAlpha = (int) (bgAlpha * 100);
         int bottomAlpha = (int) (bgAlpha * 140);
-        int topBg = (topAlpha << 24) | 0x000000;
-        int bottomBg = (bottomAlpha << 24) | 0x000000;
-        gui.fillGradient(0, 0, this.width, this.height, topBg, bottomBg);
+        gui.fillGradient(0, 0, this.width, this.height, (topAlpha << 24), (bottomAlpha << 24));
 
-        // РћС‚СЂРёСЃРѕРІРєР° РєРѕРЅС‚РµРЅС‚Р°, РµСЃР»Рё РѕРЅ РЅР°С‡Р°Р» РїРѕСЏРІР»СЏС‚СЊСЃСЏ
         if (contentAlpha > 0.01f) {
             int cx = this.width / 2;
-            int cy = this.height / 2;
-
-            int alphaInt = (int)(contentAlpha * 255);
-            int frameColor = (alphaInt << 24) | 0xFFFFFF;
-
-            // --- 1. Р¤Р›РђР“ ---
-            ResourceLocation flagTex = getFlagTexture(this.winnerFaction);
-            int flagW = 128;
-            int flagH = 72;
-            int flagX = cx - (flagW / 2);
-            int flagY = cy - 95;
-
-            if (flagTex != null) {
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, contentAlpha);
-                RenderSystem.enableBlend();
-                gui.blit(flagTex, flagX, flagY, 0, 0, flagW, flagH, flagW, flagH);
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-                gui.renderOutline(flagX - 1, flagY - 1, flagW + 2, flagH + 2, frameColor);
-            } else {
-                int fallbackBase = isBlueWinner ? 0x3366CC : 0xCC3333;
-                gui.fill(flagX, flagY, flagX + flagW, flagY + flagH, (alphaInt << 24) | fallbackBase);
-                gui.renderOutline(flagX - 1, flagY - 1, flagW + 2, flagH + 2, frameColor);
-            }
-
+            int a = (int) (contentAlpha * 255);
             RenderSystem.enableBlend();
 
-            // --- 2. Р“Р›РђР’РќР«Р™ РўР•РљРЎРў ---
-            int titleColor = (alphaInt << 24) | 0xFFFFFF;
+            // --- 1. Р—РђР“РћР›РћР’РћРљ (Р·Р°РІРёСЃРёС‚ РѕС‚ РёСЃС…РѕРґР° РґР»СЏ Р»РѕРєР°Р»СЊРЅРѕРіРѕ РёРіСЂРѕРєР° Рё С‚РёРєРµС‚РѕРІ РїРѕР±РµРґРёС‚РµР»СЏ) ---
+            boolean won = localPlayerWon();
+            Component title = Component.translatable(VictoryTitles.titleKey(won, data.winnerTickets()));
+            int titleColor = (a << 24) | (won ? 0x55FF55 : 0xFF5555);
             gui.pose().pushPose();
-            gui.pose().translate(cx, cy - 5, 0);
+            gui.pose().translate(cx, titleY, 0);
             gui.pose().scale(2.0f, 2.0f, 1.0f);
-            gui.drawCenteredString(this.font, this.winnerName + " WINS!", 0, 0, titleColor);
+            gui.drawCenteredString(this.font, title, 0, 0, titleColor);
             gui.pose().popPose();
 
-            // --- 3. РџРћР”Р—РђР“РћР›РћР’РћРљ (РўРРљР•РўР«) ---
-            int subColor = (alphaInt << 24) | 0xAAAAAA;
-            gui.drawCenteredString(this.font, this.subText, cx, cy + 25, subColor);
+            // --- 2. Р¤Р›РђР“Р: РїРѕР±РµРґРёС‚РµР»Рё СЃР»РµРІР°, РїСЂРѕРёРіСЂР°РІС€РёРµ СЃРїСЂР°РІР° ---
+            String winTeam = data.blueWon ? "BLUE" : "RED";
+            String loseTeam = data.blueWon ? "RED" : "BLUE";
+            drawTeamBlock(gui, cx - 120 - FLAG_W / 2, flagY, FLAG_W, FLAG_H, winTeam, data.winnerTickets(), a, contentAlpha);
+            drawTeamBlock(gui, cx + 120 - FLAG_W / 2, flagY, FLAG_W, FLAG_H, loseTeam, data.loserTickets(), a, contentAlpha);
+
+            // --- 3. РўР Р РџРђРќР•Р›Р ---
+            int totalW = PANEL_W * 3 + PANEL_GAP * 2;
+            int px = cx - totalW / 2;
+            int py = panelsY;
+            drawPanel(gui, px, py, "aas.victory.best_squad", "aas.victory.no_best_squad", data.bestSquad, a, contentAlpha);
+            drawPanel(gui, px + PANEL_W + PANEL_GAP, py, "aas.victory.best_medic", "aas.victory.no_best_medic", data.bestMedic, a, contentAlpha);
+            drawPanel(gui, px + (PANEL_W + PANEL_GAP) * 2, py, "aas.victory.best_logist", "aas.victory.no_best_logist", data.bestLogist, a, contentAlpha);
 
             RenderSystem.disableBlend();
         }
 
-        // РћР±РЅРѕРІР»СЏРµРј РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ РєРЅРѕРїРєРё
+        // РћР±РЅРѕРІР»СЏРµРј РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ РєРЅРѕРїРѕРє
         this.continueButton.currentAlpha = contentAlpha;
-
-        if (contentAlpha >= 1.0f && !this.continueButton.active) {
+        this.scoreButton.currentAlpha = contentAlpha;
+        if (contentAlpha >= 1.0f) {
             this.continueButton.active = true;
+            this.scoreButton.active = true;
         }
 
         super.render(gui, mouseX, mouseY, partialTick);
+    }
+
+    /** Р¤Р»Р°Рі РєРѕРјР°РЅРґС‹ + РЅР°Р·РІР°РЅРёРµ РєРѕРјР°РЅРґС‹ РЅР°Рґ РЅРёРј + В«РЎРєРѕР»СЊРєРѕ С‚РёРєРµС‚РѕРІ РѕСЃС‚Р°Р»РѕСЃСЊВ» РїРѕРґ РЅРёРј. */
+    private void drawTeamBlock(GuiGraphics gui, int x, int y, int w, int h, String team, int tickets, int a, float alpha) {
+        String name = "RED".equals(team) ? data.redName : data.blueName;
+        int nameColor = (a << 24) | ("RED".equals(team) ? 0xFF7777 : 0x77AAFF);
+        gui.drawCenteredString(this.font, this.font.plainSubstrByWidth(name, w + 40), x + w / 2, y - 12, nameColor);
+
+        drawFlag(gui, data.factionOf(team), team, x, y, w, h, a, alpha, true);
+
+        Component t = Component.translatable("aas.victory.tickets_left", tickets);
+        gui.drawCenteredString(this.font, t, x + w / 2, y + h + 6, (a << 24) | 0xDDDDDD);
+    }
+
+    private void drawPanel(GuiGraphics gui, int x, int y, String titleKey, String noneKey,
+                           VictoryData.Panel p, int a, float alpha) {
+        int bodyY = y + HEADER_H;
+        int bodyH = PANEL_H - HEADER_H;
+
+        // РЁР°РїРєР° Рё С‚РµР»Рѕ
+        gui.fill(x, y, x + PANEL_W, bodyY, (a << 24) | 0x1A1A1A);
+        gui.fill(x, bodyY, x + PANEL_W, y + PANEL_H, (a << 24) | 0x0A0A0A);
+        gui.renderOutline(x, y, PANEL_W, PANEL_H, (a << 24) | 0xFFFFFF);
+        gui.fill(x, bodyY - 1, x + PANEL_W, bodyY, (a << 24) | 0xFFFFFF);
+        gui.drawCenteredString(this.font, Component.translatable(titleKey), x + PANEL_W / 2, y + (HEADER_H - 8) / 2, (a << 24) | 0xFFFFFF);
+
+        if (p == null || !p.present) {
+            gui.drawCenteredString(this.font, Component.translatable(noneKey), x + PANEL_W / 2, bodyY + (bodyH - 8) / 2, (a << 24) | 0x888888);
+            return;
+        }
+
+        // РљСЂСѓР¶РѕРє СЃ РЅРѕРјРµСЂРѕРј РѕС‚СЂСЏРґР° СЃР»РµРІР° (С‚Р°Рј, РіРґРµ РІ РјР°РєРµС‚Рµ Р·РЅР°Рє РІРѕРїСЂРѕСЃР°)
+        int textX = x + 8;
+        if (p.squadNumber > 0) {
+            int badgeY = bodyY + (bodyH - BADGE_SIZE) / 2;
+            drawBadgeCircle(gui, x + 8, badgeY, BADGE_SIZE, badgeColorFor(p), alpha, String.valueOf(p.squadNumber), a);
+            textX = x + 8 + BADGE_SIZE + 6;
+        }
+
+        // РќР°Р·РІР°РЅРёРµ РѕС‚СЂСЏРґР° / РЅРёРє РёРіСЂРѕРєР°, РЅРёР¶Рµ вЂ” РЅРёРє Р»РёРґРµСЂР° (С‚РѕР»СЊРєРѕ Сѓ РѕС‚СЂСЏРґР°)
+        int maxTextW = x + PANEL_W - 6 - textX;
+        gui.drawString(this.font, this.font.plainSubstrByWidth(p.name, maxTextW), textX, bodyY + 7,
+                (a << 24) | 0xFFFFFF, false);
+        if (p.sub != null && !p.sub.isEmpty()) {
+            gui.drawString(this.font, this.font.plainSubstrByWidth(p.sub, maxTextW - 30), textX, bodyY + 20,
+                    (a << 24) | 0xAAAAAA, false);
+        }
+
+        // Р¤Р»Р°Рі РєРѕРјР°РЅРґС‹ вЂ” СЃРїСЂР°РІР° РІРЅРёР·Сѓ РїР°РЅРµР»Рё
+        int fw = 26, fh = 15;
+        drawFlag(gui, data.factionOf(p.team), p.team, x + PANEL_W - fw - 4, y + PANEL_H - fh - 4, fw, fh, a, alpha, true);
+    }
+
+    /** CMD вЂ” Р·РµР»С‘РЅС‹Р№, СЃРІРѕР№ РѕС‚СЂСЏРґ вЂ” СЏСЂРєРѕ-Р·РµР»С‘РЅС‹Р№, С‡СѓР¶РѕР№ вЂ” СЃРёРЅРёР№. */
+    private int badgeColorFor(VictoryData.Panel p) {
+        if (p.cmd) return BADGE_CMD;
+        String me = (this.minecraft != null && this.minecraft.player != null) ? this.minecraft.player.getScoreboardName() : null;
+        List<String> members = p.squadMembers;
+        if (me != null && members != null && members.contains(me)) return BADGE_MINE;
+        return BADGE_OTHER;
+    }
+
+    private void drawBadgeCircle(GuiGraphics gui, int x, int y, int size, int colorARGB, float alpha, String label, int a) {
+        float r = ((colorARGB >> 16) & 0xFF) / 255f;
+        float g = ((colorARGB >> 8) & 0xFF) / 255f;
+        float b = (colorARGB & 0xFF) / 255f;
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(r, g, b, alpha);
+        gui.blit(CIRCLE_BADGE, x, y, 0, 0, size, size, size, size);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        if (label != null && !label.isEmpty()) {
+            gui.drawCenteredString(this.font, label, x + size / 2, y + (size - 8) / 2, (a << 24) | 0xFFFFFF);
+        }
+    }
+
+    /** Р РёСЃСѓРµС‚ С„Р»Р°Рі С„СЂР°РєС†РёРё; РµСЃР»Рё С‚РµРєСЃС‚СѓСЂС‹ РЅРµС‚ вЂ” С†РІРµС‚РЅРѕР№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє РєРѕРјР°РЅРґС‹. */
+    private void drawFlag(GuiGraphics gui, String faction, String team, int x, int y, int w, int h,
+                          int a, float alpha, boolean outline) {
+        ResourceLocation tex = getFlagTexture(faction);
+        if (tex != null) {
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
+            RenderSystem.enableBlend();
+            gui.blit(tex, x, y, 0, 0, w, h, w, h);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        } else {
+            int base = "RED".equalsIgnoreCase(team) ? 0xCC3333 : 0x3366CC;
+            gui.fill(x, y, x + w, y + h, (a << 24) | base);
+        }
+        if (outline) gui.renderOutline(x - 1, y - 1, w + 2, h + 2, (a << 24) | 0xFFFFFF);
     }
 
     @Override
@@ -13982,7 +14570,7 @@ public class VictoryScreen extends Screen {
         return false;
     }
 
-    private ResourceLocation getFlagTexture(String faction) {
+    public static ResourceLocation getFlagTexture(String faction) {
         if (faction == null || faction.equals("none")) return null;
         switch (faction.toLowerCase()) {
             case "ukraine": return FLAG_UKRAINE;
@@ -14000,7 +14588,7 @@ public class VictoryScreen extends Screen {
     }
 
     // РљР»Р°СЃСЃ РєРЅРѕРїРєРё СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё (Alpha)
-    private static class SquadButton extends Button {
+    static class SquadButton extends Button {
         public float currentAlpha = 0.0f;
 
         public SquadButton(int x, int y, int width, int height, Component message, OnPress onPress) {
@@ -14011,7 +14599,7 @@ public class VictoryScreen extends Screen {
         protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
             if (!this.visible || currentAlpha <= 0.02f) return;
 
-            int a = (int)(currentAlpha * 255);
+            int a = (int) (currentAlpha * 255);
 
             int bgCol = (a << 24) | 0x111111;
             int borderBase = this.isHovered() ? 0xFFFFFF : 0x999999;
@@ -14034,6 +14622,7 @@ public class VictoryScreen extends Screen {
         }
     }
 }
+
 ==========================================
 FILE: WallRadialScreen.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\gui\WallRadialScreen.java
@@ -18922,6 +19511,8 @@ public class ClientData {
     public static boolean deathFadePlayed = false;
     public static boolean serverAutoBalance = false;
     public static List<com.example.aas.network.PlayerStatInfo> playerStats = new ArrayList<>();
+    /** РС‚РѕРіРё РїРѕСЃР»РµРґРЅРµРіРѕ РјР°С‚С‡Р°. РџРѕРєР° РЅРµ null вЂ” CAPS (СЃС‚Р°С‚РёСЃС‚РёРєР°) РѕС‚РєСЂС‹РІР°РµС‚ СЌРєСЂР°РЅ РїРѕР±РµРґС‹. */
+    public static com.example.aas.network.VictoryData lastVictory = null;
     public static List<AASWorldData.StationInfo> clientStations = new ArrayList<>();
     // 3. РљРѕРјР°РЅРґРёСЂС‹ Рё Р РђР—Р”Р•Р›Р¬РќРћР• РіРѕР»РѕСЃРѕРІР°РЅРёРµ Р·Р° CMD
     public static int blueCMDId = -1;
@@ -19215,7 +19806,11 @@ public class ClientEvents {
         ClientData.addChatMessage(event.getMessage());
     }
     @SubscribeEvent
-    public static void onLoggingIn(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientData.lastVictory = null;
+    }
+    @SubscribeEvent
+    public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
         teamHintShown = false;
         squadHintShown = false;
         kitHintShown = false;
@@ -19314,7 +19909,7 @@ public class ClientEvents {
 
 
     @SubscribeEvent
-    public static void onMovementInput(net.minecraftforge.client.event.MovementInputUpdateEvent event) {
+    public static void onMovementInput(MovementInputUpdateEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
@@ -19355,7 +19950,7 @@ public class ClientEvents {
         String myName = mc.player.getScoreboardName();
         com.example.aas.world.AASWorldData.Squad mySquad = null;
 
-        for (com.example.aas.world.AASWorldData.Squad s : com.example.aas.client.ClientData.clientSquads) {
+        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.members.contains(myName)) {
                 mySquad = s;
                 break;
@@ -19478,7 +20073,7 @@ public class ClientEvents {
         boolean canPing = false;
 
         // Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚РЎРЏР ВµР С РЎР‚Р С•Р В»РЎРЉ: РЎвЂљР С•Р В»РЎРЉР С”Р С• SL Р С‘Р В»Р С‘ FTL Р СР С•Р С–РЎС“РЎвЂљ РЎРѓРЎвЂљР В°Р Р†Р С‘РЎвЂљРЎРЉ Р СР ВµРЎвЂљР С”РЎС“
-        for (com.example.aas.world.AASWorldData.Squad s : com.example.aas.client.ClientData.clientSquads) {
+        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.leader.equals(myName) || s.bravoLeader.equals(myName) || s.charlieLeader.equals(myName)) {
                 canPing = true;
                 break;
@@ -19554,15 +20149,15 @@ public class ClientEvents {
         Matrix4f matrix = poseStack.last().pose();
 
         // Р В Р ВµР Р…Р Т‘Р ВµРЎР‚Р С‘Р С РЎвЂЎР ВµРЎР‚Р ВµР В· Tesselator Р Р…Р В°Р С—РЎР‚РЎРЏР СРЎС“РЎР‹ РІР‚вЂќ disableDepthTest РЎР‚Р В°Р В±Р С•РЎвЂљР В°Р ВµРЎвЂљ Р В·Р Т‘Р ВµРЎРѓРЎРЉ
-        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
-        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
-        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();  // РЎвЂљР ВµР С—Р ВµРЎР‚РЎРЉ РЎР‚Р ВµР В°Р В»РЎРЉР Р…Р С• РЎР‚Р В°Р В±Р С•РЎвЂљР В°Р ВµРЎвЂљ
-        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, texture);
-        com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();  // РЎвЂљР ВµР С—Р ВµРЎР‚РЎРЉ РЎР‚Р ВµР В°Р В»РЎРЉР Р…Р С• РЎР‚Р В°Р В±Р С•РЎвЂљР В°Р ВµРЎвЂљ
+        RenderSystem.setShaderTexture(0, texture);
+        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
 
-        com.mojang.blaze3d.vertex.Tesselator tesselator = com.mojang.blaze3d.vertex.Tesselator.getInstance();
-        com.mojang.blaze3d.vertex.BufferBuilder buf = tesselator.getBuilder();
-        buf.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR);
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buf = tesselator.getBuilder();
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
         int a = (int)(alpha * 255);
         buf.vertex(matrix, -8, -8, 0).uv(0, 0).color(255, 255, 255, a).endVertex();
@@ -19572,8 +20167,8 @@ public class ClientEvents {
 
         tesselator.end();
 
-        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
-        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1, 1, 1, 1);
+        RenderSystem.enableDepthTest();
+        RenderSystem.setShaderColor(1, 1, 1, 1);
 
         poseStack.popPose();
     }
@@ -19766,7 +20361,7 @@ public class ClientEvents {
         // 3. Р СљР вЂўР СњР В® Р С›Р СћР В Р Р‡Р вЂќР С›Р вЂ™ (K)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(event.getKey(), event.getScanCode())) {
             // Р В Р С’Р вЂ”Р В Р вЂўР РЃР С’Р вЂўР Сљ Р С•РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљР С‘Р Вµ, Р ВµРЎРѓР В»Р С‘ РЎРЊР С”РЎР‚Р В°Р Р… Р С—РЎС“РЎРѓРЎвЂљР С•Р в„– Р ВР вЂєР В Р ВµРЎРѓР В»Р С‘ Р С•РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљ РЎРЊР С”РЎР‚Р В°Р Р… Р Р…Р С•Р С”Р В°
-            if (mc.screen == null || mc.screen instanceof com.example.aas.client.gui.DownedScreen) {
+            if (mc.screen == null || mc.screen instanceof DownedScreen) {
                 String teamName = (mc.player.getTeam() != null) ? mc.player.getTeam().getName() : "";
                 boolean isValidTeam = teamName.equalsIgnoreCase("Blue") || teamName.equalsIgnoreCase("Red");
 
@@ -19796,7 +20391,14 @@ public class ClientEvents {
         // 5. Р РЋР СћР С’Р СћР ВР РЋР СћР ВР С™Р С’ (Caps Lock, Р С—Р ВµРЎР‚Р ВµР В±Р С‘Р Р…Р Т‘Р С‘РЎвЂљРЎРѓРЎРЏ Р Р† Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”Р В°РЎвЂ¦ РЎС“Р С—РЎР‚Р В°Р Р†Р В»Р ВµР Р…Р С‘РЎРЏ)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_STATS_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.screen == null) {
-                mc.setScreen(new com.example.aas.client.gui.StatisticsScreen());
+                if (ClientData.lastVictory != null) {
+                    // РџРѕСЃР»Рµ РєРѕРЅС†Р° РјР°С‚С‡Р° CAPS СЃРЅРѕРІР° РѕС‚РєСЂС‹РІР°РµС‚ СЌРєСЂР°РЅ РїРѕР±РµРґС‹ (РґРѕ /aas resetvictoryscreen РёР»Рё РЅРѕРІРѕРіРѕ РјР°С‚С‡Р°)
+                    mc.setScreen(new com.example.aas.client.gui.VictoryScreen(ClientData.lastVictory, true));
+                } else {
+                    mc.setScreen(new com.example.aas.client.gui.StatisticsScreen());
+                }
+            } else if (mc.screen instanceof com.example.aas.client.gui.VictoryScreen) {
+                mc.setScreen(null);
             } else if (mc.screen instanceof com.example.aas.client.gui.StatisticsScreen) {
                 mc.setScreen(null); // Р С—Р С•Р Р†РЎвЂљР С•РЎР‚Р Р…Р С•Р Вµ Р Р…Р В°Р В¶Р В°РЎвЂљР С‘Р Вµ Р В·Р В°Р С”РЎР‚РЎвЂ№Р Р†Р В°Р ВµРЎвЂљ РЎРЊР С”РЎР‚Р В°Р Р…
             }
@@ -19804,11 +20406,11 @@ public class ClientEvents {
     }
 
     @SubscribeEvent
-    public static void onGuiOpen(net.minecraftforge.client.event.ScreenEvent.Opening event) {
+    public static void onGuiOpen(ScreenEvent.Opening event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        if (com.example.aas.config.AASConfig.PREVENT_VEHICLE_INVENTORY_ACCESS.get() &&
+        if (AASConfig.PREVENT_VEHICLE_INVENTORY_ACCESS.get() &&
                 !mc.player.isCreative() && mc.player.getVehicle() != null) {
 
             if (event.getScreen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen ||
@@ -19921,7 +20523,7 @@ public class ClientEvents {
         double bestDistSq = REVIVE_RANGE * REVIVE_RANGE;
 
         for (Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(REVIVE_RANGE))) {
-            if (!(e instanceof net.minecraft.world.entity.player.Player p) || p == mc.player) continue;
+            if (!(e instanceof Player p) || p == mc.player) continue;
             // Р вЂ™Р С’Р вЂ“Р СњР С›: persistentData("AAS_IsDowned") Р Р…Р В° Р С”Р В»Р С‘Р ВµР Р…РЎвЂљР Вµ Р С—РЎР‚Р С•РЎРѓРЎвЂљР В°Р Р†Р В»РЎРЏР ВµРЎвЂљРЎРѓРЎРЏ Р СћР С›Р вЂєР В¬Р С™Р С› Р Т‘Р В»РЎРЏ
             // Р вЂєР С›Р С™Р С’Р вЂєР В¬Р СњР С›Р вЂњР С› Р С‘Р С–РЎР‚Р С•Р С”Р В° (РЎРѓР С. ClientHooks.handleDownedState). Р вЂќР В»РЎРЏ Р вЂ™Р РЋР вЂўР Тђ Р С•РЎРѓРЎвЂљР В°Р В»РЎРЉР Р…РЎвЂ№РЎвЂ¦
             // Р С‘Р С–РЎР‚Р С•Р С”Р С•Р Р† РЎРѓРЎвЂљР В°РЎвЂљРЎС“РЎРѓ "Р Р† Р Р…Р С•Р С”Р Вµ" РЎРѓР С‘Р Р…РЎвЂ¦РЎР‚Р С•Р Р…Р С‘Р В·Р С‘РЎР‚РЎС“Р ВµРЎвЂљРЎРѓРЎРЏ РЎвЂљР С•Р В»РЎРЉР С”Р С• РЎвЂЎР ВµРЎР‚Р ВµР В· ClientData.DOWNED_PLAYERS,
@@ -20068,10 +20670,10 @@ public class ClientEvents {
 
         if (key.getType() == InputConstants.Type.KEYSYM) {
             int v = key.getValue();
-            if (v >= org.lwjgl.glfw.GLFW.GLFW_KEY_A && v <= org.lwjgl.glfw.GLFW.GLFW_KEY_Z) {
+            if (v >= GLFW.GLFW_KEY_A && v <= GLFW.GLFW_KEY_Z) {
                 return String.valueOf((char) v); // GLFW_KEY_A..Z РЎРѓР С•Р Р†Р С—Р В°Р Т‘Р В°РЎР‹РЎвЂљ РЎРѓ ASCII 'A'..'Z'
             }
-            if (v >= org.lwjgl.glfw.GLFW.GLFW_KEY_0 && v <= org.lwjgl.glfw.GLFW.GLFW_KEY_9) {
+            if (v >= GLFW.GLFW_KEY_0 && v <= GLFW.GLFW_KEY_9) {
                 return String.valueOf((char) v); // GLFW_KEY_0..9 РЎРѓР С•Р Р†Р С—Р В°Р Т‘Р В°РЎР‹РЎвЂљ РЎРѓ ASCII '0'..'9'
             }
         }
@@ -20195,8 +20797,8 @@ import java.util.List;
 public class ClientHooks {
     public static void handleRecoil(float pitch, float yaw) {
         com.example.aas.client.RecoilHandler.addRecoil(pitch);
-        if (yaw != 0 && net.minecraft.client.Minecraft.getInstance().player != null) {
-            net.minecraft.client.Minecraft.getInstance().player.turn(yaw, 0);
+        if (yaw != 0 && Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.turn(yaw, 0);
         }
     }
     // === Р”Р›РЇ Р РђР›Р›РРљРђ ===
@@ -20205,15 +20807,15 @@ public class ClientHooks {
         if (currentSound != null && mc.getSoundManager().isActive((net.minecraft.client.resources.sounds.SoundInstance) currentSound)) {
             return currentSound;
         }
-        com.example.aas.client.sound.RallyLoopingSound newSound = new com.example.aas.client.sound.RallyLoopingSound(entity);
+        RallyLoopingSound newSound = new RallyLoopingSound(entity);
         mc.getSoundManager().play(newSound);
         return newSound;
     }
     public static void openPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
-        if (net.minecraft.client.Minecraft.getInstance().screen instanceof PlayerKitSelectScreen screen) {
+        if (Minecraft.getInstance().screen instanceof PlayerKitSelectScreen screen) {
             screen.updateKits(kits); // РћР±РЅРѕРІР»СЏРµРј РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё
         } else {
-            net.minecraft.client.Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
+            Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
         }
     }
     public static void stopRallySound(Object sound) {
@@ -20229,7 +20831,7 @@ public class ClientHooks {
         if (currentSound != null && mc.getSoundManager().isActive((net.minecraft.client.resources.sounds.SoundInstance) currentSound)) {
             return currentSound;
         }
-        com.example.aas.client.sound.HubLoopingSound newSound = new com.example.aas.client.sound.HubLoopingSound(entity);
+        HubLoopingSound newSound = new HubLoopingSound(entity);
         mc.getSoundManager().play(newSound);
         return newSound;
     }
@@ -20246,7 +20848,7 @@ public class ClientHooks {
         }
     }
     public static void openKitTeamSelect() {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
+        Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
     }
     // ... (СЃС‚Р°СЂС‹Рµ РјРµС‚РѕРґС‹ openRadioMenu, openHubMenu Рё Р·РІСѓРєРё Р±РµР· РёР·РјРµРЅРµРЅРёР№) ...
     public static void openRadioMenu() {
@@ -20258,7 +20860,7 @@ public class ClientHooks {
     }
     // Р’РЅСѓС‚СЂРё РєР»Р°СЃСЃР° ClientHooks:
     public static void openCrateMenu(int entityId) {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new com.example.aas.client.gui.CrateRadialScreen(entityId));
+        Minecraft.getInstance().setScreen(new com.example.aas.client.gui.CrateRadialScreen(entityId));
     }
     // Р’ С„Р°Р№Р»Рµ src/main/java/com/example/aas/client/ClientHooks.java
 
@@ -20278,7 +20880,7 @@ public class ClientHooks {
         boolean isLeader = false;
 
         // Р—РґРµСЃСЊ Р±РµР·РѕРїР°СЃРЅРѕ РёСЃРїРѕР»СЊР·СѓРµРј ClientData, С‚Р°Рє РєР°Рє РјС‹ РІ РєР»РёРµРЅС‚СЃРєРѕРј РєР»Р°СЃСЃРµ
-        for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
+        for (AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.members.contains(playerName)) {
                 isInSquad = true;
                 if (s.leader.equals(playerName)) {
@@ -20316,23 +20918,23 @@ public class ClientHooks {
         }
     }
     public static void handleDownedState(int entityId, boolean isDowned, boolean died) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
         if (isDowned) {
-            com.example.aas.client.ClientData.DOWNED_PLAYERS.add(entityId);
+            ClientData.DOWNED_PLAYERS.add(entityId);
             if (mc.player != null && mc.player.getId() == entityId) {
                 mc.player.getPersistentData().putBoolean("AAS_IsDowned", true);
 
                 // Р¤РРљРЎ: РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІСЂРµРјСЏ С‚РѕР»СЊРєРѕ РµСЃР»Рё РѕРЅРѕ РµС‰Рµ РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅРѕ
-                if (com.example.aas.client.ClientData.globalDeathTimestamp == 0) {
-                    com.example.aas.client.ClientData.globalDeathTimestamp = System.currentTimeMillis();
+                if (ClientData.globalDeathTimestamp == 0) {
+                    ClientData.globalDeathTimestamp = System.currentTimeMillis();
                 }
                 mc.setScreen(new com.example.aas.client.gui.DownedScreen());
             }
         } else {
 
-            com.example.aas.client.ClientData.DOWNED_PLAYERS.remove(entityId);
+            ClientData.DOWNED_PLAYERS.remove(entityId);
 
             if (mc.player != null && mc.player.getId() == entityId) {
                 mc.player.getPersistentData().putBoolean("AAS_IsDowned", false);
@@ -20345,20 +20947,20 @@ public class ClientHooks {
                 // Р•СЃР»Рё СЌС‚Рѕ Give Up/Р°РІС‚Рѕ-Р±РёРґР°СѓС‚ (died = true) вЂ” РЅРµ С‚СЂРѕРіР°РµРј,
                 // РІСЂРµРјСЏ РІ РЅРѕРєРµ РґРѕР»Р¶РЅРѕ РґРѕРЅРµСЃС‚РёСЃСЊ РґРѕ СЌРєСЂР°РЅР° СЃРјРµСЂС‚Рё.
                 if (!died) { // Р•СЃР»Рё СЂРµР°Р»СЊРЅРѕ РїРѕРґРЅСЏР»Рё, Р° РЅРµ СѓР±РёР»Рё РѕРєРѕРЅС‡Р°С‚РµР»СЊРЅРѕ
-                    com.example.aas.client.ClientData.globalDeathTimestamp = 0;
+                    ClientData.globalDeathTimestamp = 0;
                 }
             }
         }
     }
 
     public static void handleDragState(boolean isDragging) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         mc.player.getPersistentData().putBoolean("AAS_IsDraggingAlly", isDragging);
     }
 
     public static void handleSyncGameData(PacketSyncGameData msg) {
-        java.util.Map<String, String> oldKits = new java.util.HashMap<>(ClientData.playerKits);
+        java.util.Map<String, String> oldKits = new HashMap<>(ClientData.playerKits);
         ClientData.BLUE_TICKETS = msg.blueTickets;
         ClientData.RED_TICKETS = msg.redTickets;
         ClientData.hasBlueRally = msg.hasBlueRally;
@@ -20376,6 +20978,7 @@ public class ClientHooks {
         ClientData.invasionDefender = msg.invasionDefender;
         ClientData.invasionPrepTicks = msg.invasionPrepTicks;
         ClientData.isGameStarted = msg.isGameStarted;
+        if (msg.isGameStarted) ClientData.lastVictory = null; // РЅРѕРІС‹Р№ РјР°С‚С‡ вЂ” СЃС‚Р°СЂС‹Р№ СЌРєСЂР°РЅ РїРѕР±РµРґС‹ Р±РѕР»СЊС€Рµ РЅРµ РЅСѓР¶РµРЅ
         ClientData.allCapturePoints = new ArrayList<>(msg.capturePoints);
         ClientData.customBlueName = msg.blueCustomName;
         ClientData.customRedName = msg.redCustomName;
@@ -20425,7 +21028,7 @@ public class ClientHooks {
         ClientData.blueArtReqName = msg.blueArtReqName;
         ClientData.redArtReqName = msg.redArtReqName;
         if (!oldKits.equals(ClientData.playerKits)) {
-            if (net.minecraft.client.Minecraft.getInstance().screen instanceof PlayerKitSelectScreen) {
+            if (Minecraft.getInstance().screen instanceof PlayerKitSelectScreen) {
                 com.example.aas.network.PacketHandler.INSTANCE.sendToServer(new com.example.aas.network.PacketRequestKitMenu());
             }
         }
@@ -20467,16 +21070,25 @@ public class ClientHooks {
         }
     }
     public static void openPointEditor(com.example.aas.network.PacketOpenPointEditor msg) {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new com.example.aas.client.gui.PointEditorScreen(msg));
+        Minecraft.getInstance().setScreen(new com.example.aas.client.gui.PointEditorScreen(msg));
     }
-    public static void openVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner) {
-        net.minecraft.client.Minecraft.getInstance().setScreen(
-                new com.example.aas.client.gui.VictoryScreen(winnerName, winnerFaction, subText, isBlueWinner)
+    public static void openVictoryScreen(com.example.aas.network.VictoryData data) {
+        ClientData.lastVictory = data;
+        Minecraft.getInstance().setScreen(
+                new com.example.aas.client.gui.VictoryScreen(data, false)
         );
+    }
+    public static void resetVictoryScreen() {
+        ClientData.lastVictory = null;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof com.example.aas.client.gui.VictoryScreen
+                || (mc.screen instanceof com.example.aas.client.gui.StatisticsScreen st && st.isOpenedFromVictory())) {
+            mc.setScreen(null);
+        }
     }
     // === Р”Р›РЇ РЎРўРђРќР¦РР ===
     public static Object playStationSound(VehicleStationBlockEntity entity, Object currentSound) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         System.out.println("[AAS DEBUG] playStationSound called, currentSound=" + currentSound);
 
         if (currentSound != null && mc.getSoundManager().isActive((net.minecraft.client.resources.sounds.SoundInstance) currentSound)) {
@@ -20484,7 +21096,7 @@ public class ClientHooks {
             return currentSound;
         }
 
-        com.example.aas.client.sound.StationLoopingSound newSound = new com.example.aas.client.sound.StationLoopingSound(entity);
+        StationLoopingSound newSound = new StationLoopingSound(entity);
         System.out.println("[AAS DEBUG] creating new StationLoopingSound and calling play()");
         mc.getSoundManager().play(newSound);
         return newSound;
@@ -20503,16 +21115,16 @@ public class ClientHooks {
 
         // Р•СЃР»Рё РёРіСЂРѕРє С‚РѕР»СЊРєРѕ РЅР°С‡Р°Р» РіРѕРІРѕСЂРёС‚СЊ - РїСЂРѕРёРіСЂС‹РІР°РµРј РїРёРї (РєРѕРґ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ СЃС‚СЂРѕРіРѕ РЅР° РєР»РёРµРЅС‚Рµ)
         if (isNewSpeaker) {
-            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(
+            Minecraft.getInstance().getSoundManager().play(
                     net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(com.example.aas.sound.ModSounds.RADIO_BEEP.get(), 1.0F)
             );
         }
     }
     public static void handleReviveProgress(float progress, boolean isBeingRevived) {
         if (isBeingRevived) {
-            com.example.aas.client.ClientData.reviveProgressSelf = progress;
+            ClientData.reviveProgressSelf = progress;
         } else {
-            com.example.aas.client.ClientData.reviveProgressOther = progress;
+            ClientData.reviveProgressOther = progress;
         }
     }
 }
@@ -21591,6 +22203,10 @@ public class ModCommands {
                 .then(Commands.literal("gamestart")
                         .then(Commands.argument("active", BoolArgumentType.bool())
                                 .executes(ctx -> setGameStart(ctx.getSource(), BoolArgumentType.getBool(ctx, "active")))))
+                // --- РЎР‘Р РћРЎ Р­РљР РђРќРђ РџРћР‘Р•Р”Р« (CAPS СЃРЅРѕРІР° РѕС‚РєСЂС‹РІР°РµС‚ РѕР±С‹С‡РЅСѓСЋ СЃС‚Р°С‚РёСЃС‚РёРєСѓ) ---
+                .then(Commands.literal("resetvictoryscreen")
+                        .executes(ctx -> resetVictoryScreen(ctx.getSource())))
+
                 .then(Commands.literal("gamemode")
                         .then(Commands.argument("mode", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("aas", "invasion"), builder))
@@ -21944,6 +22560,13 @@ public class ModCommands {
 
     // === Р›РћР“РРљРђ РљРћРњРђРќР” ===
 
+    private static int resetVictoryScreen(CommandSourceStack source) {
+        PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(),
+                new com.example.aas.network.PacketResetVictoryScreen());
+        source.sendSuccess(() -> Component.translatable("aas.command.resetvictoryscreen").withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
     private static int setGameStart(CommandSourceStack source, boolean active) {
         ServerLevel level = source.getLevel();
         AASWorldData data = AASWorldData.get(level);
@@ -21954,10 +22577,8 @@ public class ModCommands {
             GameLogicEvents.startGameCountdown(level);
             source.sendSuccess(() -> Component.literal("Countdown started in this world!").withStyle(ChatFormatting.GREEN), true);
             for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-                p.getPersistentData().putInt("AAS_Stats_TeamPoints", 0);
-                p.getPersistentData().putInt("AAS_Stats_SquadPoints", 0);
-                p.getPersistentData().putInt("AAS_Stats_Kills", 0);   // РќРћР’РћР•
-                p.getPersistentData().putInt("AAS_Stats_Deaths", 0);  // РќРћР’РћР•
+                // TP, SP, РєРёР»Р»С‹, СЃРјРµСЂС‚Рё Рё СЃС‡С‘С‚С‡РёРєРё СѓРЅРёС‡С‚РѕР¶РµРЅРЅРѕР№ С‚РµС…РЅРёРєРё (РѕР±С‰РёР№ Рё РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј)
+                com.example.aas.events.StatsHandler.resetStats(p);
             }
         } else {
             data.isGameStarted = false;
@@ -24056,7 +24677,7 @@ public class SupplyCrateEntity extends Entity {
                     if (vehicle.getPersistentData().contains("AAS_InitialLoadout")) {
                         net.minecraft.nbt.ListTag loadoutTag = vehicle.getPersistentData().getList("AAS_InitialLoadout", 10);
                         for (int i = 0; i < loadoutTag.size(); i++) {
-                            net.minecraft.nbt.CompoundTag itemTag = loadoutTag.getCompound(i);
+                            CompoundTag itemTag = loadoutTag.getCompound(i);
                             int slot = itemTag.getByte("Slot") & 255;
                             if (slot < vehInv.getSlots()) {
                                 insertItem(vehInv, slot, ItemStack.of(itemTag));
@@ -24173,7 +24794,7 @@ public class SupplyCrateEntity extends Entity {
 
                                     // --- РќРћР’РћР•: РћС‡РєРё Р»РѕРіРёСЃС‚РёРєРё ---
                                     if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-                                        com.example.aas.events.StatsHandler.addStats(sp, 15, 0, "FOB Resupplied");
+                                        com.example.aas.events.StatsHandler.addScore(sp, com.example.aas.events.ScoreType.HUB_RESUPPLY);
                                     }
                                 }
                             }
@@ -24215,6 +24836,107 @@ public class SupplyCrateEntity extends Entity {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 }
+==========================================
+FILE: ConstructionScoring.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\ConstructionScoring.java
+==========================================
+package com.example.aas.events;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * РћС‡РєРё Р·Р° СЃС‚СЂРѕРёС‚РµР»СЊСЃС‚РІРѕ РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р—РђР’Р•Р РЁР•РќРР РїРѕСЃС‚СЂРѕР№РєРё (Р° РЅРµ РїСЂРё СѓСЃС‚Р°РЅРѕРІРєРµ РїСЂРёР·СЂР°РєР°).
+ * Р’РєР»Р°РґС‡РёРєРё СЂРµРіРёСЃС‚СЂРёСЂСѓСЋС‚СЃСЏ РїСЂРё РєР°Р¶РґРѕРј СѓРґР°СЂРµ СЃР°РїС‘СЂРЅРѕР№ Р»РѕРїР°С‚РѕР№ (EntrenchingToolItem),
+ * Р·Р°РІРµСЂС€РёРІС€РёР№ (РїРѕСЃР»РµРґРЅРёР№ РІРєР»Р°РґС‡РёРє) РїРѕР»СѓС‡Р°РµС‚ 100% РѕС‡РєРѕРІ, РѕСЃС‚Р°Р»СЊРЅС‹Рµ - BUILD_CONTRIBUTOR_PERCENT.
+ * РЎРѕСЃС‚Р°РІРЅС‹Рµ РїРѕСЃС‚СЂРѕР№РєРё (СЃС‚РµРЅС‹, РїСЂРѕРІРѕР»РѕРєР°, Р±СѓРЅРєРµСЂ РёР· СЃРІСЏР·Р°РЅРЅС‹С… Р±Р»РѕРєРѕРІ) РёРјРµСЋС‚ РѕР±С‰РёР№ structureKey,
+ * РїРѕСЌС‚РѕРјСѓ РѕС‡РєРё Р·Р° РѕРґРЅСѓ РїРѕСЃС‚СЂРѕР№РєСѓ РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РѕРґРёРЅ СЂР°Р·.
+ */
+public final class ConstructionScoring {
+
+    private ConstructionScoring() {}
+
+    private record Key(ResourceLocation dimension, long structure) {}
+
+    private static final class Entry {
+        final Map<UUID, Long> contributors = new LinkedHashMap<>();
+        UUID lastContributor = null;
+        long lastActivityTick = 0;
+        long completedTick = -1;
+    }
+
+    private static final Map<Key, Entry> ENTRIES = new HashMap<>();
+
+    /** РљР»СЋС‡ РїРѕСЃС‚СЂРѕР№РєРё РґР»СЏ Р±Р»РѕРє-СЃСѓС‰РЅРѕСЃС‚Рё; null - СЌС‚РѕС‚ С‚РёРї РЅРµ РґР°С‘С‚ РѕС‡РєРѕРІ Р·Р° СЃС‚СЂРѕР№РєСѓ. */
+    public static Long keyOf(BlockEntity be) {
+        if (be instanceof com.example.aas.block.WallBlockEntity w) return w.getStructureKey();
+        if (be instanceof com.example.aas.block.BarbedWireBlockEntity b) return b.getStructureKey();
+        if (be instanceof com.example.aas.block.BunkerBlockEntity
+                || be instanceof com.example.aas.block.AGSConstructionBlockEntity
+                || be instanceof com.example.aas.block.M2ConstructionBlockEntity
+                || be instanceof com.example.aas.block.MortarConstructionBlockEntity
+                || be instanceof com.example.aas.block.TOWConstructionBlockEntity) {
+            return be.getBlockPos().asLong();
+        }
+        return null;
+    }
+
+    /** РљР»СЋС‡ РґР»СЏ РѕРґРёРЅРѕС‡РЅРѕР№ РїРѕСЃС‚СЂРѕР№РєРё РІ РїРѕР·РёС†РёРё pos. */
+    public static long keyOf(BlockPos pos) {
+        return pos.asLong();
+    }
+
+    /** РРіСЂРѕРє РІР»РѕР¶РёР»СЃСЏ РІ РїРѕСЃС‚СЂРѕР№РєСѓ (СѓРґР°СЂ Р»РѕРїР°С‚РѕР№). */
+    public static void contribute(ServerLevel level, long structureKey, ServerPlayer player) {
+        if (player == null) return;
+        long now = level.getGameTime();
+        prune(now);
+        Key key = new Key(level.dimension().location(), structureKey);
+        Entry entry = ENTRIES.get(key);
+        if (entry == null || entry.completedTick >= 0) {
+            entry = new Entry();
+            ENTRIES.put(key, entry);
+        }
+        entry.contributors.put(player.getUUID(), now);
+        entry.lastContributor = player.getUUID();
+        entry.lastActivityTick = now;
+    }
+
+    /** РџРѕСЃС‚СЂРѕР№РєР° Р·Р°РІРµСЂС€РµРЅР°: РЅР°С‡РёСЃР»СЏРµРј РѕС‡РєРё РѕРґРёРЅ СЂР°Р· РЅР° РІСЃСЋ (РІРѕР·РјРѕР¶РЅРѕ СЃРѕСЃС‚Р°РІРЅСѓСЋ) РїРѕСЃС‚СЂРѕР№РєСѓ. */
+    public static void complete(ServerLevel level, long structureKey, ScoreType type) {
+        long now = level.getGameTime();
+        Key key = new Key(level.dimension().location(), structureKey);
+        Entry entry = ENTRIES.get(key);
+        if (entry == null || entry.completedTick >= 0) return; // РЅРёРєС‚Рѕ РЅРµ СЃС‚СЂРѕРёР» РёР»Рё СѓР¶Рµ РЅР°С‡РёСЃР»РёР»Рё
+        entry.completedTick = now;
+
+        for (Map.Entry<UUID, Long> c : entry.contributors.entrySet()) {
+            ServerPlayer p = level.getServer().getPlayerList().getPlayer(c.getKey());
+            if (p == null) continue;
+            if (c.getKey().equals(entry.lastContributor)) {
+                StatsHandler.addScore(p, type);
+            } else {
+                StatsHandler.addScoreScaled(p, type, ScoreValues.BUILD_CONTRIBUTOR_PERCENT);
+            }
+        }
+    }
+
+    private static void prune(long now) {
+        if (ENTRIES.size() < 64) return;
+        ENTRIES.values().removeIf(e -> now < e.lastActivityTick
+                || (e.completedTick >= 0 && now - e.completedTick > 200L)
+                || now - e.lastActivityTick > ScoreValues.BUILD_ENTRY_TTL_TICKS);
+    }
+}
+
 ==========================================
 FILE: GameLogicEvents.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\GameLogicEvents.java
@@ -24619,9 +25341,7 @@ public class GameLogicEvents {
                         // Р В Р’В Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р РЏ Р В Р’В Р В РІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р РЋРІР‚вЂњР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В 
                         if (!pData.isGameStarted) {
                             // Р В Р’В Р Р†Р вЂљРЎСљР В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В° Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚вЂњР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“: Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’В K/D, Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СњР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’В Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р Р‹Р В Р РЏР В Р’В Р СћРІР‚ВР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ (-1)
-                            toSend.add(new PlayerStatInfo(
-                                    info.name, info.team, -1, false, false, info.kills, info.deaths, info.ping
-                            ));
+                            toSend.add(info); // РІРЅРµ РјР°С‚С‡Р° (РІ С‚.С‡. РїРѕСЃР»Рµ РїРѕР±РµРґС‹) РѕС‚СЂСЏРґС‹ Рё СЃС‚Р°С‚РёСЃС‚РёРєР° РІСЂР°РіРѕРІ РѕС‚РєСЂС‹С‚С‹ РїРѕР»РЅРѕСЃС‚СЊСЋ
                         } else {
                             // Р В Р’В Р Р†Р вЂљРІвЂћСћР В Р’В Р РЋРІР‚Сћ Р В Р’В Р В РІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’ВР В Р Р‹Р В Р РЏ Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚вЂњР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“: Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СњР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’В Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р Р‹Р В Р РЏР В Р’В Р СћРІР‚ВР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ Р В Р’В Р РЋРІР‚В K/D (K/D Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’В° -1 Р В Р’В Р В РІР‚В  stripped)
                             toSend.add(info.stripped());
@@ -25047,7 +25767,8 @@ public class GameLogicEvents {
                         if (passCount > 0) {
                             int driveTimer = p.getPersistentData().getInt("AAS_DriveStatsTimer") + 1;
                             if (driveTimer >= 60) { // Р В Р’В Р РЋРЎСџР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В° 1 Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В¦Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р Р‹Р В Р РЏ
-                                StatsHandler.addStats(p, (int)passCount * 5, 0, "Transporting Team");
+                                int transportTp = (int) Math.min(ScoreValues.MAX_ACTION, passCount * ScoreValues.TRANSPORT_TP_PER_PASSENGER);
+                                StatsHandler.addScoreCustom(p, ScoreType.TRANSPORT, transportTp, 0);
                                 p.getPersistentData().putInt("AAS_DriveStatsTimer", 0);
                             } else {
                                 p.getPersistentData().putInt("AAS_DriveStatsTimer", driveTimer);
@@ -25200,9 +25921,14 @@ public class GameLogicEvents {
 
             int kills = p.getPersistentData().getInt("AAS_Stats_Kills");
             int deaths = p.getPersistentData().getInt("AAS_Stats_Deaths");
+            int tp = p.getPersistentData().getInt("AAS_Stats_TeamPoints");
+            int sp = p.getPersistentData().getInt("AAS_Stats_SquadPoints");
+            int revives = StatsHandler.getRevives(p);
+            int vehTotal = StatsHandler.getVehKillsTotal(p);
+            int[] vehByCat = StatsHandler.getVehKillsByCategory(p);
             int ping = p.latency;
 
-            list.add(new PlayerStatInfo(pName, pTeam, squadId, isLeader, isCMD, kills, deaths, ping));
+            list.add(new PlayerStatInfo(pName, pTeam, squadId, isLeader, isCMD, kills, deaths, tp, sp, revives, vehTotal, vehByCat, ping));
         }
         return list;
     }
@@ -25409,6 +26135,12 @@ public class GameLogicEvents {
                         }
                     }
                 }
+            }
+
+            // --- РћР§РљР Р—Рђ РџР РРЎРЈРўРЎРўР’РР• РќРђ РђРљРўРР’РќРћР™ РўРћР§РљР• (РєР°Р¶РґС‹Рµ 30 СЃРµРє, СЃ Р°РЅС‚Рё-Р°С„Рє) ---
+            if (!playersInBox.isEmpty()) {
+                PointPresenceTracker.tick(level, point, playersInBox, dominantTeam, isContested, isBeingActivelyCaptured, isTimeLocked,
+                        canCapture(point, "BLUE", data), canCapture(point, "RED", data));
             }
 
             // Р В Р’В Р Р†Р вЂљРЎС›Р В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚В Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В±Р В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚ВР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’В° Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚Сћ Р В Р’В Р В РІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚В, Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚вЂќР В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ (Contested) Р В Р’В Р РЋРІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р РЋРІР‚СњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚Сћ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР’В¦Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ
@@ -25815,7 +26547,7 @@ public class GameLogicEvents {
             // Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ° Р В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В¦ Р В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В» Р В Р’В Р СћРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В¶Р В Р’В Р СћРІР‚ВР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“.
             if (!wasGivingUp && player.getLastHurtByMob() instanceof ServerPlayer killer && killer != player) {
                 if (killer.getTeam() != player.getTeam()) {
-                    StatsHandler.addStats(killer, 2, 0, "Enemy Killed");
+                    StatsHandler.addScore(killer, ScoreType.ENEMY_KILLED);
                     StatsHandler.addKill(killer);
                 }
             }
@@ -25874,10 +26606,8 @@ public class GameLogicEvents {
         CompoundTag oldData = oldPlayer.getPersistentData();
         CompoundTag newData = newPlayer.getPersistentData();
 
-        if (oldData.contains("AAS_Stats_TeamPoints")) newData.putInt("AAS_Stats_TeamPoints", oldData.getInt("AAS_Stats_TeamPoints"));
-        if (oldData.contains("AAS_Stats_SquadPoints")) newData.putInt("AAS_Stats_SquadPoints", oldData.getInt("AAS_Stats_SquadPoints"));
-        if (oldData.contains("AAS_Stats_Kills")) newData.putInt("AAS_Stats_Kills", oldData.getInt("AAS_Stats_Kills"));
-        if (oldData.contains("AAS_Stats_Deaths")) newData.putInt("AAS_Stats_Deaths", oldData.getInt("AAS_Stats_Deaths"));
+        // TP, SP, РєРёР»Р»С‹, СЃРјРµСЂС‚Рё Рё СЃС‡С‘С‚С‡РёРєРё СѓРЅРёС‡С‚РѕР¶РµРЅРЅРѕР№ С‚РµС…РЅРёРєРё (РѕР±С‰РёР№ Рё РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј)
+        StatsHandler.copyStats(oldData, newData);
 
         if (oldData.contains("AAS_SquadID")) newData.putInt("AAS_SquadID", oldData.getInt("AAS_SquadID"));
         if (oldData.contains("AAS_IsSquadLeader")) newData.putBoolean("AAS_IsSquadLeader", oldData.getBoolean("AAS_IsSquadLeader"));
@@ -25977,18 +26707,8 @@ public class GameLogicEvents {
                     ticketsChanged = true;
                 }
 
-                // РќР°С‡РёСЃР»РµРЅРёРµ РѕС‡РєРѕРІ СѓР±РёР№С†Рµ
-                Entity lastAttacker = null;
-                if (entity instanceof LivingEntity living) {
-                    lastAttacker = living.getLastHurtByMob();
-                }
-
-                if (lastAttacker instanceof ServerPlayer sKiller) {
-                    String killerTeam = sKiller.getTeam() != null ? sKiller.getTeam().getName().toUpperCase() : "NEUTRAL";
-                    if (!vTeam.equalsIgnoreCase(killerTeam)) {
-                        StatsHandler.addStats(sKiller, penalty, 0, "Enemy Vehicle Destroyed");
-                    }
-                }
+                // РќР°С‡РёСЃР»РµРЅРёРµ РѕС‡РєРѕРІ СѓР±РёР№С†Рµ Рё Р°СЃСЃРёСЃС‚Р°Рј (РїРѕ РѕС‚СЃР»РµР¶РµРЅРЅРѕРјСѓ СѓСЂРѕРЅСѓ, СЃРј. VehicleDamageTracker)
+                VehicleDamageTracker.awardForDestroyedVehicle(entity, level, vTeam, penalty);
             }
             entity.getPersistentData().remove("AAS_TicketPenalty");
         }
@@ -26018,8 +26738,9 @@ public class GameLogicEvents {
 
                     List<ServerPlayer> cappers = level.getEntitiesOfClass(ServerPlayer.class, point.getBoundingBox());
                     for (ServerPlayer p : cappers) {
-                        if (p.isAlive() && !p.isSpectator() && p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(attackingTeam)) {
-                            StatsHandler.addStats(p, 50, 10, "Point Captured");
+                        if (p.isAlive() && !p.isSpectator() && p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(attackingTeam)
+                                && !p.getPersistentData().getBoolean("AAS_IsDowned")) {
+                            StatsHandler.addScore(p, ScoreType.POINT_CAPTURED);
                         }
                     }
 
@@ -26274,25 +26995,13 @@ public class GameLogicEvents {
         data.setDirty();
 
         // 1. Р В Р’В Р РЋРІР‚С”Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р’В Р вЂ™Р’ВµР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р РЏ
-        String winnerName;
-        String winnerFaction;
-        if (blueWon) {
-            winnerFaction = data.blueFaction;
-            winnerName = (winnerFaction == null || winnerFaction.equals("none") || winnerFaction.equals("bluefor"))
-                    ? AASConfig.BLUE_TEAM_CUSTOM_NAME.get() : formatFactionName(winnerFaction);
-            if (winnerName.isEmpty()) winnerName = "BLUE TEAM";
-        } else {
-            winnerFaction = data.redFaction;
-            winnerName = (winnerFaction == null || winnerFaction.equals("none") || winnerFaction.equals("redfor"))
-                    ? AASConfig.RED_TEAM_CUSTOM_NAME.get() : formatFactionName(winnerFaction);
-            if (winnerName.isEmpty()) winnerName = "RED TEAM";
-        }
+        String blueDisplayName = teamDisplayName(data, true);
+        String redDisplayName = teamDisplayName(data, false);
 
-        String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
-
-        // 2. Р В Р’В Р РЋРІР‚С”Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂњР В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚СњР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂњР В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р В Р Р‰Р В Р’В Р РЋРІР‚СњР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В Р В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’В
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon));
+        // 2. РЎРЅРёРјРѕРє РёС‚РѕРіРѕРІ (С‚РёРєРµС‚С‹, Р»СѓС‡С€РёР№ РѕС‚СЂСЏРґ/РјРµРґРёРє/Р»РѕРіРёСЃС‚, С‚Р°Р±Р»РёС†Р° СЃС‡С‘С‚Р°) вЂ” РІСЃРµРј РєР»РёРµРЅС‚Р°Рј
+        VictoryData victoryData =
+                VictoryStats.build(level, data, blueWon, blueDisplayName, redDisplayName);
+        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketOpenVictoryScreen(victoryData));
 
         // 3. Р В Р’В Р Р†Р вЂљРІвЂћСћР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Friendly Fire Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р РЏ Р В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚СћР В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦Р В Р’В Р СћРІР‚В (Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚СњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р Р‹Р РЋРІР‚СљР В Р’В Р вЂ™Р’В±Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ° Р В Р Р‹Р В РЎвЂњР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљР’В¦)
         Scoreboard scoreboard = level.getScoreboard();
@@ -26341,6 +27050,17 @@ public class GameLogicEvents {
                 }
             }
         }
+    }
+
+    /** РћС‚РѕР±СЂР°Р¶Р°РµРјРѕРµ РёРјСЏ РєРѕРјР°РЅРґС‹ (С‚Рѕ Р¶Рµ РїСЂР°РІРёР»Рѕ, С‡С‚Рѕ СЂР°РЅСЊС€Рµ РёСЃРїРѕР»СЊР·РѕРІР°Р»РѕСЃСЊ РґР»СЏ РїРѕР±РµРґРёС‚РµР»СЏ). */
+    private static String teamDisplayName(AASWorldData data, boolean blue) {
+        String faction = blue ? data.blueFaction : data.redFaction;
+        String defaultFaction = blue ? "bluefor" : "redfor";
+        String name = (faction == null || faction.equals("none") || faction.equals(defaultFaction))
+                ? (blue ? AASConfig.BLUE_TEAM_CUSTOM_NAME.get() : AASConfig.RED_TEAM_CUSTOM_NAME.get())
+                : formatFactionName(faction);
+        if (name == null || name.isEmpty()) name = blue ? "BLUE TEAM" : "RED TEAM";
+        return name;
     }
 
     private static String formatFactionName(String faction) {
@@ -27321,15 +28041,259 @@ public class ModServerEvents {
     }
 }
 ==========================================
+FILE: PointPresenceTracker.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\PointPresenceTracker.java
+==========================================
+package com.example.aas.events;
+
+import com.example.aas.world.AASWorldData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * "РђРєС‚СѓР°Р»СЊРЅС‹Р№ С‚СЂРёРіРіРµСЂ": РїРѕРєР° РёРіСЂРѕРє Р¶РёРІ, РЅРµ РІ СЃРїРµРєС‚Р°С‚РѕСЂРµ Рё РЅР°С…РѕРґРёС‚СЃСЏ РІ Р·РѕРЅРµ Р°РєС‚РёРІРЅРѕР№ С‚РѕС‡РєРё,
+ * РєРѕС‚РѕСЂР°СЏ СЂРµР°Р»СЊРЅРѕ РѕСЃРїР°СЂРёРІР°РµС‚СЃСЏ РёР»Рё СѓРґРµСЂР¶РёРІР°РµС‚СЃСЏ, РѕРЅ РїРѕР»СѓС‡Р°РµС‚ POINT_PRESENCE_TP РєР°Р¶РґС‹Рµ 30 СЃРµРє РїСЂРёСЃСѓС‚СЃС‚РІРёСЏ.
+ * РђРЅС‚Рё-Р°С„Рє: РёРіСЂРѕРє РґРѕР»Р¶РµРЅ РґРІРёРіР°С‚СЊСЃСЏ, РєСЂСѓС‚РёС‚СЊ РєР°РјРµСЂСѓ РёР»Рё С‡С‚Рѕ-С‚Рѕ РґРµР»Р°С‚СЊ С…РѕС‚СЏ Р±С‹ СЂР°Р· РІ 15 СЃРµРє.
+ */
+public final class PointPresenceTracker {
+
+    private PointPresenceTracker() {}
+
+    private static final class State {
+        long presenceTicks = 0;
+        long lastSeenTick = 0;
+        long lastActiveTick = 0;
+        double x, y, z;
+        float yaw, pitch;
+        boolean hasSample = false;
+    }
+
+    private static final Map<UUID, State> STATES = new HashMap<>();
+
+    public static void tick(ServerLevel level, AASWorldData.CapturePoint point, List<ServerPlayer> playersInBox,
+                            String dominantTeam, boolean isContested, boolean isBeingActivelyCaptured, boolean isTimeLocked,
+                            boolean blueCanCapture, boolean redCanCapture) {
+        if (isTimeLocked || playersInBox.isEmpty()) return;
+        long now = level.getGameTime();
+
+        for (ServerPlayer p : playersInBox) {
+            if (!p.isAlive() || p.isSpectator()) continue;
+            if (p.getPersistentData().getBoolean("AAS_IsDowned")) continue;
+            if (!point.isInside(p.position())) continue;
+            if (p.getTeam() == null) continue;
+
+            String teamKey;
+            if (p.getTeam().getName().equalsIgnoreCase("Blue")) teamKey = "BLUE";
+            else if (p.getTeam().getName().equalsIgnoreCase("Red")) teamKey = "RED";
+            else continue;
+
+            State st = STATES.get(p.getUUID());
+            if (st == null) {
+                st = new State();
+                st.lastActiveTick = now;
+                STATES.put(p.getUUID(), st);
+            }
+            if (now - st.lastSeenTick > 40L) st.presenceTicks = 0; // РІС‹С€РµР» РёР· Р·РѕРЅС‹ - СЃС‡С‘С‚С‡РёРє РЅР°С‡РёРЅР°РµС‚СЃСЏ Р·Р°РЅРѕРІРѕ
+            st.lastSeenTick = now;
+
+            updateActivity(st, p, now);
+            boolean afk = now - st.lastActiveTick > ScoreValues.POINT_AFK_TIMEOUT_TICKS;
+
+            // РўРѕС‡РєР° "Р°РєС‚СѓР°Р»СЊРЅР°" РґР»СЏ РёРіСЂРѕРєР°, РµСЃР»Рё: РёРґС‘С‚ СЃРїРѕСЂ, РѕРЅ Р°С‚Р°РєСѓРµС‚/РЅРµР№С‚СЂР°Р»РёР·СѓРµС‚ С‚РѕС‡РєСѓ,
+            // РёР»Рё РѕРЅ Р·Р°С‰РёС‰Р°РµС‚ СЃРІРѕСЋ С‚РѕС‡РєСѓ, РЅР° РєРѕС‚РѕСЂСѓСЋ РІСЂР°Рі СЂРµР°Р»СЊРЅРѕ РјРѕР¶РµС‚ РЅР°РїР°СЃС‚СЊ (С„СЂРѕРЅС‚РѕРІР°СЏ С‚РѕС‡РєР°)
+            boolean enemyCanCapture = teamKey.equals("BLUE") ? redCanCapture : blueCanCapture;
+            boolean active = isContested
+                    || (teamKey.equals(dominantTeam) && isBeingActivelyCaptured)
+                    || (point.owner.equals(teamKey) && enemyCanCapture);
+
+            if (!active || afk) continue;
+
+            st.presenceTicks++;
+            if (st.presenceTicks >= ScoreValues.POINT_PRESENCE_INTERVAL_TICKS) {
+                st.presenceTicks = 0;
+                StatsHandler.addScore(p, ScoreType.POINT_PRESENCE);
+            }
+        }
+
+        if (STATES.size() > 256) {
+            STATES.values().removeIf(s -> now < s.lastSeenTick || now - s.lastSeenTick > 1200L);
+        }
+    }
+
+    private static void updateActivity(State st, ServerPlayer p, long now) {
+        double x = p.getX(), y = p.getY(), z = p.getZ();
+        float yaw = p.getYRot(), pitch = p.getXRot();
+        if (!st.hasSample) {
+            st.hasSample = true;
+            st.lastActiveTick = now;
+        } else {
+            double dx = x - st.x, dy = y - st.y, dz = z - st.z;
+            boolean moved = dx * dx + dy * dy + dz * dz > 0.0004;
+            boolean looked = Math.abs(yaw - st.yaw) + Math.abs(pitch - st.pitch) > 0.5f;
+            if (moved || looked || p.swinging || p.isUsingItem()) st.lastActiveTick = now;
+        }
+        st.x = x; st.y = y; st.z = z;
+        st.yaw = yaw; st.pitch = pitch;
+    }
+}
+
+==========================================
+FILE: ScoreType.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\ScoreType.java
+==========================================
+package com.example.aas.events;
+
+/**
+ * РўРёРї РЅР°С‡РёСЃР»РµРЅРёСЏ. Р—РЅР°С‡РµРЅРёСЏ Р±РµСЂСѓС‚СЃСЏ РёР· ScoreValues.
+ * Р”Р»СЏ С‚РёРїРѕРІ СЃ РґРёРЅР°РјРёС‡РµСЃРєРёРјРё РѕС‡РєР°РјРё (С‚РµС…РЅРёРєР°, РїРµСЂРµРІРѕР·РєР°) tp/sp = 0,
+ * СЂРµР°Р»СЊРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ РїРµСЂРµРґР°СЋС‚СЃСЏ РІ StatsHandler.addScoreCustom(...).
+ * langKey - РєР»СЋС‡ Р»РѕРєР°Р»РёР·Р°С†РёРё РїСЂРёС‡РёРЅС‹ (РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РІ СЃРѕРѕР±С‰РµРЅРёРё РЅР°Рґ С…РѕС‚Р±Р°СЂРѕРј).
+ */
+public enum ScoreType {
+    ENEMY_KILLED      (ScoreValues.KILL_ENEMY_TP, 0, "aas.score.enemy_killed"),
+
+    REVIVE            (ScoreValues.REVIVE_TP, 0, "aas.score.revive"),
+    REVIVE_SQUAD      (ScoreValues.REVIVE_SQUAD_TP, ScoreValues.REVIVE_SQUAD_SP, "aas.score.revive_squad"),
+
+    VEHICLE_DESTROYED (0, 0, "aas.score.vehicle_destroyed"),
+    VEHICLE_ASSIST    (0, 0, "aas.score.vehicle_assist"),
+
+    HUB_PLACED        (ScoreValues.HUB_PLACED_TP, 0, "aas.score.hub_placed"),
+    HUB_SPAWN         (ScoreValues.HUB_SPAWN_TP, 0, "aas.score.hub_spawn"),
+    HUB_DESTROYED     (ScoreValues.HUB_DESTROYED_TP, 0, "aas.score.hub_destroyed"),
+    HUB_RESUPPLY      (ScoreValues.HUB_RESUPPLY_TP, 0, "aas.score.hub_resupply"),
+
+    RALLY_PLACED      (0, ScoreValues.RALLY_PLACED_SP, "aas.score.rally_placed"),
+    RALLY_SPAWN       (0, ScoreValues.RALLY_SPAWN_SP, "aas.score.rally_spawn"),
+    RALLY_DESTROYED   (ScoreValues.RALLY_DESTROYED_TP, 0, "aas.score.rally_destroyed"),
+
+    POINT_CAPTURED    (ScoreValues.POINT_CAPTURED_TP, ScoreValues.POINT_CAPTURED_SP, "aas.score.point_captured"),
+    POINT_PRESENCE    (ScoreValues.POINT_PRESENCE_TP, 0, "aas.score.point_presence"),
+
+    BUILD_LIGHT       (ScoreValues.BUILD_LIGHT_TP, 0, "aas.score.build_light"),
+    BUILD_BUNKER      (ScoreValues.BUILD_BUNKER_TP, 0, "aas.score.build_bunker"),
+    BUILD_WEAPON      (ScoreValues.BUILD_WEAPON_TP, 0, "aas.score.build_weapon"),
+
+    TRANSPORT         (0, 0, "aas.score.transport");
+
+    public final int teamPoints;
+    public final int squadPoints;
+    public final String langKey;
+
+    ScoreType(int teamPoints, int squadPoints, String langKey) {
+        this.teamPoints = teamPoints;
+        this.squadPoints = squadPoints;
+        this.langKey = langKey;
+    }
+}
+
+==========================================
+FILE: ScoreValues.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\ScoreValues.java
+==========================================
+package com.example.aas.events;
+
+/**
+ * Р’СЃРµ С‡РёСЃР»Р° СЃРёСЃС‚РµРјС‹ РѕС‡РєРѕРІ (TP / SP) РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ.
+ * РњРµРЅСЏР№С‚Рµ Р·РЅР°С‡РµРЅРёСЏ Р·РґРµСЃСЊ, Р»РѕРіРёРєСѓ РЅР°С‡РёСЃР»РµРЅРёР№ С‚СЂРѕРіР°С‚СЊ РЅРµ РЅСѓР¶РЅРѕ.
+ * Р”РёР°РїР°Р·РѕРЅ Р·РЅР°С‡РµРЅРёР№ Р·Р° РѕРґРЅРѕ РґРµР№СЃС‚РІРёРµ: 20 (РјРµР»РѕС‡СЊ) - 300 (РєСЂСѓРїРЅРѕРµ Рё РІР°Р¶РЅРѕРµ).
+ */
+public final class ScoreValues {
+
+    private ScoreValues() {}
+
+    // ================= РћР‘Р©Р•Р• =================
+    public static final int MIN_ACTION = 20;
+    public static final int MAX_ACTION = 300;
+
+    // ================= РЈР‘РР™РЎРўР’Рћ Р’Р РђР“Рђ (РјРµР»РѕС‡СЊ) =================
+    public static final int KILL_ENEMY_TP = 20;
+
+    // ================= Р Р•Р’РђР™Р’ =================
+    public static final int REVIVE_TP = 30;              // СЃРѕСЋР·РЅРёРє РЅРµ РёР· РјРѕРµРіРѕ РѕС‚СЂСЏРґР°
+    public static final int REVIVE_SQUAD_TP = 20;        // СЃРѕСЋР·РЅРёРє РёР· РјРѕРµРіРѕ РѕС‚СЂСЏРґР°: TP С‡Р°СЃС‚СЊ
+    public static final int REVIVE_SQUAD_SP = 40;        // СЃРѕСЋР·РЅРёРє РёР· РјРѕРµРіРѕ РѕС‚СЂСЏРґР°: SP С‡Р°СЃС‚СЊ
+    public static final long REVIVE_COOLDOWN_TICKS = 60L * 20L;   // Р°РЅС‚Рё-С„Р°СЂРј: РѕРґРёРЅ Рё С‚РѕС‚ Р¶Рµ РёРіСЂРѕРє РЅРµ С‡Р°С‰Рµ 1 СЂР°Р·Р° РІ 60 СЃРµРє
+
+    // ================= РўР•РҐРќРРљРђ =================
+    public static final int VEHICLE_TP_PER_TICKET = 15;  // TP = clamp(AAS_TicketPenalty * 15, MIN, MAX)
+    public static final int VEHICLE_TP_MIN = 30;
+    public static final int VEHICLE_TP_MAX = 300;
+    public static final int VEHICLE_ASSIST_PERCENT = 40; // Р°СЃСЃРёСЃС‚ = 40% РѕС‚ РѕС‡РєРѕРІ СѓР±РёР№С†С‹
+    public static final long VEHICLE_ASSIST_WINDOW_TICKS = 30L * 20L; // СѓСЂРѕРЅ Р·Р° РїРѕСЃР»РµРґРЅРёРµ 30 СЃРµРє
+
+    // ================= РҐРђР‘ (HUB / FOB) =================
+    public static final int HUB_PLACED_TP = 100;
+    public static final int HUB_SPAWN_TP = 20;           // СЃС‚СЂРѕРёС‚РµР»СЋ Р·Р° РєР°Р¶РґС‹Р№ СЃРїР°РІРЅ СЃРѕСЋР·РЅРёРєР°
+    public static final long HUB_SPAWN_COOLDOWN_TICKS = 30L * 20L; // РЅРµ С‡Р°С‰Рµ 1 СЂР°Р·Р° РІ 30 СЃРµРє РЅР° РѕРґРЅРѕРіРѕ СЃРїР°РІРЅСЏС‰РµРіРѕСЃСЏ
+    public static final int HUB_DESTROYED_TP = 120;
+    public static final int HUB_RESUPPLY_TP = 40;
+
+    // ================= RALLY POINT =================
+    public static final int RALLY_PLACED_SP = 40;
+    public static final int RALLY_SPAWN_SP = 20;         // С…РѕР·СЏРёРЅСѓ СЂР°Р»Р»Рё Р·Р° РєР°Р¶РґРѕРіРѕ Р·Р°СЃРїР°РІРЅРёРІС€РµРіРѕСЃСЏ СЃРѕСЋР·РЅРёРєР° РїРѕ РѕС‚СЂСЏРґСѓ
+    public static final long RALLY_SPAWN_COOLDOWN_TICKS = 30L * 20L;
+    public static final int RALLY_DESTROYED_TP = 50;
+
+    // ================= Р—РђРҐР’РђРў РўРћР§РљР =================
+    public static final int POINT_CAPTURED_TP = 200;
+    public static final int POINT_CAPTURED_SP = 50;
+    public static final int POINT_PRESENCE_TP = 20;      // Р·Р° РєР°Р¶РґС‹Р№ РёРЅС‚РµСЂРІР°Р» РїСЂРёСЃСѓС‚СЃС‚РІРёСЏ РЅР° Р°РєС‚РёРІРЅРѕР№ С‚РѕС‡РєРµ
+    public static final long POINT_PRESENCE_INTERVAL_TICKS = 30L * 20L; // РєР°Р¶РґС‹Рµ 30 СЃРµРє
+    public static final long POINT_AFK_TIMEOUT_TICKS = 15L * 20L;       // Р°РЅС‚Рё-Р°С„Рє: РґРІРёРіР°С‚СЊСЃСЏ/С‡С‚Рѕ-С‚Рѕ РґРµР»Р°С‚СЊ СЂР°Р· РІ 15 СЃРµРє
+
+    // ================= РЎРўР РћРРўР•Р›Р¬РЎРўР’Рћ (РїСЂРё Р—РђР’Р•Р РЁР•РќРР РїРѕСЃС‚СЂРѕР№РєРё) =================
+    public static final int BUILD_LIGHT_TP = 20;         // РєРѕР»СЋС‡Р°СЏ РїСЂРѕРІРѕР»РѕРєР°, РјР°СЃРєРёСЂРѕРІРѕС‡РЅР°СЏ СЃРµС‚СЊ, СЃС‚РµРЅР°
+    public static final int BUILD_BUNKER_TP = 80;
+    public static final int BUILD_WEAPON_TP = 100;       // AGS-30, M2 Browning, РјРёРЅРѕРјС‘С‚, TOW
+    public static final int BUILD_CONTRIBUTOR_PERCENT = 50; // С‚Рµ, РєС‚Рѕ РІР»РѕР¶РёР»СЃСЏ, РЅРѕ РЅРµ Р·Р°РІРµСЂС€РёР»
+    public static final long BUILD_ENTRY_TTL_TICKS = 20L * 60L * 20L; // СЃРєРѕР»СЊРєРѕ С…СЂР°РЅРёС‚СЊ РЅРµРґРѕСЃС‚СЂРѕРµРЅРЅС‹Рµ Р·Р°РїРёСЃРё РІРєР»Р°РґС‡РёРєРѕРІ
+
+    // ================= РџР•Р Р•Р’РћР—РљРђ РљРћРњРђРќР”Р« =================
+    public static final int TRANSPORT_TP_PER_PASSENGER = 20; // Р·Р° РїР°СЃСЃР°Р¶РёСЂР° Р·Р° РјРёРЅСѓС‚Сѓ РІРѕР¶РґРµРЅРёСЏ
+
+    // РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ РёР· РєСѓР»РґР°СѓРЅРѕРІ (РґР»СЏ РѕС‡РёСЃС‚РєРё РєР°СЂС‚С‹ РєСѓР»РґР°СѓРЅРѕРІ)
+    public static final long MAX_COOLDOWN_TICKS = REVIVE_COOLDOWN_TICKS;
+}
+
+==========================================
 FILE: StatsHandler.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\StatsHandler.java
 ==========================================
 package com.example.aas.events;
 
+import com.example.aas.util.VehicleCatalog;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class StatsHandler {
+
+    // РљР»СЋС‡Рё РІ player.getPersistentData()
+    public static final String KEY_TP = "AAS_Stats_TeamPoints";
+    public static final String KEY_SP = "AAS_Stats_SquadPoints";
+    public static final String KEY_KILLS = "AAS_Stats_Kills";
+    public static final String KEY_DEATHS = "AAS_Stats_Deaths";
+    public static final String KEY_VEH_TOTAL = "AAS_Stats_VehKills_TOTAL";
+    public static final String KEY_REVIVES = "AAS_Stats_Revives";
+    /** РћС‡РєРё С‚РѕР»СЊРєРѕ Р·Р° РїРѕСЃС‚СЂРѕР№РєСѓ (HUB_PLACED) Рё РїРѕРїРѕР»РЅРµРЅРёРµ (HUB_RESUPPLY) С…Р°Р±РѕРІ вЂ” РґР»СЏ В«Р›СѓС‡С€РµРіРѕ Р»РѕРіРёСЃС‚Р°В». */
+    public static final String KEY_LOGISTICS = "AAS_Stats_LogisticsPoints";
+    private static final String KEY_VEH_PREFIX = "AAS_Stats_VehKills_";
+
+    // РљСѓР»РґР°СѓРЅС‹ Р°РЅС‚Рё-С„Р°СЂРјР°: РєР»СЋС‡ -> С‚РёРє РїРѕСЃР»РµРґРЅРµРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+    private static final Map<String, Long> COOLDOWNS = new HashMap<>();
+
+    public static String vehKey(VehicleCatalog.Category category) {
+        return KEY_VEH_PREFIX + category.name();
+    }
 
     public static void addStats(ServerPlayer player, int teamPoints, int squadPoints, String reason) {
         if (player == null) return;
@@ -27348,6 +28312,65 @@ public class StatsHandler {
         );
         */
     }
+
+    // ================= РќРћР’РћР•: РЅР°С‡РёСЃР»РµРЅРёРµ РїРѕ С‚РёРїСѓ (Р·РЅР°С‡РµРЅРёСЏ РёР· ScoreValues) =================
+
+    /** РќР°С‡РёСЃР»СЏРµС‚ РѕС‡РєРё РїРѕ С‚РёРїСѓ ScoreType, Р·РЅР°С‡РµРЅРёСЏ Р±РµСЂСѓС‚СЃСЏ РёР· ScoreValues. */
+    public static void addScore(ServerPlayer player, ScoreType type) {
+        if (player == null || type == null) return;
+        applyScore(player, type.teamPoints, type.squadPoints, type);
+    }
+
+    /** РќР°С‡РёСЃР»СЏРµС‚ РѕС‡РєРё РїРѕ С‚РёРїСѓ, РЅРѕ СЃ РїСЂРѕС†РµРЅС‚РѕРј РѕС‚ Р±Р°Р·РѕРІС‹С… Р·РЅР°С‡РµРЅРёР№ (РЅР°РїСЂРёРјРµСЂ, 50% РІРєР»Р°РґС‡РёРєР°Рј СЃС‚СЂРѕР№РєРё). */
+    public static void addScoreScaled(ServerPlayer player, ScoreType type, int percent) {
+        if (player == null || type == null) return;
+        int tp = type.teamPoints * percent / 100;
+        int sp = type.squadPoints * percent / 100;
+        applyScore(player, tp, sp, type);
+    }
+
+    /** РќР°С‡РёСЃР»СЏРµС‚ РїСЂРѕРёР·РІРѕР»СЊРЅС‹Рµ РѕС‡РєРё, РЅРѕ СЃ РїСЂРёС‡РёРЅРѕР№/Р»РѕРєР°Р»РёР·Р°С†РёРµР№ РёР· ScoreType (С‚РµС…РЅРёРєР°, РїРµСЂРµРІРѕР·РєР°). */
+    public static void addScoreCustom(ServerPlayer player, ScoreType type, int teamPoints, int squadPoints) {
+        if (player == null || type == null) return;
+        applyScore(player, teamPoints, squadPoints, type);
+    }
+
+    public static void addScoreByName(MinecraftServer server, String playerName, ScoreType type) {
+        if (server == null || playerName == null || playerName.isEmpty()) return;
+        ServerPlayer player = server.getPlayerList().getPlayerByName(playerName);
+        if (player != null) addScore(player, type);
+    }
+
+    private static void applyScore(ServerPlayer player, int teamPoints, int squadPoints, ScoreType type) {
+        if (teamPoints <= 0 && squadPoints <= 0) return;
+        CompoundTag data = player.getPersistentData();
+        if (teamPoints > 0) data.putInt(KEY_TP, data.getInt(KEY_TP) + teamPoints);
+        if (squadPoints > 0) data.putInt(KEY_SP, data.getInt(KEY_SP) + squadPoints);
+        // РћС‚РґРµР»СЊРЅС‹Р№ СЃС‡С‘С‚С‡РёРє РѕС‡РєРѕРІ Р»РѕРіРёСЃС‚Р°: С‚РѕР»СЊРєРѕ РїРѕСЃС‚СЂРѕР№РєР° Рё РїРѕРїРѕР»РЅРµРЅРёРµ С…Р°Р±РѕРІ
+        if (teamPoints > 0 && (type == ScoreType.HUB_PLACED || type == ScoreType.HUB_RESUPPLY)) {
+            data.putInt(KEY_LOGISTICS, data.getInt(KEY_LOGISTICS) + teamPoints);
+        }
+        // РЈРІРµРґРѕРјР»РµРЅРёСЏ Рѕ РЅР°С‡РёСЃР»РµРЅРёРё РѕС‚РєР»СЋС‡РµРЅС‹ - РѕС‡РєРё РґР°СЋС‚СЃСЏ РјРѕР»С‡Р°
+    }
+
+    // ================= РђРќРўР-Р¤РђР Рњ =================
+
+    /**
+     * true - РґРµР№СЃС‚РІРёРµ СЂР°Р·СЂРµС€РµРЅРѕ (Рё РєСѓР»РґР°СѓРЅ Р·Р°РїСѓС‰РµРЅ), false - РµС‰С‘ РЅР° РєСѓР»РґР°СѓРЅРµ.
+     * key РґРѕР»Р¶РµРЅ РІРєР»СЋС‡Р°С‚СЊ С‚РёРї РґРµР№СЃС‚РІРёСЏ Рё СѓС‡Р°СЃС‚РЅРёРєРѕРІ, РЅР°РїСЂРёРјРµСЂ "revive:<reviver>:<target>".
+     */
+    public static boolean tryCooldown(String key, long nowTick, long cooldownTicks) {
+        Long last = COOLDOWNS.get(key);
+        if (last != null && nowTick >= last && nowTick - last < cooldownTicks) return false;
+        COOLDOWNS.put(key, nowTick);
+        if (COOLDOWNS.size() > 512) {
+            COOLDOWNS.values().removeIf(t -> nowTick < t || nowTick - t > ScoreValues.MAX_COOLDOWN_TICKS);
+        }
+        return true;
+    }
+
+    // ================= K/D Рё С‚РµС…РЅРёРєР° =================
+
     public static void addKill(ServerPlayer killer) {
         if (killer == null) return;
         int current = killer.getPersistentData().getInt("AAS_Stats_Kills");
@@ -27359,6 +28382,74 @@ public class StatsHandler {
         int current = victim.getPersistentData().getInt("AAS_Stats_Deaths");
         victim.getPersistentData().putInt("AAS_Stats_Deaths", current + 1);
     }
+
+    /** +1 Рє СЃС‡С‘С‚С‡РёРєСѓ РїРѕРґРЅСЏС‚С‹С… РёРіСЂРѕРєРѕРІ. */
+    public static void addRevive(ServerPlayer reviver) {
+        if (reviver == null) return;
+        CompoundTag data = reviver.getPersistentData();
+        data.putInt(KEY_REVIVES, data.getInt(KEY_REVIVES) + 1);
+    }
+
+    public static int getLogisticsPoints(ServerPlayer player) {
+        return player.getPersistentData().getInt(KEY_LOGISTICS);
+    }
+
+    public static int getRevives(ServerPlayer player) {
+        return player.getPersistentData().getInt(KEY_REVIVES);
+    }
+
+    /** +1 Рє СЃС‡С‘С‚С‡РёРєР°Рј СѓРЅРёС‡С‚РѕР¶РµРЅРЅРѕР№ С‚РµС…РЅРёРєРё СѓР±РёР№С†С‹: РїРѕ РєР°С‚РµРіРѕСЂРёРё Рё РѕР±С‰РёР№. */
+    public static void addVehicleKill(ServerPlayer killer, VehicleCatalog.Category category) {
+        if (killer == null) return;
+        if (category == null) category = VehicleCatalog.Category.OTHER;
+        CompoundTag data = killer.getPersistentData();
+        String key = vehKey(category);
+        data.putInt(key, data.getInt(key) + 1);
+        data.putInt(KEY_VEH_TOTAL, data.getInt(KEY_VEH_TOTAL) + 1);
+    }
+
+    /** РЎС‡С‘С‚С‡РёРєРё РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј РІ РїРѕСЂСЏРґРєРµ VehicleCatalog.Category.values(). */
+    public static int[] getVehKillsByCategory(ServerPlayer player) {
+        VehicleCatalog.Category[] all = VehicleCatalog.Category.values();
+        int[] result = new int[all.length];
+        CompoundTag data = player.getPersistentData();
+        for (int i = 0; i < all.length; i++) result[i] = data.getInt(vehKey(all[i]));
+        return result;
+    }
+
+    public static int getVehKillsTotal(ServerPlayer player) {
+        return player.getPersistentData().getInt(KEY_VEH_TOTAL);
+    }
+
+    /** РџРѕР»РЅС‹Р№ СЃР±СЂРѕСЃ СЃС‚Р°С‚РёСЃС‚РёРєРё РёРіСЂРѕРєР° (СЃС‚Р°СЂС‚ РјР°С‚С‡Р°). */
+    public static void resetStats(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        data.putInt(KEY_TP, 0);
+        data.putInt(KEY_SP, 0);
+        data.putInt(KEY_KILLS, 0);
+        data.putInt(KEY_DEATHS, 0);
+        data.putInt(KEY_VEH_TOTAL, 0);
+        data.putInt(KEY_REVIVES, 0);
+        data.putInt(KEY_LOGISTICS, 0);
+        for (VehicleCatalog.Category c : VehicleCatalog.Category.values()) data.putInt(vehKey(c), 0);
+    }
+
+    /** РљРѕРїРёСЂРѕРІР°РЅРёРµ СЃС‚Р°С‚РёСЃС‚РёРєРё РїСЂРё РєР»РѕРЅРµ РёРіСЂРѕРєР° (С‚РѕР»СЊРєРѕ С‚Рµ РєР»СЋС‡Рё, РєРѕС‚РѕСЂС‹Рµ РµСЃС‚СЊ Сѓ СЃС‚Р°СЂРѕРіРѕ РёРіСЂРѕРєР°). */
+    public static void copyStats(CompoundTag oldData, CompoundTag newData) {
+        copyInt(oldData, newData, KEY_TP);
+        copyInt(oldData, newData, KEY_SP);
+        copyInt(oldData, newData, KEY_KILLS);
+        copyInt(oldData, newData, KEY_DEATHS);
+        copyInt(oldData, newData, KEY_VEH_TOTAL);
+        copyInt(oldData, newData, KEY_REVIVES);
+        copyInt(oldData, newData, KEY_LOGISTICS);
+        for (VehicleCatalog.Category c : VehicleCatalog.Category.values()) copyInt(oldData, newData, vehKey(c));
+    }
+
+    private static void copyInt(CompoundTag from, CompoundTag to, String key) {
+        if (from.contains(key)) to.putInt(key, from.getInt(key));
+    }
+
     public static void addStatsByName(MinecraftServer server, String playerName, int teamPoints, int squadPoints, String reason) {
         if (playerName == null || playerName.isEmpty()) return;
         ServerPlayer player = server.getPlayerList().getPlayerByName(playerName);
@@ -27367,6 +28458,371 @@ public class StatsHandler {
         }
     }
 }
+==========================================
+FILE: VehicleDamageTracker.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\VehicleDamageTracker.java
+==========================================
+package com.example.aas.events;
+
+import com.example.aas.util.VehicleCatalog;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraftforge.event.entity.ProjectileImpactEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.level.ExplosionEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.registries.ForgeRegistries;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * РћС‚СЃР»РµР¶РёРІР°РЅРёРµ СѓСЂРѕРЅР° РїРѕ РІСЂР°Р¶РµСЃРєРѕР№ С‚РµС…РЅРёРєРµ: РєС‚Рѕ Рё РєРѕРіРґР° Р±РёР».
+ * getLastHurtByMob РґР»СЏ С‚РµС…РЅРёРєРё РЅРµРЅР°РґС‘Р¶РµРЅ, РїРѕСЌС‚РѕРјСѓ С…РёС‚С‹ СЃРѕР±РёСЂР°СЋС‚СЃСЏ РёР· РЅРµСЃРєРѕР»СЊРєРёС… РёСЃС‚РѕС‡РЅРёРєРѕРІ:
+ *  - LivingHurtEvent (РµСЃР»Рё С‚РµС…РЅРёРєР° - LivingEntity),
+ *  - ProjectileImpactEvent (СЃРЅР°СЂСЏРґС‹/РїСѓР»Рё РїРѕ С‚РµС…РЅРёРєРµ, РєРѕС‚РѕСЂР°СЏ РЅРµ LivingEntity),
+ *  - ExplosionEvent.Detonate (РІР·СЂС‹РІС‹).
+ * РўР°СЂР°РЅ: РµСЃР»Рё РёСЃС‚РѕС‡РЅРёРє СѓСЂРѕРЅР° - РґСЂСѓРіР°СЏ С‚РµС…РЅРёРєР°, Р·Р°СЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РµС‘ РІРѕРґРёС‚РµР»СЊ.
+ * РџРѕРјРµС‡РµРЅРЅРѕР№ СЃС‡РёС‚Р°РµС‚СЃСЏ Р»СЋР±Р°СЏ СЃСѓС‰РЅРѕСЃС‚СЊ СЃ AAS_VehicleTeam РІ persistent data.
+ */
+@Mod.EventBusSubscriber(modid = "aas", bus = Mod.EventBusSubscriber.Bus.FORGE)
+public final class VehicleDamageTracker {
+
+    private VehicleDamageTracker() {}
+
+    // uuid С‚РµС…РЅРёРєРё -> (uuid РёРіСЂРѕРєР° -> С‚РёРє РїРѕСЃР»РµРґРЅРµРіРѕ РїРѕРїР°РґР°РЅРёСЏ)
+    private static final Map<UUID, Map<UUID, Long>> HITS = new HashMap<>();
+
+    // ================= РЎР‘РћР  РҐРРўРћР’ =================
+
+    @SubscribeEvent
+    public static void onLivingHurt(LivingHurtEvent event) {
+        LivingEntity target = event.getEntity();
+        if (target.level().isClientSide) return;
+        if (!isMarkedVehicle(target)) return;
+        ServerPlayer attacker = resolveAttacker(event.getSource());
+        recordHit(target, attacker);
+    }
+
+    @SubscribeEvent
+    public static void onProjectileImpact(ProjectileImpactEvent event) {
+        Projectile projectile = event.getProjectile();
+        if (projectile.level().isClientSide) return;
+        if (!(event.getRayTraceResult() instanceof EntityHitResult hit)) return;
+        Entity target = hit.getEntity();
+        if (!isMarkedVehicle(target)) return;
+        Entity owner = projectile.getOwner();
+        ServerPlayer attacker = asPlayer(owner);
+        if (attacker == null) attacker = driverOf(owner);
+        recordHit(target, attacker);
+    }
+
+    @SubscribeEvent
+    public static void onExplosion(ExplosionEvent.Detonate event) {
+        if (event.getLevel().isClientSide) return;
+        Explosion explosion = event.getExplosion();
+        Entity source = explosion.getIndirectSourceEntity();
+        ServerPlayer attacker = asPlayer(source);
+        if (attacker == null) attacker = driverOf(source);
+        if (attacker == null) return;
+        for (Entity affected : event.getAffectedEntities()) {
+            if (isMarkedVehicle(affected)) recordHit(affected, attacker);
+        }
+    }
+
+    private static boolean isMarkedVehicle(Entity entity) {
+        return entity != null && entity.getPersistentData().contains("AAS_VehicleTeam");
+    }
+
+    /** РЈР±РёР№С†Р°: РёРіСЂРѕРє-СЃС‚СЂРµР»РѕРє; РµСЃР»Рё РёСЃС‚РѕС‡РЅРёРє - С‚РµС…РЅРёРєР° (С‚Р°СЂР°РЅ), С‚Рѕ РµС‘ РІРѕРґРёС‚РµР»СЊ. */
+    private static ServerPlayer resolveAttacker(DamageSource source) {
+        if (source == null) return null;
+        Entity direct = source.getDirectEntity();
+        Entity indirect = source.getEntity();
+        ServerPlayer p = asPlayer(indirect);
+        if (p != null) return p;
+        p = asPlayer(direct);
+        if (p != null) return p;
+        p = driverOf(indirect);
+        if (p != null) return p;
+        return driverOf(direct);
+    }
+
+    private static ServerPlayer asPlayer(Entity e) {
+        return (e instanceof ServerPlayer sp) ? sp : null;
+    }
+
+    private static ServerPlayer driverOf(Entity e) {
+        if (e == null) return null;
+        Entity driver = e.getControllingPassenger();
+        return (driver instanceof ServerPlayer sp) ? sp : null;
+    }
+
+    private static void recordHit(Entity vehicle, ServerPlayer attacker) {
+        if (attacker == null || vehicle == null) return;
+        if (!isEnemyOfVehicle(vehicle.getPersistentData().getString("AAS_VehicleTeam"), attacker)) return;
+
+        long now = vehicle.level().getGameTime();
+        Map<UUID, Long> perPlayer = HITS.get(vehicle.getUUID());
+        if (perPlayer == null) {
+            perPlayer = new HashMap<>();
+            HITS.put(vehicle.getUUID(), perPlayer);
+        }
+        perPlayer.put(attacker.getUUID(), now);
+
+        if (HITS.size() > 256) {
+            HITS.values().removeIf(m -> {
+                m.values().removeIf(t -> now < t || now - t > ScoreValues.VEHICLE_ASSIST_WINDOW_TICKS);
+                return m.isEmpty();
+            });
+        }
+    }
+
+    private static boolean isEnemyOfVehicle(String vehicleTeam, ServerPlayer player) {
+        if (vehicleTeam == null || vehicleTeam.isEmpty() || vehicleTeam.equalsIgnoreCase("NEUTRAL")) return false;
+        if (player.getTeam() == null) return false;
+        String pTeam = player.getTeam().getName();
+        boolean playerIsBlueRed = pTeam.equalsIgnoreCase("BLUE") || pTeam.equalsIgnoreCase("RED");
+        return playerIsBlueRed && !vehicleTeam.equalsIgnoreCase(pTeam);
+    }
+
+    // ================= РќРђР§РРЎР›Р•РќРР• РџР Р РЈРќРР§РўРћР–Р•РќРР =================
+
+    /**
+     * Р’С‹Р·С‹РІР°РµС‚СЃСЏ РёР· GameLogicEvents.processEntityLoss РїСЂРё РїРѕС‚РµСЂРµ РІСЂР°Р¶РµСЃРєРѕР№ С‚РµС…РЅРёРєРё.
+     * РЈР±РёР№С†Р° РїРѕР»СѓС‡Р°РµС‚ clamp(penalty * 15, 30, 300) TP Рё +1 Рє СЃС‡С‘С‚С‡РёРєР°Рј С‚РµС…РЅРёРєРё,
+     * Р°СЃСЃРёСЃС‚С‹ (Р±РёР»Рё Р·Р° РїРѕСЃР»РµРґРЅРёРµ 30 СЃРµРє, РЅРѕ РЅРµ РґРѕР±РёР»Рё) - 40% РѕС‚ РѕС‡РєРѕРІ СѓР±РёР№С†С‹.
+     */
+    public static void awardForDestroyedVehicle(Entity vehicle, ServerLevel level, String vTeam, int penalty) {
+        long now = level.getGameTime();
+        Map<UUID, Long> hits = HITS.remove(vehicle.getUUID());
+
+        ServerPlayer killer = null;
+        long killerTick = Long.MIN_VALUE;
+        List<ServerPlayer> assists = new ArrayList<>();
+
+        if (hits != null) {
+            for (Map.Entry<UUID, Long> e : hits.entrySet()) {
+                long t = e.getValue();
+                if (now < t || now - t > ScoreValues.VEHICLE_ASSIST_WINDOW_TICKS) continue;
+                ServerPlayer p = level.getServer().getPlayerList().getPlayer(e.getKey());
+                if (p == null || !isEnemyOfVehicle(vTeam, p)) continue;
+                if (t > killerTick) {
+                    if (killer != null) assists.add(killer);
+                    killer = p;
+                    killerTick = t;
+                } else {
+                    assists.add(p);
+                }
+            }
+        }
+
+        // Р—Р°РїР°СЃРЅРѕР№ РІР°СЂРёР°РЅС‚: РµСЃР»Рё С…РёС‚РѕРІ РЅРµ СЃРѕР±СЂР°РЅРѕ (РЅРµСЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє СѓСЂРѕРЅР°)
+        if (killer == null && vehicle instanceof LivingEntity living) {
+            if (living.getLastHurtByMob() instanceof ServerPlayer lastAttacker && isEnemyOfVehicle(vTeam, lastAttacker)) {
+                killer = lastAttacker;
+            }
+        }
+        if (killer == null) return;
+
+        int killerTp = Math.max(ScoreValues.VEHICLE_TP_MIN,
+                Math.min(ScoreValues.VEHICLE_TP_MAX, penalty * ScoreValues.VEHICLE_TP_PER_TICKET));
+        StatsHandler.addScoreCustom(killer, ScoreType.VEHICLE_DESTROYED, killerTp, 0);
+
+        String vehicleId = null;
+        ResourceLocation key = ForgeRegistries.ENTITY_TYPES.getKey(vehicle.getType());
+        if (key != null) vehicleId = key.toString();
+        String markerType = vehicle.getPersistentData().getString("AAS_VehicleType");
+        VehicleCatalog.Category category = VehicleCatalog.resolve(vehicleId, markerType);
+        StatsHandler.addVehicleKill(killer, category);
+
+        int assistTp = killerTp * ScoreValues.VEHICLE_ASSIST_PERCENT / 100;
+        for (ServerPlayer assist : assists) {
+            if (assist == killer) continue;
+            StatsHandler.addScoreCustom(assist, ScoreType.VEHICLE_ASSIST, assistTp, 0);
+        }
+    }
+}
+
+==========================================
+FILE: VictoryStats.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\VictoryStats.java
+==========================================
+package com.example.aas.events;
+
+import com.example.aas.network.VictoryData;
+import com.example.aas.world.AASWorldData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+
+import java.util.*;
+
+/**
+ * РџРѕРґСЃС‡С‘С‚ РёС‚РѕРіРѕРІ РјР°С‚С‡Р° РґР»СЏ СЌРєСЂР°РЅР° РїРѕР±РµРґС‹. РЈС‡РёС‚С‹РІР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РёРіСЂРѕРєРё, РєРѕС‚РѕСЂС‹Рµ
+ * РЅР°С…РѕРґСЏС‚СЃСЏ РІ СЃРµС‚Рё РІ РјРѕРјРµРЅС‚ РїРѕР±РµРґС‹. Р РµР°Р»СЊРЅС‹Рµ РѕС‡РєРё РёРіСЂРѕРєРѕРІ РЅРµ РёР·РјРµРЅСЏСЋС‚СЃСЏ.
+ */
+public final class VictoryStats {
+
+    private VictoryStats() {}
+
+    /** РњРЅРѕР¶РёС‚РµР»СЊ РѕС‚СЂСЏРґРЅС‹С… РѕС‡РєРѕРІ вЂ” РўРћР›Р¬РљРћ РґР»СЏ СЃСЂР°РІРЅРµРЅРёСЏ РѕС‚СЂСЏРґРѕРІ РјРµР¶РґСѓ СЃРѕР±РѕР№. */
+    public static final int SQUAD_POINTS_WEIGHT = 3;
+
+    private record Entry(ServerPlayer player, String team, int squadId,
+                         int tp, int sp, int revives, int logi) {}
+
+    public static VictoryData build(ServerLevel level, AASWorldData data, boolean blueWon,
+                                    String blueName, String redName) {
+        VictoryData out = new VictoryData();
+        out.blueWon = blueWon;
+        out.blueTickets = data.blueTickets;
+        out.redTickets = data.redTickets;
+        out.blueFaction = data.blueFaction == null ? "none" : data.blueFaction;
+        out.redFaction = data.redFaction == null ? "none" : data.redFaction;
+        out.blueName = blueName;
+        out.redName = redName;
+
+        String dim = level.dimension().location().toString();
+
+        // 1. Р РµР°Р»СЊРЅС‹Рµ РЅРѕРјРµСЂР° РѕС‚СЂСЏРґРѕРІ: СЂРѕРІРЅРѕ РєР°Рє РІ SquadSelectionScreen / StatisticsScreen вЂ”
+        //    РІРЅСѓС‚СЂРё РєРѕРјР°РЅРґС‹ Рё РёР·РјРµСЂРµРЅРёСЏ, CMD-РѕС‚СЂСЏРґ РїРµСЂРІС‹Рј, РѕСЃС‚Р°Р»СЊРЅС‹Рµ РїРѕ РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ id, РЅСѓРјРµСЂР°С†РёСЏ СЃ 1.
+        Map<Integer, Integer> numberById = new HashMap<>();
+        Map<Integer, AASWorldData.Squad> squadById = new HashMap<>();
+        for (String team : new String[]{"BLUE", "RED"}) {
+            int cmdId = team.equals("BLUE") ? data.blueCMDId : data.redCMDId;
+            List<AASWorldData.Squad> list = new ArrayList<>();
+            for (AASWorldData.Squad s : data.squads) {
+                if (s.team != null && s.team.equalsIgnoreCase(team) && s.dimension != null && s.dimension.equals(dim)) {
+                    list.add(s);
+                }
+            }
+            list.sort((a, b) -> {
+                if (a.id == cmdId && cmdId != -1) return -1;
+                if (b.id == cmdId && cmdId != -1) return 1;
+                return Integer.compare(a.id, b.id);
+            });
+            for (int i = 0; i < list.size(); i++) {
+                // id РѕС‚СЂСЏРґРѕРІ СѓРЅРёРєР°Р»РµРЅ РіР»РѕР±Р°Р»СЊРЅРѕ (СЃРј. PacketSquadAction), РїРѕСЌС‚РѕРјСѓ РєР»СЋС‡ вЂ” РїСЂРѕСЃС‚Рѕ id
+                numberById.put(list.get(i).id, i + 1);
+                squadById.put(list.get(i).id, list.get(i));
+            }
+        }
+
+        // 2. РРіСЂРѕРєРё РІ СЃРµС‚Рё СЃ РєРѕРјР°РЅРґРѕР№ BLUE/RED (СЃРїРµРєС‚Р°С‚РѕСЂС‹ РЅРµ СѓС‡РёС‚С‹РІР°СЋС‚СЃСЏ)
+        List<Entry> entries = new ArrayList<>();
+        for (ServerPlayer p : level.players()) {
+            if (p.isSpectator() || p.getTeam() == null) continue;
+            String team = p.getTeam().getName().toUpperCase();
+            if (!team.equals("BLUE") && !team.equals("RED")) continue;
+
+            String pName = p.getScoreboardName();
+            int squadId = -1;
+            for (AASWorldData.Squad s : data.squads) {
+                if (s.members.contains(pName) && numberById.containsKey(s.id)
+                        && s.team != null && s.team.equalsIgnoreCase(team)) {
+                    squadId = s.id;
+                    break;
+                }
+            }
+            var tag = p.getPersistentData();
+            entries.add(new Entry(p, team, squadId,
+                    tag.getInt(StatsHandler.KEY_TP), tag.getInt(StatsHandler.KEY_SP),
+                    StatsHandler.getRevives(p), StatsHandler.getLogisticsPoints(p)));
+        }
+
+        // 3. Р›СѓС‡С€РёР№ РѕС‚СЂСЏРґ: СЃСѓРјРјР° (TP + SP*3) РѕРЅР»Р°Р№РЅ-СѓС‡Р°СЃС‚РЅРёРєРѕРІ.
+        //    РќРёС‡СЊСЏ: Р±РѕР»СЊС€Рµ РѕРЅР»Р°Р№РЅ-СѓС‡Р°СЃС‚РЅРёРєРѕРІ, Р·Р°С‚РµРј РјРµРЅСЊС€РёР№ РЅРѕРјРµСЂ РѕС‚СЂСЏРґР°.
+        int bestId = -1;
+        long bestScore = 0;
+        int bestOnline = 0;
+        Map<Integer, long[]> perSquad = new HashMap<>(); // id -> {score, onlineCount}
+        for (Entry e : entries) {
+            if (e.squadId == -1) continue;
+            long[] acc = perSquad.computeIfAbsent(e.squadId, k -> new long[2]);
+            acc[0] += (long) e.tp + (long) e.sp * SQUAD_POINTS_WEIGHT;
+            acc[1]++;
+        }
+        for (Map.Entry<Integer, long[]> me : perSquad.entrySet()) {
+            int id = me.getKey();
+            long score = me.getValue()[0];
+            int online = (int) me.getValue()[1];
+            if (score <= 0) continue;
+            boolean better = bestId == -1
+                    || score > bestScore
+                    || (score == bestScore && online > bestOnline)
+                    || (score == bestScore && online == bestOnline && numberById.get(id) < numberById.get(bestId));
+            if (better) { bestId = id; bestScore = score; bestOnline = online; }
+        }
+        if (bestId != -1) {
+            AASWorldData.Squad s = squadById.get(bestId);
+            fillSquadInfo(out.bestSquad, s, numberById.get(bestId), data);
+            out.bestSquad.present = true;
+            out.bestSquad.name = s.name;
+            out.bestSquad.sub = s.leader == null ? "" : s.leader;
+            out.bestSquad.team = s.team.toUpperCase();
+            out.bestSquad.value = (int) Math.min(Integer.MAX_VALUE, bestScore);
+        }
+
+        // 4. Р›СѓС‡С€РёР№ РјРµРґРёРє: Р±РѕР»СЊС€Рµ РІСЃРµРіРѕ РїРѕРґСЉС‘РјРѕРІ. РќРёС‡СЊСЏ: Р±РѕР»СЊС€Рµ TP+SP, Р·Р°С‚РµРј РЅРёРє РїРѕ Р°Р»С„Р°РІРёС‚Сѓ.
+        Entry medic = null;
+        for (Entry e : entries) {
+            if (e.revives <= 0) continue;
+            if (medic == null || e.revives > medic.revives
+                    || (e.revives == medic.revives && (long) e.tp + e.sp > (long) medic.tp + medic.sp)
+                    || (e.revives == medic.revives && (long) e.tp + e.sp == (long) medic.tp + medic.sp
+                        && e.player.getScoreboardName().compareToIgnoreCase(medic.player.getScoreboardName()) < 0)) {
+                medic = e;
+            }
+        }
+        if (medic != null) fillPlayerPanel(out.bestMedic, medic, medic.revives, numberById, squadById, data);
+
+        // 5. Р›СѓС‡С€РёР№ Р»РѕРіРёСЃС‚: С‚РѕР»СЊРєРѕ РѕС‡РєРё Р·Р° РїРѕСЃС‚СЂРѕР№РєСѓ Рё РїРѕРїРѕР»РЅРµРЅРёРµ С…Р°Р±РѕРІ. РќРёС‡СЊСЏ РєР°Рє Сѓ РјРµРґРёРєР°.
+        Entry logist = null;
+        for (Entry e : entries) {
+            if (e.logi <= 0) continue;
+            if (logist == null || e.logi > logist.logi
+                    || (e.logi == logist.logi && (long) e.tp + e.sp > (long) logist.tp + logist.sp)
+                    || (e.logi == logist.logi && (long) e.tp + e.sp == (long) logist.tp + logist.sp
+                        && e.player.getScoreboardName().compareToIgnoreCase(logist.player.getScoreboardName()) < 0)) {
+                logist = e;
+            }
+        }
+        if (logist != null) fillPlayerPanel(out.bestLogist, logist, logist.logi, numberById, squadById, data);
+
+        return out;
+    }
+
+    private static void fillPlayerPanel(VictoryData.Panel panel, Entry e, int value,
+                                        Map<Integer, Integer> numberById,
+                                        Map<Integer, AASWorldData.Squad> squadById, AASWorldData data) {
+        panel.present = true;
+        panel.name = e.player.getScoreboardName();
+        panel.team = e.team;
+        panel.value = value;
+        if (e.squadId != -1) {
+            fillSquadInfo(panel, squadById.get(e.squadId), numberById.get(e.squadId), data);
+        }
+    }
+
+    private static void fillSquadInfo(VictoryData.Panel panel, AASWorldData.Squad s, int number, AASWorldData data) {
+        panel.squadNumber = number;
+        panel.squadMembers = new ArrayList<>(s.members);
+        int cmdId = s.team.equalsIgnoreCase("BLUE") ? data.blueCMDId : data.redCMDId;
+        panel.cmd = (cmdId != -1 && s.id == cmdId);
+    }
+}
+
 ==========================================
 FILE: AGSAmmoItem.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\item\AGSAmmoItem.java
@@ -27729,6 +29185,16 @@ public class EntrenchingToolItem extends Item implements GeoItem {
     // РЎРўРђР›Рћ
     private void addProgressToBE(BlockEntity be, Player player) {
         boolean isSapper = "Sapper".equalsIgnoreCase(player.getPersistentData().getString("AAS_CurrentKit"));
+
+        // Р РµРіРёСЃС‚СЂРёСЂСѓРµРј РІРєР»Р°РґС‡РёРєР° РїРѕСЃС‚СЂРѕР№РєРё (РѕС‡РєРё РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё, СЃРј. ConstructionScoring)
+        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+                && be.getLevel() instanceof ServerLevel serverLevel) {
+            Long structureKey = com.example.aas.events.ConstructionScoring.keyOf(be);
+            if (structureKey != null) {
+                com.example.aas.events.ConstructionScoring.contribute(serverLevel, structureKey, serverPlayer);
+            }
+        }
+
         if (be instanceof HubBlockEntity b) b.addProgress(isSapper);
         else if (be instanceof WallBlockEntity b) b.addProgress(isSapper);
         else if (be instanceof BarbedWireBlockEntity b) b.addProgress(isSapper);
@@ -28957,7 +30423,7 @@ public class DownedHandler {
                 // event.setCanceled РІ onPlayerHurt), РїРѕСЌС‚РѕРјСѓ РєР°СЃС‚РѕРјРЅСѓСЋ СЃС‚Р°С‚РёСЃС‚РёРєСѓ (AAS_Stats_Kills)
                 // РЅР°С‡РёСЃР»СЏРµРј Р·РґРµСЃСЊ РЅР°РїСЂСЏРјСѓСЋ, РїРѕРєР° СѓР±РёР№С†Р° С‚РѕС‡РЅРѕ РёР·РІРµСЃС‚РµРЅ.
                 if (killer != player && killer.getTeam() != player.getTeam()) {
-                    com.example.aas.events.StatsHandler.addStats(killer, 2, 0, "Enemy Killed");
+                    com.example.aas.events.StatsHandler.addScore(killer, com.example.aas.events.ScoreType.ENEMY_KILLED);
                     com.example.aas.events.StatsHandler.addKill(killer);
                 }
             }
@@ -29150,12 +30616,25 @@ public class DownedHandler {
         int s1 = reviver.getPersistentData().getInt("AAS_SquadID");
         int s2 = target.getPersistentData().getInt("AAS_SquadID");
 
-        if (s1 != 0 && s1 == s2) {
-            // Р’ РѕРґРЅРѕРј РѕС‚СЂСЏРґРµ - РґР°РµРј Рё РєРѕРјР°РЅРґРЅС‹Рµ Рё РѕС‚СЂСЏРґРЅС‹Рµ РѕС‡РєРё
-            com.example.aas.events.StatsHandler.addStats(reviver, 10, 15, "Squad Revive");
-        } else {
-            // Р Р°Р·РЅС‹Рµ РѕС‚СЂСЏРґС‹ - С‚РѕР»СЊРєРѕ РєРѕРјР°РЅРґРЅС‹Рµ
-            com.example.aas.events.StatsHandler.addStats(reviver, 10, 0, "Revived Teammate");
+        // РђРЅС‚Рё-С„Р°СЂРј: Р·Р° РѕРґРЅРѕРіРѕ Рё С‚РѕРіРѕ Р¶Рµ РёРіСЂРѕРєР° РЅРµ С‡Р°С‰Рµ 1 СЂР°Р·Р° РІ 60 СЃРµРє
+        boolean reviveAllowed = reviver != target && com.example.aas.events.StatsHandler.tryCooldown(
+                "revive:" + reviver.getUUID() + ":" + target.getUUID(),
+                reviver.level().getGameTime(),
+                com.example.aas.events.ScoreValues.REVIVE_COOLDOWN_TICKS);
+
+        // РЎС‡С‘С‚С‡РёРє "СЃРєРѕР»СЊРєРѕ РёРіСЂРѕРєРѕРІ РїРѕРґРЅСЏР»" (РІ С‚Р°Р±Р»РёС†Рµ СЃРєРѕСЂР±РѕСЂРґР°)
+        if (reviver != target) {
+            com.example.aas.events.StatsHandler.addRevive(reviver);
+        }
+
+        if (reviveAllowed) {
+            if (s1 != 0 && s1 == s2) {
+                // Р’ РѕРґРЅРѕРј РѕС‚СЂСЏРґРµ - РґР°РµРј Рё РєРѕРјР°РЅРґРЅС‹Рµ Рё РѕС‚СЂСЏРґРЅС‹Рµ РѕС‡РєРё
+                com.example.aas.events.StatsHandler.addScore(reviver, com.example.aas.events.ScoreType.REVIVE_SQUAD);
+            } else {
+                // Р Р°Р·РЅС‹Рµ РѕС‚СЂСЏРґС‹ - С‚РѕР»СЊРєРѕ РєРѕРјР°РЅРґРЅС‹Рµ
+                com.example.aas.events.StatsHandler.addScore(reviver, com.example.aas.events.ScoreType.REVIVE);
+            }
         }
     }
 
@@ -30192,6 +31671,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketVoiceActivity.class, PacketVoiceActivity::encode, PacketVoiceActivity::decode, PacketVoiceActivity::handle);
         INSTANCE.registerMessage(id++, PacketRadioVoiceActivity.class, PacketRadioVoiceActivity::encode, PacketRadioVoiceActivity::decode, PacketRadioVoiceActivity::handle); // Р СњР С›Р вЂ™Р С›Р вЂў
         INSTANCE.registerMessage(id++, PacketOpenVictoryScreen.class, PacketOpenVictoryScreen::encode, PacketOpenVictoryScreen::decode, PacketOpenVictoryScreen::handle);
+        INSTANCE.registerMessage(id++, PacketResetVictoryScreen.class, PacketResetVictoryScreen::encode, PacketResetVictoryScreen::decode, PacketResetVictoryScreen::handle);
         INSTANCE.registerMessage(id++, PacketSyncServerConfig.class, PacketSyncServerConfig::encode, PacketSyncServerConfig::decode, PacketSyncServerConfig::handle);
         INSTANCE.registerMessage(id++, PacketOpenPointEditor.class, PacketOpenPointEditor::encode, PacketOpenPointEditor::decode, PacketOpenPointEditor::handle);
         INSTANCE.registerMessage(id++, PacketSavePoint.class, PacketSavePoint::encode, PacketSavePoint::decode, PacketSavePoint::handle);
@@ -30576,39 +32056,31 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class PacketOpenVictoryScreen {
-    public final String winnerName;
-    public final String winnerFaction;
-    public final String subText;
-    public final boolean isBlueWinner;
+    public final VictoryData data;
 
-    public PacketOpenVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner) {
-        this.winnerName = winnerName;
-        this.winnerFaction = winnerFaction;
-        this.subText = subText;
-        this.isBlueWinner = isBlueWinner;
+    public PacketOpenVictoryScreen(VictoryData data) {
+        this.data = data;
     }
 
     public static void encode(PacketOpenVictoryScreen msg, FriendlyByteBuf buf) {
-        buf.writeUtf(msg.winnerName);
-        buf.writeUtf(msg.winnerFaction);
-        buf.writeUtf(msg.subText);
-        buf.writeBoolean(msg.isBlueWinner);
+        msg.data.encode(buf);
     }
 
     public static PacketOpenVictoryScreen decode(FriendlyByteBuf buf) {
-        return new PacketOpenVictoryScreen(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readBoolean());
+        return new PacketOpenVictoryScreen(VictoryData.decode(buf));
     }
 
     public static void handle(PacketOpenVictoryScreen msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             // РРЎРџРћР›Р¬Р—РЈР•Рњ РџР РћРЎР›РћР™РљРЈ ClientHooks
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                com.example.aas.client.ClientHooks.openVictoryScreen(msg.winnerName, msg.winnerFaction, msg.subText, msg.isBlueWinner);
+                com.example.aas.client.ClientHooks.openVictoryScreen(msg.data);
             });
         });
         ctx.get().setPacketHandled(true);
     }
 }
+
 ==========================================
 FILE: PacketPasteKit.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketPasteKit.java
@@ -31241,7 +32713,7 @@ public class PacketRadioAction {
                     // РњРµР»РєР°СЏ РїРѕРїСЂР°РІРєР°: 10 * 60 * 20 СЌС‚Рѕ 10 РјРёРЅСѓС‚, Р° РЅРµ 8. Р•СЃР»Рё РЅСѓР¶РЅРѕ 8, СЃС‚Р°РІСЊ 8 * 60 * 20
                     playerSquad.nextRallyAvailableTick = currentGameTime + (5 * 60 * 20);
                     player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
-                    com.example.aas.events.StatsHandler.addStats(player, 0, 15, "Rally Placed");
+                    com.example.aas.events.StatsHandler.addScore(player, com.example.aas.events.ScoreType.RALLY_PLACED);
                 } else {
                     playerSquad.nextRallyAvailableTick = currentGameTime + (15 * 20);
                 }
@@ -31306,7 +32778,7 @@ public class PacketRadioAction {
 
             // 4. РЈСЃС‚Р°РЅРѕРІРєР° Р±Р»РѕРєР° Рё СЃРѕС…СЂР°РЅРµРЅРёРµ РґР°РЅРЅС‹С…
             level.setBlock(targetPos, ModBlocks.HUB_BLOCK.get().defaultBlockState(), 3);
-            level.playSound(null, targetPos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
+            level.playSound(null, targetPos, ModSounds.BLUEPRINT_PLACE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
             BlockEntity be = level.getBlockEntity(targetPos);
             if (be instanceof HubBlockEntity hubEntity) {
                 hubEntity.setTeam(playerTeam);
@@ -31315,7 +32787,7 @@ public class PacketRadioAction {
 
             // --- РР—РњР•РќР•РќРћ: РРЎРџРћР›Р¬Р—РЈР•Рњ player.getScoreboardName() РІРјРµСЃС‚Рѕ pName ---
             data.hubs.add(new AASWorldData.HubInfo(targetPos, playerTeam, false, level.dimension().location().toString(), player.getScoreboardName()));
-            com.example.aas.events.StatsHandler.addStats(player, 20, 0, "FOB Placed");
+            com.example.aas.events.StatsHandler.addScore(player, com.example.aas.events.ScoreType.HUB_PLACED);
             // --------------------------------------------------------------------
 
             data.setDirty();
@@ -31325,7 +32797,7 @@ public class PacketRadioAction {
             String playerTeam = (player.getTeam() != null) ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
 
             level.setBlock(targetPos, ModBlocks.VEHICLE_STATION_BLOCK.get().defaultBlockState(), 3);
-            level.playSound(null, targetPos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
+            level.playSound(null, targetPos, ModSounds.BLUEPRINT_PLACE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 
             BlockEntity be = level.getBlockEntity(targetPos);
             if (be instanceof VehicleStationBlockEntity vs) {
@@ -31351,7 +32823,7 @@ public class PacketRadioAction {
     private static void placeBlueprint(ServerLevel level, BlockPos pos, ServerPlayer player, BlockState state, String name) {
         if (!level.getBlockState(pos).isAir() && !level.getBlockState(pos).canBeReplaced()) return;
         level.setBlock(pos, state, 3);
-        level.playSound(null, pos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
+        level.playSound(null, pos, ModSounds.BLUEPRINT_PLACE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
         BlockEntity be = level.getBlockEntity(pos);
         String pTeam = (player.getTeam() != null) ? player.getTeam().getName() : "NEUTRAL";
 
@@ -31420,6 +32892,7 @@ public class PacketRadioAction {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof RallyPointBlockEntity rbe) {
                 rbe.setSquadId(squad.id);
+                rbe.setOwnerName(player.getScoreboardName()); // С…РѕР·СЏРёРЅ СЂР°Р»Р»Рё - РїРѕР»СѓС‡Р°РµС‚ SP Р·Р° СЃРїР°РІРЅС‹ РѕС‚СЂСЏРґР°
             }
 
             squad.rallyPos = pos;
@@ -32296,6 +33769,36 @@ public class PacketRequestVehicleList {
     }
 }
 ==========================================
+FILE: PacketResetVictoryScreen.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketResetVictoryScreen.java
+==========================================
+package com.example.aas.network;
+
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.network.NetworkEvent;
+import java.util.function.Supplier;
+
+/** /aas resetvictoryscreen: СЃР±СЂР°СЃС‹РІР°РµС‚ Сѓ РєР»РёРµРЅС‚РѕРІ СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЌРєСЂР°РЅ РїРѕР±РµРґС‹. */
+public class PacketResetVictoryScreen {
+    public PacketResetVictoryScreen() {}
+
+    public static void encode(PacketResetVictoryScreen msg, FriendlyByteBuf buf) {}
+
+    public static PacketResetVictoryScreen decode(FriendlyByteBuf buf) {
+        return new PacketResetVictoryScreen();
+    }
+
+    public static void handle(PacketResetVictoryScreen msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            com.example.aas.client.ClientHooks.resetVictoryScreen();
+        }));
+        ctx.get().setPacketHandled(true);
+    }
+}
+
+==========================================
 FILE: PacketRespawnRequest.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketRespawnRequest.java
 ==========================================
@@ -32465,7 +33968,7 @@ public class PacketRespawnRequest {
                 player.setRespawnPosition(targetDimension, targetPos, 0.0f, true, false);
                 player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0f);
 
-                com.example.aas.network.ResupplyHandler.tryApplyPendingKit(player, data);
+                ResupplyHandler.tryApplyPendingKit(player, data);
 
                 if (player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
                     player.setGameMode(GameType.SURVIVAL);
@@ -32474,8 +33977,21 @@ public class PacketRespawnRequest {
                 // --- РќРћР’РћР•: Р’С‹РґР°С‡Р° РѕС‡РєРѕРІ Р·Р° СЃРїР°РІРЅ ---
                 if (msg.type.equals("RALLY")) {
                     AASWorldData.Squad s = getPlayerSquad(player.getScoreboardName(), data);
-                    if (s != null && !s.leader.equals(player.getScoreboardName())) {
-                        com.example.aas.events.StatsHandler.addStatsByName(player.server, s.leader, 0, 5, "Squad spawned on Rally");
+                    if (s != null) {
+                        // РҐРѕР·СЏРёРЅ СЂР°Р»Р»Рё; РµСЃР»Рё РІР»Р°РґРµР»РµС† РЅРµ Р·Р°РїРёСЃР°РЅ (СЃС‚Р°СЂС‹Р№ Р±Р»РѕРє) - Р»РёРґРµСЂ РѕС‚СЂСЏРґР°
+                        String rallyOwner = s.leader;
+                        if (s.rallyPos != null && level.isLoaded(s.rallyPos)
+                                && level.getBlockEntity(s.rallyPos) instanceof com.example.aas.block.RallyPointBlockEntity rallyBe
+                                && !rallyBe.getOwnerName().isEmpty()) {
+                            rallyOwner = rallyBe.getOwnerName();
+                        }
+                        // РЎРµР±Рµ РѕС‡РєРё РЅРµ РґР°С‘Рј; Р°РЅС‚Рё-С„Р°СЂРј: РЅРµ С‡Р°С‰Рµ 1 СЂР°Р·Р° РІ 30 СЃРµРє РЅР° РѕРґРЅРѕРіРѕ СЃРїР°РІРЅСЏС‰РµРіРѕСЃСЏ
+                        if (rallyOwner != null && !rallyOwner.isEmpty() && !rallyOwner.equals(player.getScoreboardName())
+                                && com.example.aas.events.StatsHandler.tryCooldown(
+                                        "rallyspawn:" + player.getUUID(), level.getGameTime(),
+                                        com.example.aas.events.ScoreValues.RALLY_SPAWN_COOLDOWN_TICKS)) {
+                            com.example.aas.events.StatsHandler.addScoreByName(player.server, rallyOwner, com.example.aas.events.ScoreType.RALLY_SPAWN);
+                        }
                     }
                 } else if (msg.type.startsWith("HUB")) {
                     String[] parts = msg.type.split(":");
@@ -32484,8 +34000,12 @@ public class PacketRespawnRequest {
                             BlockPos reqPos = new BlockPos(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
                             for (AASWorldData.HubInfo h : data.hubs) {
                                 if (h.pos.equals(reqPos)) {
-                                    if (!h.builderName.equals(player.getScoreboardName())) {
-                                        com.example.aas.events.StatsHandler.addStatsByName(player.server, h.builderName, 5, 0, "Player spawned on FOB");
+                                    // РђРЅС‚Рё-С„Р°СЂРј: РЅРµ С‡Р°С‰Рµ 1 СЂР°Р·Р° РІ 30 СЃРµРє РЅР° РѕРґРЅРѕРіРѕ СЃРїР°РІРЅСЏС‰РµРіРѕСЃСЏ
+                                    if (!h.builderName.equals(player.getScoreboardName())
+                                            && com.example.aas.events.StatsHandler.tryCooldown(
+                                                    "hubspawn:" + player.getUUID(), level.getGameTime(),
+                                                    com.example.aas.events.ScoreValues.HUB_SPAWN_COOLDOWN_TICKS)) {
+                                        com.example.aas.events.StatsHandler.addScoreByName(player.server, h.builderName, com.example.aas.events.ScoreType.HUB_SPAWN);
                                     }
                                     break;
                                 }
@@ -32513,7 +34033,7 @@ public class PacketRespawnRequest {
     // Р¤РРљРЎ: С‚РµРїРµСЂСЊ РІРѕР·РІСЂР°С‰Р°РµС‚ null РµСЃР»Рё РЅРµ РЅР°С€Р»Р° Р±РµР·РѕРїР°СЃРЅРѕРµ РјРµСЃС‚Рѕ,
     // РІРјРµСЃС‚Рѕ fallback РЅР° heightmap РєРѕС‚РѕСЂС‹Р№ РјРѕРі Р±С‹С‚СЊ РІ РІРѕР·РґСѓС…Рµ РёР»Рё РїРѕРґ Р·РµРјР»С‘Р№
     private static BlockPos findRandomSafeSpawn(ServerLevel level, BlockPos center, int radius) {
-        java.util.Random rand = new java.util.Random();
+        Random rand = new Random();
 
         for (int i = 0; i < 100; i++) {
             int dx = rand.nextInt(radius * 2 + 1) - radius;
@@ -35256,9 +36776,15 @@ public class PlayerStatInfo {
     public boolean isCMD;
     public int kills;       // -1 = СЃРєСЂС‹С‚Рѕ (РІСЂР°Рі РІРѕ РІСЂРµРјСЏ РјР°С‚С‡Р°)
     public int deaths;      // -1 = СЃРєСЂС‹С‚Рѕ
+    public int tp;          // РєРѕРјР°РЅРґРЅС‹Рµ РѕС‡РєРё (Team Points), -1 = СЃРєСЂС‹С‚Рѕ
+    public int sp;          // РѕС‚СЂСЏРґРЅС‹Рµ РѕС‡РєРё (Squad Points), -1 = СЃРєСЂС‹С‚Рѕ
+    public int revives;     // СЃРєРѕР»СЊРєРѕ РёРіСЂРѕРєРѕРІ РїРѕРґРЅСЏР», -1 = СЃРєСЂС‹С‚Рѕ
+    public int vehKillsTotal;       // СЃРєРѕР»СЊРєРѕ С‚РµС…РЅРёРєРё СѓРЅРёС‡С‚РѕР¶РµРЅРѕ РІСЃРµРіРѕ, -1 = СЃРєСЂС‹С‚Рѕ
+    public int[] vehKillsByCategory; // РїРѕ VehicleCatalog.Category.values(), РїСѓСЃС‚РѕР№ РјР°СЃСЃРёРІ = РЅРµС‚ РґР°РЅРЅС‹С…
     public int ping;
 
-    public PlayerStatInfo(String name, String team, int squadId, boolean isLeader, boolean isCMD, int kills, int deaths, int ping) {
+    public PlayerStatInfo(String name, String team, int squadId, boolean isLeader, boolean isCMD,
+                          int kills, int deaths, int tp, int sp, int revives, int vehKillsTotal, int[] vehKillsByCategory, int ping) {
         this.name = name;
         this.team = team;
         this.squadId = squadId;
@@ -35266,12 +36792,22 @@ public class PlayerStatInfo {
         this.isCMD = isCMD;
         this.kills = kills;
         this.deaths = deaths;
+        this.tp = tp;
+        this.sp = sp;
+        this.revives = revives;
+        this.vehKillsTotal = vehKillsTotal;
+        this.vehKillsByCategory = (vehKillsByCategory != null) ? vehKillsByCategory : new int[0];
         this.ping = ping;
     }
 
     // РЈСЂРµР·Р°РЅРЅР°СЏ РІРµСЂСЃРёСЏ РґР»СЏ РІСЂР°Р¶РµСЃРєРѕР№ РєРѕРјР°РЅРґС‹, РїРѕРєР° РјР°С‚С‡ РёРґС‘С‚: С‚РѕР»СЊРєРѕ РЅРёРє, РєРѕРјР°РЅРґР° Рё РїРёРЅРі
     public PlayerStatInfo stripped() {
-        return new PlayerStatInfo(this.name, this.team, -1, false, false, -1, -1, this.ping);
+        return new PlayerStatInfo(this.name, this.team, -1, false, false, -1, -1, -1, -1, -1, -1, new int[0], this.ping);
+    }
+
+    // Р’СЃРµ 5 РєРѕР»РѕРЅРѕРє СЃРєСЂС‹С‚С‹, РµСЃР»Рё СЃРµСЂРІРµСЂ РїСЂРёСЃР»Р°Р» -1 С…РѕС‚СЏ Р±С‹ РІ РѕРґРЅРѕРј РёР· Р·РЅР°С‡РµРЅРёР№
+    public boolean isHidden() {
+        return kills < 0 || deaths < 0 || tp < 0 || sp < 0 || revives < 0 || vehKillsTotal < 0;
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -35282,15 +36818,32 @@ public class PlayerStatInfo {
         buf.writeBoolean(isCMD);
         buf.writeInt(kills);
         buf.writeInt(deaths);
+        buf.writeInt(tp);
+        buf.writeInt(sp);
+        buf.writeInt(revives);
+        buf.writeInt(vehKillsTotal);
+        buf.writeVarInt(vehKillsByCategory.length);
+        for (int v : vehKillsByCategory) buf.writeInt(v);
         buf.writeInt(ping);
     }
 
     public static PlayerStatInfo decode(FriendlyByteBuf buf) {
-        return new PlayerStatInfo(
-                buf.readUtf(), buf.readUtf(), buf.readInt(),
-                buf.readBoolean(), buf.readBoolean(),
-                buf.readInt(), buf.readInt(), buf.readInt()
-        );
+        String name = buf.readUtf();
+        String team = buf.readUtf();
+        int squadId = buf.readInt();
+        boolean isLeader = buf.readBoolean();
+        boolean isCMD = buf.readBoolean();
+        int kills = buf.readInt();
+        int deaths = buf.readInt();
+        int tp = buf.readInt();
+        int sp = buf.readInt();
+        int revives = buf.readInt();
+        int vehKillsTotal = buf.readInt();
+        int catCount = buf.readVarInt();
+        int[] byCat = new int[catCount];
+        for (int i = 0; i < catCount; i++) byCat[i] = buf.readInt();
+        int ping = buf.readInt();
+        return new PlayerStatInfo(name, team, squadId, isLeader, isCMD, kills, deaths, tp, sp, revives, vehKillsTotal, byCat, ping);
     }
 }
 ==========================================
@@ -35755,6 +37308,102 @@ public class ResupplyHandler {
     }
 }
 ==========================================
+FILE: VictoryData.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\VictoryData.java
+==========================================
+package com.example.aas.network;
+
+import net.minecraft.network.FriendlyByteBuf;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * РЎРЅРёРјРѕРє РёС‚РѕРіРѕРІ РјР°С‚С‡Р° РґР»СЏ СЌРєСЂР°РЅР° РїРѕР±РµРґС‹. РЎРѕР±РёСЂР°РµС‚СЃСЏ РЅР° СЃРµСЂРІРµСЂРµ РІ РјРѕРјРµРЅС‚ РїРѕР±РµРґС‹
+ * Рё С†РµР»РёРєРѕРј РѕС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РєР»РёРµРЅС‚Р°Рј (РєР»РёРµРЅС‚ С…СЂР°РЅРёС‚ РµРіРѕ РІ ClientData.lastVictory).
+ */
+public class VictoryData {
+
+    /** РћРґРЅР° РёР· С‚СЂС‘С… РЅРёР¶РЅРёС… РїР°РЅРµР»РµР№ (Р»СѓС‡С€РёР№ РѕС‚СЂСЏРґ / РјРµРґРёРє / Р»РѕРіРёСЃС‚). */
+    public static class Panel {
+        public boolean present = false;     // false -> В«РќРµС‚ Р»СѓС‡С€РµРіРѕ ...В»
+        public String name = "";            // РЅР°Р·РІР°РЅРёРµ РѕС‚СЂСЏРґР° РёР»Рё РЅРёРє РёРіСЂРѕРєР°
+        public String sub = "";             // РЅРёРє Р»РёРґРµСЂР° (С‚РѕР»СЊРєРѕ РґР»СЏ РѕС‚СЂСЏРґР°)
+        public String team = "";            // "BLUE" / "RED" вЂ” РїРѕ РЅРµРјСѓ РІС‹Р±РёСЂР°РµС‚СЃСЏ С„Р»Р°Рі
+        public int squadNumber = 0;         // СЂРµР°Р»СЊРЅС‹Р№ РЅРѕРјРµСЂ РѕС‚СЂСЏРґР° РІ РµРіРѕ РєРѕРјР°РЅРґРµ (0 = РЅРµС‚ РѕС‚СЂСЏРґР°)
+        public boolean cmd = false;         // РѕС‚СЂСЏРґ РєРѕРјР°РЅРґРёСЂР° (Р·РµР»С‘РЅС‹Р№ РєСЂСѓР¶РѕРє CMD)
+        public int value = 0;               // РїРѕРґСЉС‘РјС‹ / РѕС‡РєРё Р»РѕРіРёСЃС‚Р° / РѕС‡РєРё РѕС‚СЂСЏРґР°
+        public List<String> squadMembers = new ArrayList<>(); // СѓС‡Р°СЃС‚РЅРёРєРё РѕС‚СЂСЏРґР° РЅР° РјРѕРјРµРЅС‚ РїРѕР±РµРґС‹
+
+        public void encode(FriendlyByteBuf buf) {
+            buf.writeBoolean(present);
+            buf.writeUtf(name);
+            buf.writeUtf(sub);
+            buf.writeUtf(team);
+            buf.writeVarInt(squadNumber);
+            buf.writeBoolean(cmd);
+            buf.writeInt(value);
+            buf.writeVarInt(squadMembers.size());
+            for (String m : squadMembers) buf.writeUtf(m);
+        }
+
+        public static Panel decode(FriendlyByteBuf buf) {
+            Panel p = new Panel();
+            p.present = buf.readBoolean();
+            p.name = buf.readUtf();
+            p.sub = buf.readUtf();
+            p.team = buf.readUtf();
+            p.squadNumber = buf.readVarInt();
+            p.cmd = buf.readBoolean();
+            p.value = buf.readInt();
+            int n = buf.readVarInt();
+            for (int i = 0; i < n; i++) p.squadMembers.add(buf.readUtf());
+            return p;
+        }
+    }
+
+    public boolean blueWon;
+    public int blueTickets, redTickets;
+    public String blueFaction = "none", redFaction = "none";
+    public String blueName = "", redName = "";
+    public Panel bestSquad = new Panel();
+    public Panel bestMedic = new Panel();
+    public Panel bestLogist = new Panel();
+
+    public int winnerTickets() { return blueWon ? blueTickets : redTickets; }
+    public int loserTickets() { return blueWon ? redTickets : blueTickets; }
+    public String factionOf(String team) { return "RED".equalsIgnoreCase(team) ? redFaction : blueFaction; }
+
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeBoolean(blueWon);
+        buf.writeInt(blueTickets);
+        buf.writeInt(redTickets);
+        buf.writeUtf(blueFaction);
+        buf.writeUtf(redFaction);
+        buf.writeUtf(blueName);
+        buf.writeUtf(redName);
+        bestSquad.encode(buf);
+        bestMedic.encode(buf);
+        bestLogist.encode(buf);
+    }
+
+    public static VictoryData decode(FriendlyByteBuf buf) {
+        VictoryData d = new VictoryData();
+        d.blueWon = buf.readBoolean();
+        d.blueTickets = buf.readInt();
+        d.redTickets = buf.readInt();
+        d.blueFaction = buf.readUtf();
+        d.redFaction = buf.readUtf();
+        d.blueName = buf.readUtf();
+        d.redName = buf.readUtf();
+        d.bestSquad = Panel.decode(buf);
+        d.bestMedic = Panel.decode(buf);
+        d.bestLogist = Panel.decode(buf);
+        return d;
+    }
+}
+
+==========================================
 FILE: ModSounds.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\sound\ModSounds.java
 ==========================================
@@ -36216,6 +37865,37 @@ public final class VehicleListService {
         return result;
     }
 }
+==========================================
+FILE: VictoryTitles.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\util\VictoryTitles.java
+==========================================
+package com.example.aas.util;
+
+/**
+ * Р—Р°РіРѕР»РѕРІРєРё СЌРєСЂР°РЅР° РїРѕР±РµРґС‹. РџРѕСЂРѕРіРё (РїРѕ С‡РёСЃР»Сѓ РѕСЃС‚Р°РІС€РёС…СЃСЏ С‚РёРєРµС‚РѕРІ Сѓ РџРћР‘Р•Р”РР’РЁР•Р™ РєРѕРјР°РЅРґС‹)
+ * РІС‹РЅРµСЃРµРЅС‹ РІ РєРѕРЅСЃС‚Р°РЅС‚С‹, С‡С‚РѕР±С‹ РёС… Р±С‹Р»Рѕ Р»РµРіРєРѕ РјРµРЅСЏС‚СЊ.
+ */
+public final class VictoryTitles {
+
+    private VictoryTitles() {}
+
+    /** 0..CLOSE_MAX С‚РёРєРµС‚РѕРІ: Р±Р»РёР·РєРёР№ РёСЃС…РѕРґ (РїРёСЂСЂРѕРІР° РїРѕР±РµРґР° / Р±Р»РёР·РєРѕРµ РїРѕСЂР°Р¶РµРЅРёРµ). */
+    public static final int CLOSE_MAX = 50;
+    /** CLOSE_MAX+1..MINOR_MAX: РЅРµР·РЅР°С‡РёС‚РµР»СЊРЅС‹Р№ РёСЃС…РѕРґ. */
+    public static final int MINOR_MAX = 100;
+    /** MINOR_MAX+1..NORMAL_MAX: РѕР±С‹С‡РЅС‹Р№ РёСЃС…РѕРґ. Р’СЃС‘ С‡С‚Рѕ РІС‹С€Рµ: СЃРѕРєСЂСѓС€РёС‚РµР»СЊРЅС‹Р№. */
+    public static final int NORMAL_MAX = 300;
+
+    /** РљР»СЋС‡ Р»РѕРєР°Р»РёР·Р°С†РёРё Р·Р°РіРѕР»РѕРІРєР°. winnerTickets вЂ” С‚РёРєРµС‚С‹ РїРѕР±РµРґРёРІС€РµР№ РєРѕРјР°РЅРґС‹. */
+    public static String titleKey(boolean localPlayerWon, int winnerTickets) {
+        String prefix = localPlayerWon ? "aas.victory.title.win_" : "aas.victory.title.loss_";
+        if (winnerTickets <= CLOSE_MAX) return prefix + "close";
+        if (winnerTickets <= MINOR_MAX) return prefix + "minor";
+        if (winnerTickets <= NORMAL_MAX) return prefix + "normal";
+        return prefix + "crushing";
+    }
+}
+
 ==========================================
 FILE: AASVoicechatPlugin.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\voicechat\AASVoicechatPlugin.java
@@ -39860,8 +41540,51 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\lang\en_us.js
   "aas.gui.vehicles.tooltip.tickets": "Tickets lost on destruction",
   "aas.gui.vehicles.category.logistics": "Logistics",
   "aas.gui.vehicles.category.transport": "Transport",
-  "aas.gui.vehicles.category.other": "Other"
+  "aas.gui.vehicles.category.other": "Other",
+  "aas.gui.stats.col.tp": "Team Points",
+  "aas.gui.stats.col.sp": "Squad Points",
+  "aas.gui.stats.col.vehicles": "Vehicles Destroyed",
+  "aas.gui.stats.col.kills": "Kills",
+  "aas.gui.stats.col.deaths": "Deaths",
+  "aas.score.enemy_killed": "Enemy Killed",
+  "aas.score.revive": "Revived Teammate",
+  "aas.score.revive_squad": "Revived Squadmate",
+  "aas.score.vehicle_destroyed": "Enemy Vehicle Destroyed",
+  "aas.score.vehicle_assist": "Vehicle Destruction Assist",
+  "aas.score.hub_placed": "FOB Placed",
+  "aas.score.hub_spawn": "Teammate Spawned on Your FOB",
+  "aas.score.hub_destroyed": "Enemy FOB Destroyed",
+  "aas.score.hub_resupply": "FOB Resupplied",
+  "aas.score.rally_placed": "Rally Placed",
+  "aas.score.rally_spawn": "Squadmate Spawned on Rally",
+  "aas.score.rally_destroyed": "Enemy Rally Destroyed",
+  "aas.score.point_captured": "Point Captured",
+  "aas.score.point_presence": "Holding the Objective",
+  "aas.score.build_light": "Structure Built",
+  "aas.score.build_bunker": "Bunker Built",
+  "aas.score.build_weapon": "Emplacement Built",
+  "aas.score.transport": "Transporting Team",
+  "aas.gui.stats.col.revives": "Revives",
+  "aas.victory.title.win_close": "Pyrrhic Victory",
+  "aas.victory.title.win_minor": "Minor Victory",
+  "aas.victory.title.win_normal": "Decisive Victory",
+  "aas.victory.title.win_crushing": "Crushing Victory",
+  "aas.victory.title.loss_close": "Narrow Defeat",
+  "aas.victory.title.loss_minor": "Minor Defeat",
+  "aas.victory.title.loss_normal": "Defeat",
+  "aas.victory.title.loss_crushing": "Crushing Defeat",
+  "aas.victory.tickets_left": "Tickets left: %s",
+  "aas.victory.score": "Score",
+  "aas.victory.continue": "CONTINUE",
+  "aas.victory.best_squad": "Best Squad",
+  "aas.victory.best_medic": "Best Medic",
+  "aas.victory.best_logist": "Best Logistician",
+  "aas.victory.no_best_squad": "No best squad",
+  "aas.victory.no_best_medic": "No best medic",
+  "aas.victory.no_best_logist": "No best logistician",
+  "aas.command.resetvictoryscreen": "Victory screen reset: the stats key now opens the regular statistics screen."
 }
+
 ==========================================
 FILE: ru_ru.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\lang\ru_ru.json
@@ -40118,7 +41841,49 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\lang\ru_ru.js
   "aas.gui.vehicles.tooltip.tickets": "РўРёРєРµС‚С‹ Р·Р° СѓРЅРёС‡С‚РѕР¶РµРЅРёРµ",
   "aas.gui.vehicles.category.logistics": "Р›РѕРіРёСЃС‚РёРєР°",
   "aas.gui.vehicles.category.transport": "РўСЂР°РЅСЃРїРѕСЂС‚",
-  "aas.gui.vehicles.category.other": "РџСЂРѕС‡РµРµ"
+  "aas.gui.vehicles.category.other": "РџСЂРѕС‡РµРµ",
+  "aas.gui.stats.col.tp": "РљРѕРјР°РЅРґРЅС‹Рµ РѕС‡РєРё",
+  "aas.gui.stats.col.sp": "РћС‡РєРё РѕС‚СЂСЏРґР°",
+  "aas.gui.stats.col.vehicles": "РЈРЅРёС‡С‚РѕР¶РµРЅРѕ С‚РµС…РЅРёРєРё",
+  "aas.gui.stats.col.kills": "РЈР±РёР№СЃС‚РІР°",
+  "aas.gui.stats.col.deaths": "РЎРјРµСЂС‚Рё",
+  "aas.score.enemy_killed": "Р’СЂР°Рі СѓР±РёС‚",
+  "aas.score.revive": "РЎРѕСЋР·РЅРёРє РїРѕРґРЅСЏС‚",
+  "aas.score.revive_squad": "Р‘РѕРµС† РѕС‚СЂСЏРґР° РїРѕРґРЅСЏС‚",
+  "aas.score.vehicle_destroyed": "Р’СЂР°Р¶РµСЃРєР°СЏ С‚РµС…РЅРёРєР° СѓРЅРёС‡С‚РѕР¶РµРЅР°",
+  "aas.score.vehicle_assist": "РџРѕРјРѕС‰СЊ РІ СѓРЅРёС‡С‚РѕР¶РµРЅРёРё С‚РµС…РЅРёРєРё",
+  "aas.score.hub_placed": "РҐРђР‘ СѓСЃС‚Р°РЅРѕРІР»РµРЅ",
+  "aas.score.hub_spawn": "РЎРѕСЋР·РЅРёРє РїРѕСЏРІРёР»СЃСЏ РЅР° РІР°С€РµРј РҐРђР‘Рµ",
+  "aas.score.hub_destroyed": "Р’СЂР°Р¶РµСЃРєРёР№ РҐРђР‘ СѓРЅРёС‡С‚РѕР¶РµРЅ",
+  "aas.score.hub_resupply": "РҐРђР‘ РїРѕРїРѕР»РЅРµРЅ",
+  "aas.score.rally_placed": "Р Р°Р»Р»Рё СѓСЃС‚Р°РЅРѕРІР»РµРЅРѕ",
+  "aas.score.rally_spawn": "Р‘РѕРµС† РѕС‚СЂСЏРґР° РїРѕСЏРІРёР»СЃСЏ РЅР° СЂР°Р»Р»Рё",
+  "aas.score.rally_destroyed": "Р’СЂР°Р¶РµСЃРєРѕРµ СЂР°Р»Р»Рё СѓРЅРёС‡С‚РѕР¶РµРЅРѕ",
+  "aas.score.point_captured": "РўРѕС‡РєР° Р·Р°С…РІР°С‡РµРЅР°",
+  "aas.score.point_presence": "РЈРґРµСЂР¶Р°РЅРёРµ С†РµР»Рё",
+  "aas.score.build_light": "РЎРѕРѕСЂСѓР¶РµРЅРёРµ РїРѕСЃС‚СЂРѕРµРЅРѕ",
+  "aas.score.build_bunker": "Р‘СѓРЅРєРµСЂ РїРѕСЃС‚СЂРѕРµРЅ",
+  "aas.score.build_weapon": "РћРіРЅРµРІР°СЏ С‚РѕС‡РєР° РїРѕСЃС‚СЂРѕРµРЅР°",
+  "aas.score.transport": "РџРµСЂРµРІРѕР·РєР° РєРѕРјР°РЅРґС‹",
+  "aas.gui.stats.col.revives": "РџРѕРґРЅСЏС‚Рѕ РёРіСЂРѕРєРѕРІ",
+  "aas.victory.title.win_close": "РџРёСЂСЂРѕРІР° РїРѕР±РµРґР°",
+  "aas.victory.title.win_minor": "РќРµР·РЅР°С‡РёС‚РµР»СЊРЅР°СЏ РїРѕР±РµРґР°",
+  "aas.victory.title.win_normal": "РџРѕР»РЅР°СЏ РїРѕР±РµРґР°",
+  "aas.victory.title.win_crushing": "РЎРѕРєСЂСѓС€РёС‚РµР»СЊРЅР°СЏ РїРѕР±РµРґР°",
+  "aas.victory.title.loss_close": "Р‘Р»РёР·РєРѕРµ РїРѕСЂР°Р¶РµРЅРёРµ",
+  "aas.victory.title.loss_minor": "РќРµР·РЅР°С‡РёС‚РµР»СЊРЅРѕРµ РїРѕСЂР°Р¶РµРЅРёРµ",
+  "aas.victory.title.loss_normal": "РџРѕСЂР°Р¶РµРЅРёРµ",
+  "aas.victory.title.loss_crushing": "РЎРѕРєСЂСѓС€РёС‚РµР»СЊРЅРѕРµ РїРѕСЂР°Р¶РµРЅРёРµ",
+  "aas.victory.tickets_left": "РћСЃС‚Р°Р»РѕСЃСЊ С‚РёРєРµС‚РѕРІ: %s",
+  "aas.victory.score": "РЎС‡С‘С‚",
+  "aas.victory.continue": "РџР РћР”РћР›Р–РРўР¬",
+  "aas.victory.best_squad": "Р›СѓС‡С€РёР№ РѕС‚СЂСЏРґ",
+  "aas.victory.best_medic": "Р›СѓС‡С€РёР№ РјРµРґРёРє",
+  "aas.victory.best_logist": "Р›СѓС‡С€РёР№ Р»РѕРіРёСЃС‚",
+  "aas.victory.no_best_squad": "РќРµС‚ Р»СѓС‡С€РµРіРѕ РѕС‚СЂСЏРґР°",
+  "aas.victory.no_best_medic": "РќРµС‚ Р»СѓС‡С€РµРіРѕ РјРµРґРёРєР°",
+  "aas.victory.no_best_logist": "РќРµС‚ Р»СѓС‡С€РµРіРѕ Р»РѕРіРёСЃС‚Р°",
+  "aas.command.resetvictoryscreen": "Р­РєСЂР°РЅ РїРѕР±РµРґС‹ СЃР±СЂРѕС€РµРЅ: РєРЅРѕРїРєР° СЃС‚Р°С‚РёСЃС‚РёРєРё СЃРЅРѕРІР° РѕС‚РєСЂС‹РІР°РµС‚ РѕР±С‹С‡РЅСѓСЋ СЃС‚Р°С‚РёСЃС‚РёРєСѓ."
 }
 
 ==========================================
@@ -40377,8 +42142,51 @@ PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\lang\uk_ua.js
   "aas.gui.vehicles.tooltip.tickets": "РўС–РєРµС‚Рё Р·Р° Р·РЅРёС‰РµРЅРЅСЏ",
   "aas.gui.vehicles.category.logistics": "Р›РѕРіС–СЃС‚РёРєР°",
   "aas.gui.vehicles.category.transport": "РўСЂР°РЅСЃРїРѕСЂС‚",
-  "aas.gui.vehicles.category.other": "Р†РЅС€Рµ"
+  "aas.gui.vehicles.category.other": "Р†РЅС€Рµ",
+  "aas.gui.stats.col.tp": "РљРѕРјР°РЅРґРЅС– РѕС‡РєРё",
+  "aas.gui.stats.col.sp": "РћС‡РєРё Р·Р°РіРѕРЅСѓ",
+  "aas.gui.stats.col.vehicles": "Р—РЅРёС‰РµРЅРѕ С‚РµС…РЅС–РєРё",
+  "aas.gui.stats.col.kills": "Р’Р±РёРІСЃС‚РІР°",
+  "aas.gui.stats.col.deaths": "РЎРјРµСЂС‚С–",
+  "aas.score.enemy_killed": "Р’РѕСЂРѕРіР° РІР±РёС‚Рѕ",
+  "aas.score.revive": "РЎРѕСЋР·РЅРёРєР° РїС–РґРЅСЏС‚Рѕ",
+  "aas.score.revive_squad": "Р‘С–Р№С†СЏ Р·Р°РіРѕРЅСѓ РїС–РґРЅСЏС‚Рѕ",
+  "aas.score.vehicle_destroyed": "Р’РѕСЂРѕР¶Сѓ С‚РµС…РЅС–РєСѓ Р·РЅРёС‰РµРЅРѕ",
+  "aas.score.vehicle_assist": "Р”РѕРїРѕРјРѕРіР° Сѓ Р·РЅРёС‰РµРЅРЅС– С‚РµС…РЅС–РєРё",
+  "aas.score.hub_placed": "РҐРђР‘ РІСЃС‚Р°РЅРѕРІР»РµРЅРѕ",
+  "aas.score.hub_spawn": "РЎРѕСЋР·РЅРёРє Р·'СЏРІРёРІСЃСЏ РЅР° РІР°С€РѕРјСѓ РҐРђР‘С–",
+  "aas.score.hub_destroyed": "Р’РѕСЂРѕР¶РёР№ РҐРђР‘ Р·РЅРёС‰РµРЅРѕ",
+  "aas.score.hub_resupply": "РҐРђР‘ РїРѕРїРѕРІРЅРµРЅРѕ",
+  "aas.score.rally_placed": "Р Р°Р»С– РІСЃС‚Р°РЅРѕРІР»РµРЅРѕ",
+  "aas.score.rally_spawn": "Р‘РѕС”С†СЊ Р·Р°РіРѕРЅСѓ Р·'СЏРІРёРІСЃСЏ РЅР° СЂР°Р»С–",
+  "aas.score.rally_destroyed": "Р’РѕСЂРѕР¶С– СЂР°Р»С– Р·РЅРёС‰РµРЅРѕ",
+  "aas.score.point_captured": "РўРѕС‡РєСѓ Р·Р°С…РѕРїР»РµРЅРѕ",
+  "aas.score.point_presence": "РЈС‚СЂРёРјР°РЅРЅСЏ С†С–Р»С–",
+  "aas.score.build_light": "РЎРїРѕСЂСѓРґСѓ Р·Р±СѓРґРѕРІР°РЅРѕ",
+  "aas.score.build_bunker": "Р‘СѓРЅРєРµСЂ Р·Р±СѓРґРѕРІР°РЅРѕ",
+  "aas.score.build_weapon": "Р’РѕРіРЅРµРІСѓ С‚РѕС‡РєСѓ Р·Р±СѓРґРѕРІР°РЅРѕ",
+  "aas.score.transport": "РџРµСЂРµРІРµР·РµРЅРЅСЏ РєРѕРјР°РЅРґРё",
+  "aas.gui.stats.col.revives": "РџС–РґРЅСЏС‚Рѕ РіСЂР°РІС†С–РІ",
+  "aas.victory.title.win_close": "РџС–СЂСЂРѕРІР° РїРµСЂРµРјРѕРіР°",
+  "aas.victory.title.win_minor": "РќРµР·РЅР°С‡РЅР° РїРµСЂРµРјРѕРіР°",
+  "aas.victory.title.win_normal": "РџРѕРІРЅР° РїРµСЂРµРјРѕРіР°",
+  "aas.victory.title.win_crushing": "РќРёС‰С–РІРЅР° РїРµСЂРµРјРѕРіР°",
+  "aas.victory.title.loss_close": "Р‘Р»РёР·СЊРєР° РїРѕСЂР°Р·РєР°",
+  "aas.victory.title.loss_minor": "РќРµР·РЅР°С‡РЅР° РїРѕСЂР°Р·РєР°",
+  "aas.victory.title.loss_normal": "РџРѕСЂР°Р·РєР°",
+  "aas.victory.title.loss_crushing": "РќРёС‰С–РІРЅР° РїРѕСЂР°Р·РєР°",
+  "aas.victory.tickets_left": "Р—Р°Р»РёС€РёР»РѕСЃСЊ С‚С–РєРµС‚С–РІ: %s",
+  "aas.victory.score": "Р Р°С…СѓРЅРѕРє",
+  "aas.victory.continue": "РџР РћР”РћР’Р–РРўР",
+  "aas.victory.best_squad": "РќР°Р№РєСЂР°С‰РёР№ Р·Р°РіС–РЅ",
+  "aas.victory.best_medic": "РќР°Р№РєСЂР°С‰РёР№ РјРµРґРёРє",
+  "aas.victory.best_logist": "РќР°Р№РєСЂР°С‰РёР№ Р»РѕРіС–СЃС‚",
+  "aas.victory.no_best_squad": "РќРµРјР°С” РЅР°Р№РєСЂР°С‰РѕРіРѕ Р·Р°РіРѕРЅСѓ",
+  "aas.victory.no_best_medic": "РќРµРјР°С” РЅР°Р№РєСЂР°С‰РѕРіРѕ РјРµРґРёРєР°",
+  "aas.victory.no_best_logist": "РќРµРјР°С” РЅР°Р№РєСЂР°С‰РѕРіРѕ Р»РѕРіС–СЃС‚Р°",
+  "aas.command.resetvictoryscreen": "Р•РєСЂР°РЅ РїРµСЂРµРјРѕРіРё СЃРєРёРЅСѓС‚Рѕ: РєРЅРѕРїРєР° СЃС‚Р°С‚РёСЃС‚РёРєРё Р·РЅРѕРІСѓ РІС–РґРєСЂРёРІР°С” Р·РІРёС‡Р°Р№РЅСѓ СЃС‚Р°С‚РёСЃС‚РёРєСѓ."
 }
+
 ==========================================
 FILE: ags_30_invalid.json
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\resources\assets\aas\models\block\ags_30_invalid.json

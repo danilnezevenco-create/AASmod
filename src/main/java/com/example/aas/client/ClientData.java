@@ -33,6 +33,8 @@ public class ClientData {
     public static boolean deathFadePlayed = false;
     public static boolean serverAutoBalance = false;
     public static List<com.example.aas.network.PlayerStatInfo> playerStats = new ArrayList<>();
+    /** Итоги последнего матча. Пока не null — CAPS (статистика) открывает экран победы. */
+    public static com.example.aas.network.VictoryData lastVictory = null;
     public static List<AASWorldData.StationInfo> clientStations = new ArrayList<>();
     // 3. Командиры и РАЗДЕЛЬНОЕ голосование за CMD
     public static int blueCMDId = -1;
