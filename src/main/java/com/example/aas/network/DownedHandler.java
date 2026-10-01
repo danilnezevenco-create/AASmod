@@ -111,6 +111,14 @@ public class DownedHandler {
                 // Стираем убийцу, только если это была чистая смерть от окружения
                 player.getPersistentData().remove("AAS_KnockedBy");
             }
+            // Уведомление о нике союзника (тимнок)
+            ServerPlayer knocker = null;
+            if (attacker instanceof ServerPlayer atkSp) {
+                knocker = atkSp;
+            } else if (player.getLastHurtByMob() instanceof ServerPlayer lastSp) {
+                knocker = lastSp;
+            }
+            TeamKillNotifier.onPlayerKnocked(player, knocker);
 
             enterDownedState(player);
         }

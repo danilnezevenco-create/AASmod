@@ -87,6 +87,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketPlayMarkerSound.class, PacketPlayMarkerSound::encode, PacketPlayMarkerSound::decode, PacketPlayMarkerSound::handle);
         INSTANCE.registerMessage(id++, PacketRequestVehicleList.class, PacketRequestVehicleList::encode, PacketRequestVehicleList::decode, PacketRequestVehicleList::handle);
         INSTANCE.registerMessage(id++, PacketSyncVehicleList.class, PacketSyncVehicleList::encode, PacketSyncVehicleList::decode, PacketSyncVehicleList::handle);
+        INSTANCE.registerMessage(id++, PacketTeamKillNotification.class, PacketTeamKillNotification::encode, PacketTeamKillNotification::decode, PacketTeamKillNotification::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

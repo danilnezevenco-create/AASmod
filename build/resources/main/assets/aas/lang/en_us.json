@@ -293,5 +293,9 @@
   "aas.victory.no_best_squad": "No best squad",
   "aas.victory.no_best_medic": "No best medic",
   "aas.victory.no_best_logist": "No best logistician",
-  "aas.command.resetvictoryscreen": "Victory screen reset: the stats key now opens the regular statistics screen."
+  "aas.command.resetvictoryscreen": "Victory screen reset: the stats key now opens the regular statistics screen.",
+  "aas.hud.teamkill.killer": "You killed an ally: %s",
+  "aas.hud.teamkill.victim": "You were killed by an ally: %s",
+  "aas.hud.teamkill.knock.killer": "You knocked down an ally: %s",
+  "aas.hud.teamkill.knock.victim": "You were knocked down by an ally: %s"
 }

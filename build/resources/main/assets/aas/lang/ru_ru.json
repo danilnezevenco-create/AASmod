@@ -292,5 +292,9 @@
   "aas.victory.no_best_squad": "Нет лучшего отряда",
   "aas.victory.no_best_medic": "Нет лучшего медика",
   "aas.victory.no_best_logist": "Нет лучшего логиста",
-  "aas.command.resetvictoryscreen": "Экран победы сброшен: кнопка статистики снова открывает обычную статистику."
+  "aas.command.resetvictoryscreen": "Экран победы сброшен: кнопка статистики снова открывает обычную статистику.",
+  "aas.hud.teamkill.killer": "Вы убили союзника: %s",
+  "aas.hud.teamkill.victim": "Вас убил союзник: %s",
+  "aas.hud.teamkill.knock.killer": "Вы нокнули союзника: %s",
+  "aas.hud.teamkill.knock.victim": "Вас нокнул союзник: %s"
 }

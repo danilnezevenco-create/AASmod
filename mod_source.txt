@@ -4517,6 +4517,12 @@ public class VehicleStationBlockEntity extends BlockEntity {
                 if (entity.currentProgress >= MAX_PROGRESS) {
                     entity.currentProgress = MAX_PROGRESS;
                     level.setBlock(pos, state.setValue(VehicleStationBlock.CONSTRUCTED, true).setValue(VehicleStationBlock.BUILD_STAGE, 2), 3);
+
+                    // РћС‡РєРё Р·Р° РїРѕСЃС‚СЂРѕР№РєСѓ СЃС‚Р°РЅС†РёРё
+                    com.example.aas.events.ConstructionScoring.complete(
+                            (net.minecraft.server.level.ServerLevel) level,
+                            pos.asLong(),
+                            com.example.aas.events.ScoreType.BUILD_STATION);
                 } else {
                     int stage = (entity.currentProgress >= MAX_PROGRESS / 2) ? 2 : 1;
                     if (state.getValue(VehicleStationBlock.BUILD_STAGE) != stage) {
@@ -24883,7 +24889,8 @@ public final class ConstructionScoring {
                 || be instanceof com.example.aas.block.AGSConstructionBlockEntity
                 || be instanceof com.example.aas.block.M2ConstructionBlockEntity
                 || be instanceof com.example.aas.block.MortarConstructionBlockEntity
-                || be instanceof com.example.aas.block.TOWConstructionBlockEntity) {
+                || be instanceof com.example.aas.block.TOWConstructionBlockEntity
+                || be instanceof com.example.aas.block.VehicleStationBlockEntity) {   // <-- РґРѕР±Р°РІР»РµРЅРѕ
             return be.getBlockPos().asLong();
         }
         return null;
@@ -28178,6 +28185,7 @@ public enum ScoreType {
     BUILD_LIGHT       (ScoreValues.BUILD_LIGHT_TP, 0, "aas.score.build_light"),
     BUILD_BUNKER      (ScoreValues.BUILD_BUNKER_TP, 0, "aas.score.build_bunker"),
     BUILD_WEAPON      (ScoreValues.BUILD_WEAPON_TP, 0, "aas.score.build_weapon"),
+    BUILD_STATION     (ScoreValues.BUILD_STATION_TP, 0, "aas.score.build_station"),
 
     TRANSPORT         (0, 0, "aas.score.transport");
 
@@ -28253,6 +28261,7 @@ public final class ScoreValues {
     public static final int BUILD_WEAPON_TP = 100;       // AGS-30, M2 Browning, РјРёРЅРѕРјС‘С‚, TOW
     public static final int BUILD_CONTRIBUTOR_PERCENT = 50; // С‚Рµ, РєС‚Рѕ РІР»РѕР¶РёР»СЃСЏ, РЅРѕ РЅРµ Р·Р°РІРµСЂС€РёР»
     public static final long BUILD_ENTRY_TTL_TICKS = 20L * 60L * 20L; // СЃРєРѕР»СЊРєРѕ С…СЂР°РЅРёС‚СЊ РЅРµРґРѕСЃС‚СЂРѕРµРЅРЅС‹Рµ Р·Р°РїРёСЃРё РІРєР»Р°РґС‡РёРєРѕРІ
+    public static final int BUILD_STATION_TP = 200;
 
     // ================= РџР•Р Р•Р’РћР—РљРђ РљРћРњРђРќР”Р« =================
     public static final int TRANSPORT_TP_PER_PASSENGER = 20; // Р·Р° РїР°СЃСЃР°Р¶РёСЂР° Р·Р° РјРёРЅСѓС‚Сѓ РІРѕР¶РґРµРЅРёСЏ

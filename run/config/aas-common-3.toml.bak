@@ -1,4 +1,8 @@
 
+["Faction Settings"]
+	blueTeamCustomName = "BLUEFOR"
+	redTeamCustomName = "REDFOR"
+
 ["Gameplay Settings"]
 	#Grenade destruction
 	agsProjectileDestruction = true
@@ -131,8 +135,4 @@
 	#Artillery strike impact radius
 	#Range: 5 ~ 100
 	artStrikeRadius = 20
-
-["Faction Settings"]
-	blueTeamCustomName = "BLUEFOR"
-	redTeamCustomName = "REDFOR"
 
