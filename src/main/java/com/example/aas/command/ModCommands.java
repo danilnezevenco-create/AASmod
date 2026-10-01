@@ -403,10 +403,8 @@ public class ModCommands {
             GameLogicEvents.startGameCountdown(level);
             source.sendSuccess(() -> Component.literal("Countdown started in this world!").withStyle(ChatFormatting.GREEN), true);
             for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-                p.getPersistentData().putInt("AAS_Stats_TeamPoints", 0);
-                p.getPersistentData().putInt("AAS_Stats_SquadPoints", 0);
-                p.getPersistentData().putInt("AAS_Stats_Kills", 0);   // НОВОЕ
-                p.getPersistentData().putInt("AAS_Stats_Deaths", 0);  // НОВОЕ
+                // TP, SP, киллы, смерти и счётчики уничтоженной техники (общий и по категориям)
+                com.example.aas.events.StatsHandler.resetStats(p);
             }
         } else {
             data.isGameStarted = false;

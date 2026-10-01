@@ -49,6 +49,20 @@ public class WallBlockEntity extends BlockEntity {
         return 300; // Одиночная стена
     }
 
+    // Общий ключ постройки для очков: минимальная позиция среди связанных блоков (или своя, если блок одиночный)
+    public long getStructureKey() {
+        long key = this.worldPosition.asLong();
+        for (BlockPos p : linkedWalls) key = Math.min(key, p.asLong());
+        return key;
+    }
+
+    // Тип очков за завершение: большая связка (>15 блоков) - бункер, остальное - стена/сетка
+    public com.example.aas.events.ScoreType getScoreType() {
+        return (linkedWalls.size() > 15)
+                ? com.example.aas.events.ScoreType.BUILD_BUNKER
+                : com.example.aas.events.ScoreType.BUILD_LIGHT;
+    }
+
     public void setTeam(String team) { this.teamOwner = team; setChanged(); }
     public void setLinkedWalls(List<BlockPos> links) { this.linkedWalls = new ArrayList<>(links); this.isMultiWall = true; setChanged(); }
     public String getTeam() { return teamOwner; }
@@ -136,6 +150,9 @@ public class WallBlockEntity extends BlockEntity {
 
             if (entity.currentProgress >= max) {
                 entity.currentProgress = max;
+
+                // ОЧКИ ЗА СТРОИТЕЛЬСТВО: начисляются при завершении (один раз на всю связанную постройку)
+                com.example.aas.events.ConstructionScoring.complete((net.minecraft.server.level.ServerLevel) level, entity.getStructureKey(), entity.getScoreType());
 
                 // ЛОГИКА ЗАВЕРШЕНИЯ / ТРАНСФОРМАЦИИ
                 if (!entity.transformTo.isEmpty()) {

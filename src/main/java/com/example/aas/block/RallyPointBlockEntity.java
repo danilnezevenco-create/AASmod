@@ -17,6 +17,7 @@ public class RallyPointBlockEntity extends BlockEntity {
     public boolean wasDismantled = false;
     private int squadId = -1;
     private long expiryTick = -1;
+    private String ownerName = ""; // кто поставил ралли (получает SP за спавны отряда)
     private Object clientSoundRef = null; // Используем Object, это безопасно для сервера
 
     public RallyPointBlockEntity(BlockPos pos, BlockState state) {
@@ -25,6 +26,9 @@ public class RallyPointBlockEntity extends BlockEntity {
 
     public void setSquadId(int id) { this.squadId = id; setChanged(); }
     public int getSquadId() { return squadId; }
+
+    public void setOwnerName(String name) { this.ownerName = (name == null) ? "" : name; setChanged(); }
+    public String getOwnerName() { return ownerName; }
 
     public void setExpiryTick(long tick) { this.expiryTick = tick; setChanged(); }
 
@@ -76,6 +80,7 @@ public class RallyPointBlockEntity extends BlockEntity {
         super.saveAdditional(tag);
         tag.putInt("SquadID", squadId);
         tag.putBoolean("IsDecay", isDecay);
+        tag.putString("OwnerName", ownerName);
     }
 
     @Override
@@ -83,5 +88,6 @@ public class RallyPointBlockEntity extends BlockEntity {
         super.load(tag);
         squadId = tag.getInt("SquadID");
         isDecay = tag.getBoolean("IsDecay");
+        ownerName = tag.contains("OwnerName") ? tag.getString("OwnerName") : "";
     }
 }

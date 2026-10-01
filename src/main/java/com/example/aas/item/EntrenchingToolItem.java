@@ -240,6 +240,16 @@ public class EntrenchingToolItem extends Item implements GeoItem {
     // СТАЛО
     private void addProgressToBE(BlockEntity be, Player player) {
         boolean isSapper = "Sapper".equalsIgnoreCase(player.getPersistentData().getString("AAS_CurrentKit"));
+
+        // Регистрируем вкладчика постройки (очки начисляются при завершении, см. ConstructionScoring)
+        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+                && be.getLevel() instanceof ServerLevel serverLevel) {
+            Long structureKey = com.example.aas.events.ConstructionScoring.keyOf(be);
+            if (structureKey != null) {
+                com.example.aas.events.ConstructionScoring.contribute(serverLevel, structureKey, serverPlayer);
+            }
+        }
+
         if (be instanceof HubBlockEntity b) b.addProgress(isSapper);
         else if (be instanceof WallBlockEntity b) b.addProgress(isSapper);
         else if (be instanceof BarbedWireBlockEntity b) b.addProgress(isSapper);

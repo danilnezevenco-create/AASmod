@@ -34,6 +34,7 @@ public class BunkerBlockEntity extends BlockEntity {
             entity.currentProgress += (int) Math.ceil(entity.activeDiggers * multiplier);
 
             if (entity.currentProgress >= MAX_PROGRESS) {
+                com.example.aas.events.ConstructionScoring.complete((ServerLevel) level, pos.asLong(), com.example.aas.events.ScoreType.BUILD_BUNKER);
                 entity.finishConstruction((ServerLevel) level, pos, state);
             }
             setChanged(level, pos, state);

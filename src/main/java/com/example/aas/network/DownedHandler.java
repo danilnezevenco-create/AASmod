@@ -223,7 +223,7 @@ public class DownedHandler {
                 // event.setCanceled в onPlayerHurt), поэтому кастомную статистику (AAS_Stats_Kills)
                 // начисляем здесь напрямую, пока убийца точно известен.
                 if (killer != player && killer.getTeam() != player.getTeam()) {
-                    com.example.aas.events.StatsHandler.addStats(killer, 2, 0, "Enemy Killed");
+                    com.example.aas.events.StatsHandler.addScore(killer, com.example.aas.events.ScoreType.ENEMY_KILLED);
                     com.example.aas.events.StatsHandler.addKill(killer);
                 }
             }
@@ -416,12 +416,25 @@ public class DownedHandler {
         int s1 = reviver.getPersistentData().getInt("AAS_SquadID");
         int s2 = target.getPersistentData().getInt("AAS_SquadID");
 
-        if (s1 != 0 && s1 == s2) {
-            // В одном отряде - даем и командные и отрядные очки
-            com.example.aas.events.StatsHandler.addStats(reviver, 10, 15, "Squad Revive");
-        } else {
-            // Разные отряды - только командные
-            com.example.aas.events.StatsHandler.addStats(reviver, 10, 0, "Revived Teammate");
+        // Анти-фарм: за одного и того же игрока не чаще 1 раза в 60 сек
+        boolean reviveAllowed = reviver != target && com.example.aas.events.StatsHandler.tryCooldown(
+                "revive:" + reviver.getUUID() + ":" + target.getUUID(),
+                reviver.level().getGameTime(),
+                com.example.aas.events.ScoreValues.REVIVE_COOLDOWN_TICKS);
+
+        // Счётчик "сколько игроков поднял" (в таблице скорборда)
+        if (reviver != target) {
+            com.example.aas.events.StatsHandler.addRevive(reviver);
+        }
+
+        if (reviveAllowed) {
+            if (s1 != 0 && s1 == s2) {
+                // В одном отряде - даем и командные и отрядные очки
+                com.example.aas.events.StatsHandler.addScore(reviver, com.example.aas.events.ScoreType.REVIVE_SQUAD);
+            } else {
+                // Разные отряды - только командные
+                com.example.aas.events.StatsHandler.addScore(reviver, com.example.aas.events.ScoreType.REVIVE);
+            }
         }
     }
 

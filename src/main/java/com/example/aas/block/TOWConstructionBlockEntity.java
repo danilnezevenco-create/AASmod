@@ -39,14 +39,14 @@ public class TOWConstructionBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, TOWConstructionBlockEntity entity) {
+    public static void tick(Level level, BlockPos pos, BlockState state, TOWConstructionBlockEntity entity) {
         if (level.isClientSide) return;
 
         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 2) ? 2.0f : 1.0f;
                 if (entity.sapperBoost) speed *= 2.0f;
-                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
@@ -57,6 +57,8 @@ public class TOWConstructionBlockEntity extends BlockEntity {
                     ((ServerLevel) level).sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE,
                             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                             30, 0.7, 0.4, 0.7, 0.05);
+                    // ОЧКИ ЗА СТРОИТЕЛЬСТВО: начисляются при завершении постройки
+                    com.example.aas.events.ConstructionScoring.complete((ServerLevel) level, pos.asLong(), com.example.aas.events.ScoreType.BUILD_WEAPON);
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
             }

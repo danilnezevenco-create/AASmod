@@ -32,6 +32,13 @@ public class BarbedWireBlockEntity extends BlockEntity {
         super(ModBlocks.WIRE_BE.get(), pos, state);
     }
 
+    // Общий ключ постройки для очков: минимальная позиция среди связанных блоков (или своя, если блок одиночный)
+    public long getStructureKey() {
+        long key = this.worldPosition.asLong();
+        for (BlockPos p : linkedWires) key = Math.min(key, p.asLong());
+        return key;
+    }
+
     public void setTeam(String team) { this.teamOwner = team; setChanged(); }
     public void setLinkedWires(List<BlockPos> links) { this.linkedWires = new ArrayList<>(links); this.isMultiWire = true; setChanged(); }
     public String getTeam() { return teamOwner; }
@@ -100,13 +107,16 @@ public class BarbedWireBlockEntity extends BlockEntity {
             if (entity.activeDiggers > 0) {
                 float speed = (entity.activeDiggers >= 3) ? 2.0f : 1.0f;
                 if (entity.sapperBoost) speed *= 2.0f;
-                float multiplier = com.example.aas.config.AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
+                float multiplier = AASConfig.DIGGING_SPEED_MULTIPLIER.get().floatValue();
                 speed *= multiplier;
                 entity.currentProgress += (int) Math.ceil(speed);
             }
 
             if (entity.currentProgress >= MAX_PROGRESS) {
                 entity.currentProgress = MAX_PROGRESS;
+
+                // ОЧКИ ЗА СТРОИТЕЛЬСТВО: начисляются при завершении (один раз на всю связанную постройку)
+                com.example.aas.events.ConstructionScoring.complete((net.minecraft.server.level.ServerLevel) level, entity.getStructureKey(), com.example.aas.events.ScoreType.BUILD_LIGHT);
                 level.setBlock(pos, state.setValue(BarbedWireBlock.CONSTRUCTED, true).setValue(BarbedWireBlock.BUILD_STAGE, 2), 3);
 
                 if (!level.isClientSide) {

@@ -164,7 +164,7 @@ public class PacketRespawnRequest {
                 player.setRespawnPosition(targetDimension, targetPos, 0.0f, true, false);
                 player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0f);
 
-                com.example.aas.network.ResupplyHandler.tryApplyPendingKit(player, data);
+                ResupplyHandler.tryApplyPendingKit(player, data);
 
                 if (player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
                     player.setGameMode(GameType.SURVIVAL);
@@ -173,8 +173,21 @@ public class PacketRespawnRequest {
                 // --- НОВОЕ: Выдача очков за спавн ---
                 if (msg.type.equals("RALLY")) {
                     AASWorldData.Squad s = getPlayerSquad(player.getScoreboardName(), data);
-                    if (s != null && !s.leader.equals(player.getScoreboardName())) {
-                        com.example.aas.events.StatsHandler.addStatsByName(player.server, s.leader, 0, 5, "Squad spawned on Rally");
+                    if (s != null) {
+                        // Хозяин ралли; если владелец не записан (старый блок) - лидер отряда
+                        String rallyOwner = s.leader;
+                        if (s.rallyPos != null && level.isLoaded(s.rallyPos)
+                                && level.getBlockEntity(s.rallyPos) instanceof com.example.aas.block.RallyPointBlockEntity rallyBe
+                                && !rallyBe.getOwnerName().isEmpty()) {
+                            rallyOwner = rallyBe.getOwnerName();
+                        }
+                        // Себе очки не даём; анти-фарм: не чаще 1 раза в 30 сек на одного спавнящегося
+                        if (rallyOwner != null && !rallyOwner.isEmpty() && !rallyOwner.equals(player.getScoreboardName())
+                                && com.example.aas.events.StatsHandler.tryCooldown(
+                                        "rallyspawn:" + player.getUUID(), level.getGameTime(),
+                                        com.example.aas.events.ScoreValues.RALLY_SPAWN_COOLDOWN_TICKS)) {
+                            com.example.aas.events.StatsHandler.addScoreByName(player.server, rallyOwner, com.example.aas.events.ScoreType.RALLY_SPAWN);
+                        }
                     }
                 } else if (msg.type.startsWith("HUB")) {
                     String[] parts = msg.type.split(":");
@@ -183,8 +196,12 @@ public class PacketRespawnRequest {
                             BlockPos reqPos = new BlockPos(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
                             for (AASWorldData.HubInfo h : data.hubs) {
                                 if (h.pos.equals(reqPos)) {
-                                    if (!h.builderName.equals(player.getScoreboardName())) {
-                                        com.example.aas.events.StatsHandler.addStatsByName(player.server, h.builderName, 5, 0, "Player spawned on FOB");
+                                    // Анти-фарм: не чаще 1 раза в 30 сек на одного спавнящегося
+                                    if (!h.builderName.equals(player.getScoreboardName())
+                                            && com.example.aas.events.StatsHandler.tryCooldown(
+                                                    "hubspawn:" + player.getUUID(), level.getGameTime(),
+                                                    com.example.aas.events.ScoreValues.HUB_SPAWN_COOLDOWN_TICKS)) {
+                                        com.example.aas.events.StatsHandler.addScoreByName(player.server, h.builderName, com.example.aas.events.ScoreType.HUB_SPAWN);
                                     }
                                     break;
                                 }
@@ -212,7 +229,7 @@ public class PacketRespawnRequest {
     // ФИКС: теперь возвращает null если не нашла безопасное место,
     // вместо fallback на heightmap который мог быть в воздухе или под землёй
     private static BlockPos findRandomSafeSpawn(ServerLevel level, BlockPos center, int radius) {
-        java.util.Random rand = new java.util.Random();
+        Random rand = new Random();
 
         for (int i = 0; i < 100; i++) {
             int dx = rand.nextInt(radius * 2 + 1) - radius;

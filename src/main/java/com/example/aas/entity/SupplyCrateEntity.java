@@ -206,7 +206,7 @@ public class SupplyCrateEntity extends Entity {
                     if (vehicle.getPersistentData().contains("AAS_InitialLoadout")) {
                         net.minecraft.nbt.ListTag loadoutTag = vehicle.getPersistentData().getList("AAS_InitialLoadout", 10);
                         for (int i = 0; i < loadoutTag.size(); i++) {
-                            net.minecraft.nbt.CompoundTag itemTag = loadoutTag.getCompound(i);
+                            CompoundTag itemTag = loadoutTag.getCompound(i);
                             int slot = itemTag.getByte("Slot") & 255;
                             if (slot < vehInv.getSlots()) {
                                 insertItem(vehInv, slot, ItemStack.of(itemTag));
@@ -323,7 +323,7 @@ public class SupplyCrateEntity extends Entity {
 
                                     // --- НОВОЕ: Очки логистики ---
                                     if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-                                        com.example.aas.events.StatsHandler.addStats(sp, 15, 0, "FOB Resupplied");
+                                        com.example.aas.events.StatsHandler.addScore(sp, com.example.aas.events.ScoreType.HUB_RESUPPLY);
                                     }
                                 }
                             }

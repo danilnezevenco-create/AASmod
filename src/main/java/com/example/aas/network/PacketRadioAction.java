@@ -95,7 +95,7 @@ public class PacketRadioAction {
                     // Мелкая поправка: 10 * 60 * 20 это 10 минут, а не 8. Если нужно 8, ставь 8 * 60 * 20
                     playerSquad.nextRallyAvailableTick = currentGameTime + (5 * 60 * 20);
                     player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
-                    com.example.aas.events.StatsHandler.addStats(player, 0, 15, "Rally Placed");
+                    com.example.aas.events.StatsHandler.addScore(player, com.example.aas.events.ScoreType.RALLY_PLACED);
                 } else {
                     playerSquad.nextRallyAvailableTick = currentGameTime + (15 * 20);
                 }
@@ -160,7 +160,7 @@ public class PacketRadioAction {
 
             // 4. Установка блока и сохранение данных
             level.setBlock(targetPos, ModBlocks.HUB_BLOCK.get().defaultBlockState(), 3);
-            level.playSound(null, targetPos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
+            level.playSound(null, targetPos, ModSounds.BLUEPRINT_PLACE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
             BlockEntity be = level.getBlockEntity(targetPos);
             if (be instanceof HubBlockEntity hubEntity) {
                 hubEntity.setTeam(playerTeam);
@@ -169,7 +169,7 @@ public class PacketRadioAction {
 
             // --- ИЗМЕНЕНО: ИСПОЛЬЗУЕМ player.getScoreboardName() вместо pName ---
             data.hubs.add(new AASWorldData.HubInfo(targetPos, playerTeam, false, level.dimension().location().toString(), player.getScoreboardName()));
-            com.example.aas.events.StatsHandler.addStats(player, 20, 0, "FOB Placed");
+            com.example.aas.events.StatsHandler.addScore(player, com.example.aas.events.ScoreType.HUB_PLACED);
             // --------------------------------------------------------------------
 
             data.setDirty();
@@ -179,7 +179,7 @@ public class PacketRadioAction {
             String playerTeam = (player.getTeam() != null) ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
 
             level.setBlock(targetPos, ModBlocks.VEHICLE_STATION_BLOCK.get().defaultBlockState(), 3);
-            level.playSound(null, targetPos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
+            level.playSound(null, targetPos, ModSounds.BLUEPRINT_PLACE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 
             BlockEntity be = level.getBlockEntity(targetPos);
             if (be instanceof VehicleStationBlockEntity vs) {
@@ -205,7 +205,7 @@ public class PacketRadioAction {
     private static void placeBlueprint(ServerLevel level, BlockPos pos, ServerPlayer player, BlockState state, String name) {
         if (!level.getBlockState(pos).isAir() && !level.getBlockState(pos).canBeReplaced()) return;
         level.setBlock(pos, state, 3);
-        level.playSound(null, pos, com.example.aas.sound.ModSounds.BLUEPRINT_PLACE.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
+        level.playSound(null, pos, ModSounds.BLUEPRINT_PLACE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
         BlockEntity be = level.getBlockEntity(pos);
         String pTeam = (player.getTeam() != null) ? player.getTeam().getName() : "NEUTRAL";
 
@@ -274,6 +274,7 @@ public class PacketRadioAction {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof RallyPointBlockEntity rbe) {
                 rbe.setSquadId(squad.id);
+                rbe.setOwnerName(player.getScoreboardName()); // хозяин ралли - получает SP за спавны отряда
             }
 
             squad.rallyPos = pos;

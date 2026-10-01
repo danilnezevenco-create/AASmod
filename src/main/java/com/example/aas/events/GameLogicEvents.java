@@ -399,7 +399,8 @@ public class GameLogicEvents {
                         if (!pData.isGameStarted) {
                             // Р В РІР‚СњР В РЎвЂў Р РЋР С“Р РЋРІР‚С™Р В Р’В°Р РЋР вЂљР РЋРІР‚С™Р В Р’В° Р В РЎвЂР В РЎвЂ“Р РЋР вЂљР РЋРІР‚в„–: Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎВ K/D, Р В Р вЂ¦Р В РЎвЂў Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР В РЎВ Р В РЎвЂўР РЋРІР‚С™Р РЋР вЂљР РЋР РЏР В РўвЂР РЋРІР‚в„– (-1)
                             toSend.add(new PlayerStatInfo(
-                                    info.name, info.team, -1, false, false, info.kills, info.deaths, info.ping
+                                    info.name, info.team, -1, false, false, info.kills, info.deaths,
+                                    info.tp, info.sp, info.revives, info.vehKillsTotal, info.vehKillsByCategory, info.ping
                             ));
                         } else {
                             // Р В РІР‚в„ўР В РЎвЂў Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎВР РЋР РЏ Р В РЎвЂР В РЎвЂ“Р РЋР вЂљР РЋРІР‚в„–: Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР В РЎВ Р В РЎвЂўР РЋРІР‚С™Р РЋР вЂљР РЋР РЏР В РўвЂР РЋРІР‚в„– Р В РЎвЂ K/D (K/D Р В Р’В·Р В Р’В°Р В РЎВР В Р’ВµР В Р вЂ¦Р РЋР РЏР В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ¦Р В Р’В° -1 Р В Р вЂ  stripped)
@@ -826,7 +827,8 @@ public class GameLogicEvents {
                         if (passCount > 0) {
                             int driveTimer = p.getPersistentData().getInt("AAS_DriveStatsTimer") + 1;
                             if (driveTimer >= 60) { // Р В РЎСџР РЋР вЂљР В РЎвЂўР РЋРІвЂљВ¬Р В Р’В»Р В Р’В° 1 Р В РЎВР В РЎвЂР В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р В Р’В° Р В Р вЂ Р В РЎвЂўР В Р’В¶Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ
-                                StatsHandler.addStats(p, (int)passCount * 5, 0, "Transporting Team");
+                                int transportTp = (int) Math.min(ScoreValues.MAX_ACTION, passCount * ScoreValues.TRANSPORT_TP_PER_PASSENGER);
+                                StatsHandler.addScoreCustom(p, ScoreType.TRANSPORT, transportTp, 0);
                                 p.getPersistentData().putInt("AAS_DriveStatsTimer", 0);
                             } else {
                                 p.getPersistentData().putInt("AAS_DriveStatsTimer", driveTimer);
@@ -979,9 +981,14 @@ public class GameLogicEvents {
 
             int kills = p.getPersistentData().getInt("AAS_Stats_Kills");
             int deaths = p.getPersistentData().getInt("AAS_Stats_Deaths");
+            int tp = p.getPersistentData().getInt("AAS_Stats_TeamPoints");
+            int sp = p.getPersistentData().getInt("AAS_Stats_SquadPoints");
+            int revives = StatsHandler.getRevives(p);
+            int vehTotal = StatsHandler.getVehKillsTotal(p);
+            int[] vehByCat = StatsHandler.getVehKillsByCategory(p);
             int ping = p.latency;
 
-            list.add(new PlayerStatInfo(pName, pTeam, squadId, isLeader, isCMD, kills, deaths, ping));
+            list.add(new PlayerStatInfo(pName, pTeam, squadId, isLeader, isCMD, kills, deaths, tp, sp, revives, vehTotal, vehByCat, ping));
         }
         return list;
     }
@@ -1188,6 +1195,12 @@ public class GameLogicEvents {
                         }
                     }
                 }
+            }
+
+            // --- ОЧКИ ЗА ПРИСУТСТВИЕ НА АКТИВНОЙ ТОЧКЕ (каждые 30 сек, с анти-афк) ---
+            if (!playersInBox.isEmpty()) {
+                PointPresenceTracker.tick(level, point, playersInBox, dominantTeam, isContested, isBeingActivelyCaptured, isTimeLocked,
+                        canCapture(point, "BLUE", data), canCapture(point, "RED", data));
             }
 
             // Р В РІР‚СћР РЋР С“Р В Р’В»Р В РЎвЂ Р РЋРІР‚С™Р В РЎвЂўР РЋРІР‚РЋР В РЎвЂќР В Р’В° Р В Р вЂ¦Р В Р’Вµ Р В Р’В·Р В Р’В°Р В Р’В±Р В Р’В»Р В РЎвЂўР В РЎвЂќР В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В Р’В° Р В РЎвЂ”Р В РЎвЂў Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎВР В Р’ВµР В Р вЂ¦Р В РЎвЂ, Р В Р вЂ¦Р В Р’Вµ Р В РЎвЂўР РЋР С“Р В РЎвЂ”Р В Р’В°Р РЋР вЂљР В РЎвЂР В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ (Contested) Р В РЎвЂ Р В Р’В°Р В РЎвЂќР РЋРІР‚С™Р В РЎвЂР В Р вЂ Р В Р вЂ¦Р В РЎвЂў Р В Р вЂ¦Р В Р’Вµ Р В Р’В·Р В Р’В°Р РЋРІР‚В¦Р В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ
@@ -1594,7 +1607,7 @@ public class GameLogicEvents {
             // Р РЋРІР‚РЋР РЋРІР‚С™Р В РЎвЂўР В Р’В±Р РЋРІР‚в„– Р В Р вЂ¦Р В Р’Вµ Р В Р’В·Р В Р’В°Р РЋР С“Р РЋРІР‚РЋР В РЎвЂР РЋРІР‚С™Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р В РЎвЂўР В РўвЂР В РЎвЂР В Р вЂ¦ Р В РЎвЂќР В РЎвЂР В Р’В»Р В Р’В» Р В РўвЂР В Р вЂ Р В Р’В°Р В Р’В¶Р В РўвЂР РЋРІР‚в„–.
             if (!wasGivingUp && player.getLastHurtByMob() instanceof ServerPlayer killer && killer != player) {
                 if (killer.getTeam() != player.getTeam()) {
-                    StatsHandler.addStats(killer, 2, 0, "Enemy Killed");
+                    StatsHandler.addScore(killer, ScoreType.ENEMY_KILLED);
                     StatsHandler.addKill(killer);
                 }
             }
@@ -1653,10 +1666,8 @@ public class GameLogicEvents {
         CompoundTag oldData = oldPlayer.getPersistentData();
         CompoundTag newData = newPlayer.getPersistentData();
 
-        if (oldData.contains("AAS_Stats_TeamPoints")) newData.putInt("AAS_Stats_TeamPoints", oldData.getInt("AAS_Stats_TeamPoints"));
-        if (oldData.contains("AAS_Stats_SquadPoints")) newData.putInt("AAS_Stats_SquadPoints", oldData.getInt("AAS_Stats_SquadPoints"));
-        if (oldData.contains("AAS_Stats_Kills")) newData.putInt("AAS_Stats_Kills", oldData.getInt("AAS_Stats_Kills"));
-        if (oldData.contains("AAS_Stats_Deaths")) newData.putInt("AAS_Stats_Deaths", oldData.getInt("AAS_Stats_Deaths"));
+        // TP, SP, киллы, смерти и счётчики уничтоженной техники (общий и по категориям)
+        StatsHandler.copyStats(oldData, newData);
 
         if (oldData.contains("AAS_SquadID")) newData.putInt("AAS_SquadID", oldData.getInt("AAS_SquadID"));
         if (oldData.contains("AAS_IsSquadLeader")) newData.putBoolean("AAS_IsSquadLeader", oldData.getBoolean("AAS_IsSquadLeader"));
@@ -1756,18 +1767,8 @@ public class GameLogicEvents {
                     ticketsChanged = true;
                 }
 
-                // Начисление очков убийце
-                Entity lastAttacker = null;
-                if (entity instanceof LivingEntity living) {
-                    lastAttacker = living.getLastHurtByMob();
-                }
-
-                if (lastAttacker instanceof ServerPlayer sKiller) {
-                    String killerTeam = sKiller.getTeam() != null ? sKiller.getTeam().getName().toUpperCase() : "NEUTRAL";
-                    if (!vTeam.equalsIgnoreCase(killerTeam)) {
-                        StatsHandler.addStats(sKiller, penalty, 0, "Enemy Vehicle Destroyed");
-                    }
-                }
+                // Начисление очков убийце и ассистам (по отслеженному урону, см. VehicleDamageTracker)
+                VehicleDamageTracker.awardForDestroyedVehicle(entity, level, vTeam, penalty);
             }
             entity.getPersistentData().remove("AAS_TicketPenalty");
         }
@@ -1797,8 +1798,9 @@ public class GameLogicEvents {
 
                     List<ServerPlayer> cappers = level.getEntitiesOfClass(ServerPlayer.class, point.getBoundingBox());
                     for (ServerPlayer p : cappers) {
-                        if (p.isAlive() && !p.isSpectator() && p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(attackingTeam)) {
-                            StatsHandler.addStats(p, 50, 10, "Point Captured");
+                        if (p.isAlive() && !p.isSpectator() && p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(attackingTeam)
+                                && !p.getPersistentData().getBoolean("AAS_IsDowned")) {
+                            StatsHandler.addScore(p, ScoreType.POINT_CAPTURED);
                         }
                     }
 

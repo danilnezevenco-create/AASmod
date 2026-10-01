@@ -42,7 +42,7 @@ public class HubBlock extends BaseEntityBlock {
     public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
 
     public HubBlock() {
-        super(BlockBehaviour.Properties.of()
+        super(Properties.of()
                 .mapColor(MapColor.METAL)
                 .strength(3.0f, 9.0f)
                 .noOcclusion());
@@ -171,7 +171,7 @@ public class HubBlock extends BaseEntityBlock {
                 // 2. РќРћР’РћР•: Р•СЃР»Рё Р»РѕРјР°РµС‚ Р’Р РђР“ (РќР°С‡РёСЃР»РµРЅРёРµ РѕС‡РєРѕРІ)
                 else if (!hubTeam.equals("NEUTRAL")) {
                     // Р”Р°РµРј 30 РѕС‡РєРѕРІ РёРіСЂРѕРєСѓ РІ Team Points Р·Р° СѓРЅРёС‡С‚РѕР¶РµРЅРёРµ РІСЂР°Р¶РµСЃРєРѕРіРѕ РҐРђР‘Р°
-                    com.example.aas.events.StatsHandler.addStats((net.minecraft.server.level.ServerPlayer) player, 30, 0, "Enemy HUB Destroyed");
+                    com.example.aas.events.StatsHandler.addScore((net.minecraft.server.level.ServerPlayer) player, com.example.aas.events.ScoreType.HUB_DESTROYED);
                 }
             }
         }

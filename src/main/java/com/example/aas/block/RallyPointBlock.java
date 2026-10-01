@@ -41,7 +41,7 @@ public class RallyPointBlock extends BaseEntityBlock {
     public static final VoxelShape SHAPE = Shapes.block();
 
     public RallyPointBlock() {
-        super(BlockBehaviour.Properties.of()
+        super(Properties.of()
                 .strength(1.0f)
                 .noOcclusion()
         );
@@ -111,12 +111,12 @@ public class RallyPointBlock extends BaseEntityBlock {
 
                     data.setDirty();
                     PacketHandler.sendToAllClients(serverLevel, data);
-                    PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.DIMENSION.with(level::dimension), new com.example.aas.network.PacketSyncSquads(data.squads));
+                    PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
                 }
                 // 2. РќРћР’РћР•: Р•СЃР»Рё Р»РѕРјР°РµС‚ Р’Р РђР“ (РќР°С‡РёСЃР»РµРЅРёРµ РѕС‡РєРѕРІ)
                 else if (!rallyTeam.equals("NEUTRAL")) {
                     // Р”Р°РµРј 20 РѕС‡РєРѕРІ Р·Р° СѓРЅРёС‡С‚РѕР¶РµРЅРёРµ РІСЂР°Р¶РµСЃРєРѕРіРѕ СЂР°Р»Р»Рё-РїРѕРёРЅС‚Р°
-                    com.example.aas.events.StatsHandler.addStats((net.minecraft.server.level.ServerPlayer) player, 20, 0, "Enemy Rally Destroyed");
+                    com.example.aas.events.StatsHandler.addScore((net.minecraft.server.level.ServerPlayer) player, com.example.aas.events.ScoreType.RALLY_DESTROYED);
                 }
             }
         }

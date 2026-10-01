@@ -15,7 +15,7 @@ reducedDebugInfo:false
 showSubtitles:false
 directionalAudio:false
 touchscreen:false
-fullscreen:false
+fullscreen:true
 bobView:true
 toggleCrouch:false
 toggleSprint:false
@@ -34,7 +34,7 @@ gamma:1.0
 renderDistance:16
 simulationDistance:5
 entityDistanceScaling:5.0
-guiScale:2
+guiScale:3
 particles:0
 maxFps:120
 graphicsMode:1
