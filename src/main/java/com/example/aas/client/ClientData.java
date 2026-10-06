@@ -208,5 +208,7 @@ public class ClientData {
         vehicleListReceivedAtMs = System.currentTimeMillis();
         vehicleList = msg;
     }
+    public static boolean serverShowKitRanks = false;
+    public static Map<String, Integer> playerKitRanks = new HashMap<>();
 }
 

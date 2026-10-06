@@ -281,7 +281,9 @@ public class SquadPanelOverlay {
         if (isDead) {
             gui.blit(ICON_DEAD, statusX, iconY, 8, 8, 0f, 0f, 10, 10, 10, 10);
         } else if (isDowned) {
+            RenderSystem.setShaderColor(0.831f, 0.204f, 0.208f, panelAlpha); // #D43435
             gui.blit(ICON_HEARTBEAT, statusX, iconY, 8, 8, 0f, 0f, 36, 36, 36, 36);
+            setAlpha(panelAlpha); // вернуть прежний цвет панели
         }
 
         // микрофон — виден ТОЛЬКО когда игрок реально говорит, иначе не рисуется вовсе.

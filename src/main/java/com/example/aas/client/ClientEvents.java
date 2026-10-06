@@ -88,6 +88,7 @@ public class ClientEvents {
     private static final ResourceLocation MARKER_ATTACK_CHARLIE = new ResourceLocation("aas", "textures/gui/map_icons/marker_attack_charlie.png");
     private static final ResourceLocation MARKER_DEFEND_CHARLIE = new ResourceLocation("aas", "textures/gui/map_icons/marker_defend_charlie.png");
     private static final ResourceLocation MARKER_BUILD_CHARLIE  = new ResourceLocation("aas", "textures/gui/map_icons/marker_build_charlie.png");
+    private static final ResourceLocation REVIVE_MARKER_ICON = new ResourceLocation("aas", "textures/gui/heartbeat.png");
     private static int reviveTargetId = -1;        // кому в последний раз послали START
     private static int reviveResendCooldown = 0;   // тики до повторного START, если сервер не подтвердил
     private static final int REVIVE_RESEND_TICKS = 10;
@@ -202,7 +203,9 @@ public class ClientEvents {
         handleReviveHold(mc);
 
         // РћР±РЅРѕРІР»СЏРµРј С†РµР»СЊ РґР»СЏ РІРёР·СѓР°Р»СЊРЅРѕР№ РїРѕРґСЃРєР°Р·РєРё "Р·Р°Р¶РјРёС‚Рµ F" (РЅР°РІРѕРґРєР° + РЅСѓР¶РЅС‹Р№ РїСЂРµРґРјРµС‚ РІ СЂСѓРєРµ)
-        currentRevivePromptTarget = findRevivePromptTarget(mc);
+        Entity lockedTarget = (revivingHeld && ClientData.reviveProgressOther >= 0f)
+                ? mc.level.getEntity(reviveTargetId) : null;
+        currentRevivePromptTarget = lockedTarget != null ? lockedTarget : findRevivePromptTarget(mc);
         // ==== Подсказки для новичков ====
         if (hintCheckDelay > 0) {
             hintCheckDelay--;
@@ -358,7 +361,7 @@ public class ClientEvents {
             boolean aimingInVehicle = (vehicle instanceof AGS30Entity ags && ags.isAiming()) ||
                     (vehicle instanceof M2BrowningEntity m2 && m2.isAiming());
 
-            if (usingBinoculars || aimingInVehicle) {
+            if (usingBinoculars || aimingInVehicle || ClientData.reviveProgressOther >= 0f) {
                 event.setCanceled(true);
             }
         }
@@ -456,25 +459,61 @@ public class ClientEvents {
         // Р РµРЅРґРµСЂРёРј С‡РµСЂРµР· Tesselator РЅР°РїСЂСЏРјСѓСЋ вЂ” disableDepthTest СЂР°Р±РѕС‚Р°РµС‚ Р·РґРµСЃСЊ
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        RenderSystem.disableDepthTest();  // С‚РµРїРµСЂСЊ СЂРµР°Р»СЊРЅРѕ СЂР°Р±РѕС‚Р°РµС‚
-        RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
+        RenderSystem.disableDepthTest();
+
+        // --- Идёт подъём: вместо буквы F рисуем иконку с кольцом ---
+        float revProgress = ClientData.reviveProgressOther;
+        if (revProgress >= 0f) {
+            com.example.aas.client.gui.ReviveIconRenderer.draw(
+                    matrix, REVIVE_MARKER_ICON, 0f, 0f, 20f, 12.5f, 15.5f, revProgress);
+            RenderSystem.enableDepthTest();
+            poseStack.popPose();
+            return;
+        }
+
+        // --- Обычная подсказка: чёрная заливка + белая обводка + буква + текст ---
+        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder buf = tesselator.getBuilder();
-        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
-        int a = (int)(alpha * 255);
-        buf.vertex(matrix, -8, -8, 0).uv(0, 0).color(255, 255, 255, a).endVertex();
-        buf.vertex(matrix, -8,  8, 0).uv(0, 1).color(255, 255, 255, a).endVertex();
-        buf.vertex(matrix,  8,  8, 0).uv(1, 1).color(255, 255, 255, a).endVertex();
-        buf.vertex(matrix,  8, -8, 0).uv(1, 0).color(255, 255, 255, a).endVertex();
+        float half = 13f;
+        float t = 2.5f; // толщина обводки
 
+        // 1. Чёрный полупрозрачный фон
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        quad(buf, matrix, -half, -half, half, half, 0, 0, 0, 140);
         tesselator.end();
 
-        RenderSystem.enableDepthTest();
+        // 2. Белая обводка поверх фона
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        quad(buf, matrix, -half, -half, half, -half + t, 255, 255, 255, 255);   // верх
+        quad(buf, matrix, -half, half - t, half, half, 255, 255, 255, 255);     // низ
+        quad(buf, matrix, -half, -half, -half + t, half, 255, 255, 255, 255);   // лево
+        quad(buf, matrix, half - t, -half, half, half, 255, 255, 255, 255);     // право
+        tesselator.end();
+
         RenderSystem.setShaderColor(1, 1, 1, 1);
 
+        // 3. Буква и подпись (видны сквозь стены)
+        Font font = mc.font;
+        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+
+        String letter = getReviveKeyLabel();
+        float lw = font.width(letter);
+        font.drawInBatch(letter, -lw / 2f, -4f, 0xFFFFFFFF, false,
+                matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+
+        poseStack.pushPose();
+        poseStack.translate(half + 6f, -4f, 0f);
+        Matrix4f textMatrix = poseStack.last().pose();
+        font.drawInBatch(I18n.get("aas.hud.revive_prompt"), 0, 0, 0xFFFFFFFF, false,
+                textMatrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+        poseStack.popPose();
+
+        buffer.endBatch();
+
+        RenderSystem.enableDepthTest();
         poseStack.popPose();
     }
 
@@ -915,46 +954,48 @@ public class ClientEvents {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
+
+        // --- Идёт подъём: вместо буквы F рисуем иконку с кольцом ---
+        float revProgress = ClientData.reviveProgressOther;
+        if (revProgress >= 0f) {
+            com.example.aas.client.gui.ReviveIconRenderer.draw(
+                    matrix, REVIVE_MARKER_ICON, 0f, 0f, 20f, 12.5f, 15.5f, revProgress);
+            RenderSystem.enableDepthTest();
+            poseStack.popPose();
+            return;
+        }
+
+        // --- Обычная подсказка: рамка без заливки + буква + текст ---
         RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder buf = tesselator.getBuilder();
 
         float half = 13f;
+        float t = 2.2f; // толщина обводки
 
-        // 1. Р§С‘СЂРЅС‹Р№ РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅС‹Р№ С„РѕРЅ-РєРІР°РґСЂР°С‚
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        quad(buf, matrix, -half, -half, half, half, 0, 0, 0, 140);
-        tesselator.end();
-
-        // 2. Р‘РµР»Р°СЏ РѕР±РІРѕРґРєР° (4 С‚РѕРЅРєРёС… РїРѕР»РѕСЃРєРё РїРѕ РїРµСЂРёРјРµС‚СЂСѓ)
-        float t = 1.2f;
-        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        quad(buf, matrix, -half, -half, half, -half + t, 255, 255, 255, 230);      // РІРµСЂС…
-        quad(buf, matrix, -half, half - t, half, half, 255, 255, 255, 230);        // РЅРёР·
-        quad(buf, matrix, -half, -half, -half + t, half, 255, 255, 255, 230);      // Р»РµРІР°СЏ
-        quad(buf, matrix, half - t, -half, half, half, 255, 255, 255, 230);        // РїСЂР°РІР°СЏ
+        quad(buf, matrix, -half, -half, half, -half + t, 255, 255, 255, 255);   // верх
+        quad(buf, matrix, -half, half - t, half, half, 255, 255, 255, 255);     // низ
+        quad(buf, matrix, -half, -half, -half + t, half, 255, 255, 255, 255);   // лево
+        quad(buf, matrix, half - t, -half, half, half, 255, 255, 255, 255);     // право
         tesselator.end();
 
         RenderSystem.setShaderColor(1, 1, 1, 1);
 
-        // 3. Р‘СѓРєРІР° РІ С†РµРЅС‚СЂРµ РєРІР°РґСЂР°С‚Р° вЂ” Р”РРќРђРњРР§Р•РЎРљРђРЇ: Р±РµСЂС‘С‚СЃСЏ РёР· С‚РµРєСѓС‰РµРіРѕ Р±РёРЅРґР° REVIVE_KEY,
-        // РЅРѕ РІСЃРµРіРґР° РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ Р°РЅРіР»РёР№СЃРєРёРј СЃРёРјРІРѕР»РѕРј (РЅРµ Р·Р°РІРёСЃРёС‚ РѕС‚ СЏР·С‹РєР° РёРіСЂС‹/СЂР°СЃРєР»Р°РґРєРё)
         Font font = mc.font;
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
 
         String letter = getReviveKeyLabel();
         float lw = font.width(letter);
-        // было: font.drawInBatch(letter, -lw / 2f, -4f, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, 15728880);
         font.drawInBatch(letter, -lw / 2f, -4f, 0xFFFFFFFF, false,
-                matrix, buffer, Font.DisplayMode.NORMAL, 0, 15728880); // оставляем как есть — это уже чистый белый
+                matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
 
-// подпись рядом — убираем теневую подложку 0x55000000, чтобы не давала серый оттенок
         poseStack.pushPose();
         poseStack.translate(half + 6f, -4f, 0f);
         Matrix4f textMatrix = poseStack.last().pose();
         font.drawInBatch(I18n.get("aas.hud.revive_prompt"), 0, 0, 0xFFFFFFFF, false,
-                textMatrix, buffer, Font.DisplayMode.NORMAL, 0, 15728880); // false вместо true, 0 вместо 0x55000000
+                textMatrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
         poseStack.popPose();
 
         buffer.endBatch();

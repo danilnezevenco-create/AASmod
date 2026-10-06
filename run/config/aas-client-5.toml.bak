@@ -1,6 +1,0 @@
-
-["Client Visuals"]
-	#Scale of the HUD compass (1 = Small, 2 = Normal, 3 = Large)
-	#Range: 1 ~ 3
-	compassScale = 2
-

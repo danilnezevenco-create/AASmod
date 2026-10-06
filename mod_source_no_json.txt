@@ -10933,6 +10933,7 @@ import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.world.AASWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
+import com.example.aas.client.KitRankIcons;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -11875,6 +11876,12 @@ public class SquadSelectionScreen extends Screen {
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
                         xOffset += 12;
+
+                        int rankLvl = KitRankIcons.levelOf(member);
+                        if (rankLvl > 0) {
+                            KitRankIcons.draw(gui, rankLvl, xOffset, currentY);
+                            xOffset += KitRankIcons.ROW_ADVANCE;
+                        }
                     }
 
                     gui.drawString(this.font, member, xOffset, currentY + 1, col, false);
@@ -12045,7 +12052,10 @@ public class SquadSelectionScreen extends Screen {
         int start = isSelf ? 44 : 30;
         int end = start;
         String kName = ClientData.playerKits.getOrDefault(member, "Unassigned");
-        if (!kName.equals("Unassigned") && !kName.isEmpty()) end += 12; // Р С‘Р С”Р С•Р Р…Р С”Р В° Р С”Р С‘РЎвЂљР В°
+        if (!kName.equals("Unassigned") && !kName.isEmpty()) {
+            end += 12; // РёРєРѕРЅРєР° РєРёС‚Р°
+            if (KitRankIcons.levelOf(member) > 0) end += KitRankIcons.ROW_ADVANCE; // РёРєРѕРЅРєР° СЂР°РЅРіР°
+        }
         end += this.font.width(member);
         return mouseX >= start && mouseX <= end;
     }
@@ -17011,6 +17021,12 @@ public class AASDeathScreen extends DeathScreen {
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
                         xOffset += 12;
+
+                        int rankLvl = KitRankIcons.levelOf(member);
+                        if (rankLvl > 0) {
+                            KitRankIcons.draw(gui, rankLvl, xOffset, currentY);
+                            xOffset += KitRankIcons.ROW_ADVANCE;
+                        }
                     }
 
                     gui.drawString(this.font, member, xOffset, currentY + 1, col, false);
@@ -17572,7 +17588,10 @@ public class AASDeathScreen extends DeathScreen {
         int start = isSelf ? 44 : 30;
         int end = start;
         String kName = ClientData.playerKits.getOrDefault(member, "Unassigned");
-        if (!kName.equals("Unassigned") && !kName.isEmpty()) end += 12;
+        if (!kName.equals("Unassigned") && !kName.isEmpty()) {
+            end += 12; // РёРєРѕРЅРєР° РєРёС‚Р°
+            if (KitRankIcons.levelOf(member) > 0) end += KitRankIcons.ROW_ADVANCE; // РёРєРѕРЅРєР° СЂР°РЅРіР°
+        }
         end += this.font.width(member);
         return mouseX >= start && mouseX <= end;
     }
@@ -19628,6 +19647,8 @@ public class ClientData {
         vehicleListReceivedAtMs = System.currentTimeMillis();
         vehicleList = msg;
     }
+    public static boolean serverShowKitRanks = false;
+    public static Map<String, Integer> playerKitRanks = new HashMap<>();
 }
 
 
@@ -21862,6 +21883,59 @@ public class KitKeyUtil {
     }
 }
 ==========================================
+FILE: KitRankIcons.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\KitRankIcons.java
+==========================================
+package com.example.aas.client;
+
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
+
+/**
+ * РљР»РёРµРЅС‚СЃРєРёР№ РїРѕРјРѕС‰РЅРёРє РґР»СЏ РёРєРѕРЅРѕРє СЂР°РЅРіРѕРІ РєРёС‚РѕРІ (1..20).
+ * РўРµРєСЃС‚СѓСЂС‹: assets/aas/textures/gui/ranks/rank_1.png ... rank_20.png
+ */
+public final class KitRankIcons {
+
+    public static final int MAX_LEVEL = 20;
+
+    /** Р Р°Р·РјРµСЂ СЃР°РјРѕР№ С‚РµРєСЃС‚СѓСЂС‹ РІ РїРёРєСЃРµР»СЏС… (РєР°Рє Сѓ РёРєРѕРЅРѕРє РєРёС‚РѕРІ вЂ” 10x10). Р•СЃР»Рё РЅР°СЂРёСЃРѕРІР°РЅС‹ РґСЂСѓРіРѕРіРѕ СЂР°Р·РјРµСЂР°, РїРѕРјРµРЅСЏР№ С‚СѓС‚. */
+    public static final int TEX_SIZE = 10;
+
+    /** РЎРєРѕР»СЊРєРѕ РјРµСЃС‚Р° Р·Р°РЅРёРјР°РµС‚ РёРєРѕРЅРєР° СЂР°РЅРіР° РІ СЃС‚СЂРѕРєРµ (10 px РёРєРѕРЅРєР° + 2 px РѕС‚СЃС‚СѓРї, РєР°Рє Сѓ РёРєРѕРЅРєРё РєРёС‚Р°). */
+    public static final int ROW_ADVANCE = 12;
+
+    private static final ResourceLocation[] ICONS = new ResourceLocation[MAX_LEVEL + 1];
+
+    static {
+        for (int i = 1; i <= MAX_LEVEL; i++) {
+            ICONS[i] = new ResourceLocation("aas", "textures/gui/ranks/rank_" + i + ".png");
+        }
+    }
+
+    /** РЈСЂРѕРІРµРЅСЊ РґР»СЏ РїРѕРєР°Р·Р°. 0 = РЅРёС‡РµРіРѕ РЅРµ СЂРёСЃРѕРІР°С‚СЊ (РєРѕРЅС„РёРі РІС‹РєР»СЋС‡РµРЅ / РЅРµС‚ РґР°РЅРЅС‹С…). */
+    public static int levelOf(String playerName) {
+        if (!ClientData.serverShowKitRanks) return 0;
+        Integer lvl = ClientData.playerKitRanks.get(playerName);
+        if (lvl == null) return 0;
+        return Math.max(0, Math.min(MAX_LEVEL, lvl));
+    }
+
+    /** Р РёСЃСѓРµС‚ РёРєРѕРЅРєСѓ 10x10. */
+    public static void draw(GuiGraphics gui, int level, int x, int y) {
+        draw(gui, level, x, y, 10);
+    }
+
+    /** Р РёСЃСѓРµС‚ РёРєРѕРЅРєСѓ СЃ Р·Р°РґР°РЅРЅС‹Рј СЂР°Р·РјРµСЂРѕРј РЅР° СЌРєСЂР°РЅРµ (РЅР°РїСЂРёРјРµСЂ 9, РєР°Рє Сѓ РёРєРѕРЅРєРё РєРёС‚Р° РІ SquadPanelOverlay). */
+    public static void draw(GuiGraphics gui, int level, int x, int y, int size) {
+        if (level < 1 || level > MAX_LEVEL) return;
+        gui.blit(ICONS[level], x, y, size, size, 0f, 0f, TEX_SIZE, TEX_SIZE, TEX_SIZE, TEX_SIZE);
+    }
+
+    private KitRankIcons() {
+    }
+}
+==========================================
 FILE: MapPlayerInfo.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\client\MapPlayerInfo.java
 ==========================================
@@ -22067,11 +22141,9 @@ public class TeamKillOverlay {
     private static final List<Entry> ENTRIES = new CopyOnWriteArrayList<>();
 
     /** Р’С‹Р·С‹РІР°РµС‚СЃСЏ РёР· PacketTeamKillNotification РЅР° РєР»РёРµРЅС‚Рµ. */
-    public static void push(String otherName, boolean youAreKiller) {
-        Component text = youAreKiller
-                ? Component.translatable("aas.hud.teamkill.killer", otherName)
-                : Component.translatable("aas.hud.teamkill.victim", otherName);
-        ENTRIES.add(new Entry(text));
+    public static void push(String otherName, boolean youAreKiller, boolean knocked) {
+        String key = "aas.hud.teamkill." + (knocked ? "knock." : "") + (youAreKiller ? "killer" : "victim");
+        ENTRIES.add(new Entry(Component.translatable(key, otherName)));
         while (ENTRIES.size() > MAX_VISIBLE) {
             ENTRIES.remove(0);
         }
@@ -23287,7 +23359,7 @@ public class AASConfig {
     public static final ForgeConfigSpec.IntValue RALLY_BLOCK_ENEMY_COUNT;
     public static final ForgeConfigSpec.IntValue SUPPLY_TRUCK_CRATES;
     public static final ForgeConfigSpec.IntValue SUPPLY_CRATE_MATERIALS;
-
+    public static final ForgeConfigSpec.BooleanValue SHOW_KIT_RANKS;
 
     // Р ВР СР ВµР Р…Р В° Р С”Р С•Р СР В°Р Р…Р Т‘
     public static final ForgeConfigSpec.ConfigValue<String> BLUE_TEAM_CUSTOM_NAME;
@@ -23356,6 +23428,8 @@ public class AASConfig {
                 .define("requireSpecialistToDrive", false);
         AUTO_BALANCE_TEAMS = BUILDER.comment("Force auto-balance. Player cannot join a team if it has more players than the other.")
                 .define("autoBalanceTeams", false);
+        SHOW_KIT_RANKS = BUILDER.comment("Show kit ranks (level icon) between the kit icon and the player name")
+                .define("showKitRanks", false);
         INVASION_PREP_TIME_MINUTES = BUILDER.comment("Preparation time for defenders in Invasion mode (minutes)")
                 .defineInRange("invasionPrepTimeMinutes", 5, 1, 30);
         ONE_AMMO_BAG_PER_PLAYER = BUILDER.comment("Prevent players from carrying more than 1 Ammo Bag at a time.")
@@ -28073,6 +28147,325 @@ public class InteractionEvents {
     }
 }
 ==========================================
+FILE: KitRankManager.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\KitRankManager.java
+==========================================
+package com.example.aas.events;
+
+import com.example.aas.config.AASConfig;
+import com.example.aas.network.PacketHandler;
+import com.example.aas.network.PacketSyncKitRanks;
+import com.example.aas.world.AASWorldData;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
+import com.mojang.logging.LogUtils;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
+import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.UUID;
+
+/**
+ * Р Р°РЅРіРё РєРёС‚РѕРІ.
+ *
+ * - Р’СЂРµРјСЏ РёРіСЂС‹ РЅР° РєРёС‚Рµ (AAS_CurrentKit, РќР• AAS_PendingKit) РєРѕРїРёС‚СЃСЏ РІ СЃРµРєСѓРЅРґР°С…; 600 СЃРµРє (10 РјРёРЅ) = 1 РѕС‡РєРѕ.
+ * - Р”Р°РЅРЅС‹Рµ РїСЂРёРІСЏР·Р°РЅС‹ Рє РќРРљРЈ РёРіСЂРѕРєР° Рё С…СЂР°РЅСЏС‚СЃСЏ РІ aas_kit_ranks.json РІ РєРѕСЂРЅРµ РёРіСЂС‹/СЃРµСЂРІРµСЂР°
+ *   (СЂСЏРґРѕРј СЃ РїР°РїРєР°РјРё mods, config Рё С‚.Рґ.).
+ * - РҐСЂР°РЅРёС‚СЃСЏ РЅРµ С‚РѕР»СЊРєРѕ РѕС‡РєРё, РЅРѕ Рё РѕСЃС‚Р°С‚РѕРє СЃРµРєСѓРЅРґ РґРѕ СЃР»РµРґСѓСЋС‰РµРіРѕ РѕС‡РєР°, С‡С‚РѕР±С‹ РІСЂРµРјСЏ РЅРµ СЃРіРѕСЂР°Р»Рѕ.
+ * - РќР°РєРѕРїР»РµРЅРёРµ РёРґС‘С‚ РІСЃРµРіРґР°; РєРѕРЅС„РёРі showKitRanks СѓРїСЂР°РІР»СЏРµС‚ С‚РѕР»СЊРєРѕ РїРѕРєР°Р·РѕРј РЅР° РєР»РёРµРЅС‚Рµ.
+ *
+ * Р¤РѕСЂРјР°С‚ С„Р°Р№Р»Р°:
+ * {
+ *   "Nick": {
+ *     "Medic": { "level": 3, "points": 7, "seconds": 120 }
+ *   }
+ * }
+ */
+@Mod.EventBusSubscriber(modid = "aas")
+public final class KitRankManager {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
+
+    public static final int MAX_LEVEL = 20;
+    /** 10 РјРёРЅСѓС‚ РёРіСЂС‹ = 1 РѕС‡РєРѕ. */
+    public static final int SECONDS_PER_POINT = 10 * 60;
+
+    private static final String FILE_NAME = "aas_kit_ranks.json";
+    private static final int AUTOSAVE_TICKS = 20 * 60; // СЂР°Р· РІ РјРёРЅСѓС‚Сѓ, РµСЃР»Рё РµСЃС‚СЊ РёР·РјРµРЅРµРЅРёСЏ
+
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+
+    public static final class Entry {
+        public int level = 1;
+        public int points = 0;
+        public int seconds = 0;
+    }
+
+    // РЅРёРє (Р±РµР· СѓС‡С‘С‚Р° СЂРµРіРёСЃС‚СЂР°) -> РЅР°Р·РІР°РЅРёРµ РєРёС‚Р° -> РїСЂРѕРіСЂРµСЃСЃ
+    private static final Map<String, Map<String, Entry>> DATA = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    // РїРѕСЃР»РµРґРЅРёР№ РёР·РІРµСЃС‚РЅС‹Р№ РєРёС‚ РёРіСЂРѕРєР° (РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїСЂРё СЃРјРµРЅРµ РєРёС‚Р°)
+    private static final Map<UUID, String> LAST_KIT = new HashMap<>();
+
+    private static boolean dirty = false;
+    private static long tickCounter = 0;
+
+    // С‡С‚Рѕ РїРѕСЃР»РµРґРЅРёР№ СЂР°Р· РѕС‚РїСЂР°РІРёР»Рё РєР»РёРµРЅС‚Р°Рј
+    private static Boolean lastSentShow = null;
+    private static Map<String, Integer> lastSentRanks = null;
+
+    // ================== РџР РђР’РР›Рђ РЈР РћР’РќР•Р™ ==================
+
+    /** РЎРєРѕР»СЊРєРѕ РѕС‡РєРѕРІ РЅСѓР¶РЅРѕ, С‡С‚РѕР±С‹ СЃ СѓСЂРѕРІРЅСЏ {@code level} РїРµСЂРµР№С‚Рё РЅР° {@code level + 1}. */
+    public static int costToNext(int level) {
+        if (level <= 4) return 3;
+        if (level <= 10) return 6;
+        if (level <= 12) return 8;
+        if (level <= 16) return 10;
+        return 12; // 17-20
+    }
+
+    /** РЈСЂРѕРІРµРЅСЊ (1..20) РїРѕ СЃСѓРјРјР°СЂРЅРѕРјСѓ РєРѕР»РёС‡РµСЃС‚РІСѓ РѕС‡РєРѕРІ. Р’СЃРµ СЃС‚Р°СЂС‚СѓСЋС‚ СЃ 1 СѓСЂРѕРІРЅСЏ. */
+    public static int levelForPoints(int points) {
+        int level = 1;
+        int rem = Math.max(0, points);
+        while (level < MAX_LEVEL) {
+            int cost = costToNext(level);
+            if (rem < cost) break;
+            rem -= cost;
+            level++;
+        }
+        return level;
+    }
+
+    // ================== РџРЈР‘Р›РР§РќР«Р™ API ==================
+
+    /** РЈСЂРѕРІРµРЅСЊ РёРіСЂРѕРєР° РЅР° РєРёС‚Рµ. Р•СЃР»Рё Р·Р°РїРёСЃРё РµС‰С‘ РЅРµС‚ вЂ” 1. */
+    public static int getLevel(String nick, String kit) {
+        Entry e = getEntry(nick, kit);
+        return e == null ? 1 : e.level;
+    }
+
+    public static Entry getEntry(String nick, String kit) {
+        Map<String, Entry> kits = DATA.get(nick);
+        return kits == null ? null : kits.get(kit);
+    }
+
+    /** Р—Р°РґРµР» РЅР° Р±СѓРґСѓС‰РµРµ: РЅР°С‡РёСЃР»РёС‚СЊ РѕС‡РєРё РєРёС‚Сѓ РЅР°РїСЂСЏРјСѓСЋ (РЅРµ РІСЂРµРјРµРЅРµРј). */
+    public static void addPoints(String nick, String kit, int points) {
+        if (points <= 0 || !isRankedKit(kit)) return;
+        Entry e = entry(nick, kit);
+        e.points += points;
+        e.level = levelForPoints(e.points);
+        dirty = true;
+    }
+
+    private static boolean isRankedKit(String kit) {
+        return kit != null && !kit.isEmpty() && !kit.equalsIgnoreCase("Unassigned");
+    }
+
+    private static Entry entry(String nick, String kit) {
+        return DATA.computeIfAbsent(nick, k -> new TreeMap<>()).computeIfAbsent(kit, k -> new Entry());
+    }
+
+    // ================== Р–РР—РќР•РќРќР«Р™ Р¦РРљР› ==================
+
+    @SubscribeEvent
+    public static void onServerStarting(ServerStartingEvent event) {
+        load();
+        LAST_KIT.clear();
+        lastSentShow = null;
+        lastSentRanks = null;
+        tickCounter = 0;
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        save();
+    }
+
+    @SubscribeEvent
+    public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+        boolean show = AASConfig.SHOW_KIT_RANKS.get();
+        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                new PacketSyncKitRanks(show, show ? buildRanks(server) : new HashMap<>()));
+    }
+
+    @SubscribeEvent
+    public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        LAST_KIT.remove(player.getUUID());
+        if (dirty) save();
+    }
+
+    // ================== РўРРљ ==================
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+
+        tickCounter++;
+        if (tickCounter % 20 != 0) return; // СЂР°Р· РІ СЃРµРєСѓРЅРґСѓ
+
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+
+        AASWorldData data = AASWorldData.get(server.overworld());
+        boolean flushNeeded = false;
+
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            // РўРѕР»СЊРєРѕ СЂРµР°Р»СЊРЅРѕ РІС‹РґР°РЅРЅС‹Р№ РєРёС‚. AAS_PendingKit (Р±СЂРѕРЅСЊ) РЅРµ СѓС‡РёС‚С‹РІР°РµС‚СЃСЏ.
+            String kit = p.getPersistentData().getString("AAS_CurrentKit");
+
+            String prev = LAST_KIT.put(p.getUUID(), kit);
+            if (prev != null && !prev.equals(kit)) flushNeeded = true;
+
+            if (!isRankedKit(kit)) continue;
+            if (!data.isGameStarted) continue;
+            if (!p.isAlive() || p.isSpectator()) continue;
+
+            addSecond(p.getGameProfile().getName(), kit);
+        }
+
+        syncToClientsIfChanged(server);
+
+        if (flushNeeded || (tickCounter % AUTOSAVE_TICKS == 0)) {
+            if (dirty) save();
+        }
+    }
+
+    private static void addSecond(String nick, String kit) {
+        Entry e = entry(nick, kit);
+        e.seconds++;
+        if (e.seconds >= SECONDS_PER_POINT) {
+            e.seconds -= SECONDS_PER_POINT;
+            e.points++;
+            e.level = levelForPoints(e.points);
+        }
+        dirty = true;
+    }
+
+    // ================== РЎРРќРҐР РћРќРР—РђР¦РРЇ РЎ РљР›РР•РќРўРђРњР ==================
+
+    /** РЅРёРє -> СѓСЂРѕРІРµРЅСЊ РЅР° С‚РµРєСѓС‰РµРј РєРёС‚Рµ, С‚РѕР»СЊРєРѕ РґР»СЏ РёРіСЂРѕРєРѕРІ РѕРЅР»Р°Р№РЅ СЃ РЅР°Р·РЅР°С‡РµРЅРЅС‹Рј РєРёС‚РѕРј. */
+    private static Map<String, Integer> buildRanks(MinecraftServer server) {
+        Map<String, Integer> ranks = new HashMap<>();
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            String kit = p.getPersistentData().getString("AAS_CurrentKit");
+            if (!isRankedKit(kit)) continue;
+            String nick = p.getGameProfile().getName();
+            ranks.put(nick, getLevel(nick, kit));
+        }
+        return ranks;
+    }
+
+    private static void syncToClientsIfChanged(MinecraftServer server) {
+        boolean show = AASConfig.SHOW_KIT_RANKS.get();
+        Map<String, Integer> ranks = show ? buildRanks(server) : new HashMap<>();
+
+        if (lastSentShow != null && lastSentShow == show && ranks.equals(lastSentRanks)) return;
+
+        lastSentShow = show;
+        lastSentRanks = ranks;
+        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncKitRanks(show, ranks));
+    }
+
+    // ================== Р¤РђР™Р› ==================
+
+    private static Path file() {
+        return FMLPaths.GAMEDIR.get().resolve(FILE_NAME);
+    }
+
+    private static void load() {
+        DATA.clear();
+        dirty = false;
+
+        Path file = file();
+        if (!Files.exists(file)) return;
+
+        try (Reader r = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            Type type = new TypeToken<Map<String, Map<String, Entry>>>() {}.getType();
+            Map<String, Map<String, Entry>> loaded = GSON.fromJson(r, type);
+            if (loaded == null) return;
+
+            for (Map.Entry<String, Map<String, Entry>> nickEntry : loaded.entrySet()) {
+                if (nickEntry.getValue() == null) continue;
+                Map<String, Entry> kits = new TreeMap<>();
+                for (Map.Entry<String, Entry> kitEntry : nickEntry.getValue().entrySet()) {
+                    Entry e = kitEntry.getValue();
+                    if (e == null) continue;
+                    if (e.points < 0) e.points = 0;
+                    if (e.seconds < 0) e.seconds = 0;
+                    // РµСЃР»Рё РІ С„Р°Р№Р»Рµ СЂСѓРєР°РјРё РІС‹СЃС‚Р°РІРёР»Рё РјРЅРѕРіРѕ СЃРµРєСѓРЅРґ вЂ” РїРµСЂРµРІРѕРґРёРј РІ РѕС‡РєРё
+                    if (e.seconds >= SECONDS_PER_POINT) {
+                        e.points += e.seconds / SECONDS_PER_POINT;
+                        e.seconds = e.seconds % SECONDS_PER_POINT;
+                    }
+                    e.level = levelForPoints(e.points); // РёСЃС‚РѕС‡РЅРёРє РёСЃС‚РёРЅС‹ вЂ” РѕС‡РєРё
+                    kits.put(kitEntry.getKey(), e);
+                }
+                DATA.put(nickEntry.getKey(), kits);
+            }
+            LOGGER.info("[AAS] Kit ranks loaded: {} players", DATA.size());
+        } catch (JsonParseException | IOException ex) {
+            // РќРµ Р·Р°С‚РёСЂР°РµРј Р±РёС‚С‹Р№ С„Р°Р№Р» РјРѕР»С‡Р°: РѕС‚РєР»Р°РґС‹РІР°РµРј РІ СЃС‚РѕСЂРѕРЅСѓ Рё СЃС‚Р°СЂС‚СѓРµРј СЃ РїСѓСЃС‚РѕРіРѕ.
+            LOGGER.error("[AAS] Failed to read " + FILE_NAME + ", moving it aside", ex);
+            try {
+                Path bad = file.resolveSibling(FILE_NAME + ".broken-" + System.currentTimeMillis());
+                Files.move(file, bad, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException ignored) {
+            }
+            DATA.clear();
+        }
+    }
+
+    public static void save() {
+        Path file = file();
+        Path tmp = file.resolveSibling(FILE_NAME + ".tmp");
+        try {
+            try (Writer w = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8)) {
+                GSON.toJson(DATA, w);
+            }
+            try {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+            dirty = false;
+        } catch (IOException ex) {
+            LOGGER.error("[AAS] Failed to save " + FILE_NAME, ex);
+        }
+    }
+
+    private KitRankManager() {
+    }
+}
+==========================================
 FILE: ModServerEvents.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\ModServerEvents.java
 ==========================================
@@ -28534,10 +28927,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
-/** РЎРµСЂРІРµСЂРЅР°СЏ Р»РѕРіРёРєР°: РѕРїСЂРµРґРµР»СЏРµС‚ С‚РёРјРєРёР»Р» Рё СЂР°СЃСЃС‹Р»Р°РµС‚ СѓРІРµРґРѕРјР»РµРЅРёСЏ СѓР±РёР№С†Рµ Рё Р¶РµСЂС‚РІРµ. */
+/** РЎРµСЂРІРµСЂРЅР°СЏ Р»РѕРіРёРєР°: РѕРїСЂРµРґРµР»СЏРµС‚ С‚РёРјРєРёР»Р»/С‚РёРјРЅРѕРє Рё СЂР°СЃСЃС‹Р»Р°РµС‚ СѓРІРµРґРѕРјР»РµРЅРёСЏ СѓР±РёР№С†Рµ Рё Р¶РµСЂС‚РІРµ. */
 public final class TeamKillNotifier {
 
+    /** РќР°СЃС‚РѕСЏС‰Р°СЏ СЃРјРµСЂС‚СЊ РёРіСЂРѕРєР°. */
     public static void onPlayerDeath(ServerPlayer victim, DamageSource source, boolean wasGivingUp) {
         // РРіСЂРѕРє СЃР°Рј РЅР°Р¶Р°Р» "Give Up" РІ РЅРѕРєР°СѓС‚Рµ вЂ” СЌС‚Рѕ РЅРµ СѓР±РёР№СЃС‚РІРѕ.
         if (wasGivingUp) return;
@@ -28546,12 +28941,19 @@ public final class TeamKillNotifier {
         if (source != null && source.getEntity() instanceof ServerPlayer direct) {
             found = direct;
         } else if (victim.getLastHurtByMob() instanceof ServerPlayer lastAttacker) {
-            // Р’Р·СЂС‹РІ, РѕРіРѕРЅСЊ Рё С‚.Рї. вЂ” СЃРјРѕС‚СЂРёРј, РєС‚Рѕ Р±РёР» РїРѕСЃР»РµРґРЅРёРј (РєР°Рє Рё РІ РѕСЃС‚Р°Р»СЊРЅРѕР№ Р»РѕРіРёРєРµ AAS)
             found = lastAttacker;
         }
 
-        if (found == null || found == victim) return;
-        final ServerPlayer killer = found;
+        notifyIfAllied(victim, found, false);
+    }
+
+    /** РРіСЂРѕРєР° СѓР»РѕР¶РёР»Рё РІ РЅРѕРє (РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· DownedHandler.onPlayerHurt). */
+    public static void onPlayerKnocked(ServerPlayer victim, @Nullable ServerPlayer attacker) {
+        notifyIfAllied(victim, attacker, true);
+    }
+
+    private static void notifyIfAllied(ServerPlayer victim, @Nullable ServerPlayer killer, boolean knocked) {
+        if (killer == null || killer == victim) return;
 
         Team killerTeam = killer.getTeam();
         Team victimTeam = victim.getTeam();
@@ -28561,15 +28963,14 @@ public final class TeamKillNotifier {
         String victimName = victim.getGameProfile().getName();
 
         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> killer),
-                new PacketTeamKillNotification(victimName, true));
+                new PacketTeamKillNotification(victimName, true, knocked));
         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> victim),
-                new PacketTeamKillNotification(killerName, false));
+                new PacketTeamKillNotification(killerName, false, knocked));
     }
 
     private TeamKillNotifier() {
     }
 }
-
 ==========================================
 FILE: VehicleDamageTracker.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\events\VehicleDamageTracker.java
@@ -30423,6 +30824,14 @@ public class DownedHandler {
                 // РЎС‚РёСЂР°РµРј СѓР±РёР№С†Сѓ, С‚РѕР»СЊРєРѕ РµСЃР»Рё СЌС‚Рѕ Р±С‹Р»Р° С‡РёСЃС‚Р°СЏ СЃРјРµСЂС‚СЊ РѕС‚ РѕРєСЂСѓР¶РµРЅРёСЏ
                 player.getPersistentData().remove("AAS_KnockedBy");
             }
+            // РЈРІРµРґРѕРјР»РµРЅРёРµ Рѕ РЅРёРєРµ СЃРѕСЋР·РЅРёРєР° (С‚РёРјРЅРѕРє)
+            ServerPlayer knocker = null;
+            if (attacker instanceof ServerPlayer atkSp) {
+                knocker = atkSp;
+            } else if (player.getLastHurtByMob() instanceof ServerPlayer lastSp) {
+                knocker = lastSp;
+            }
+            TeamKillNotifier.onPlayerKnocked(player, knocker);
 
             enterDownedState(player);
         }
@@ -30936,6 +31345,217 @@ public class DownedHandler {
             PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
                     new PacketSyncDownedState(sp.getId(), false, true));
         }
+    }
+}
+==========================================
+FILE: KitResupplier.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\KitResupplier.java
+==========================================
+package com.example.aas.network;
+
+import com.example.aas.item.AGSAmmoItem;
+import com.example.aas.item.M2AmmoItem;
+import com.example.aas.item.ModItems;
+import com.example.aas.world.AASWorldData;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+/**
+ * Р•РґРёРЅР°СЏ СЃРёСЃС‚РµРјР° РїРѕРїРѕР»РЅРµРЅРёСЏ РєРёС‚Р° (С…Р°Р±, ammo bag, main supply, СЏС‰РёРєРё, С‚РµС…РЅРёРєР°).
+ *
+ * РџСЂР°РІРёР»Р°:
+ *  1. "РўРѕС‚ Р¶Рµ РїСЂРµРґРјРµС‚" = С‚РѕС‚ Р¶Рµ Item + РѕРґРёРЅР°РєРѕРІС‹Р№ NBT Р‘Р•Р— РёР·РјРµРЅС‡РёРІС‹С… РєР»СЋС‡РµР№
+ *     (Damage, GeckoLibID, Ammo). Р”Р»СЏ СЃР»РѕС‚РѕРІ СЃ С„Р»Р°РіРѕРј SaveNbt СЃСЂР°РІРЅРёРІР°РµРј С‚РѕР»СЊРєРѕ РїРѕ Item.
+ *  2. РџСЂРµРґРјРµС‚С‹ РѕРґРЅРѕРіРѕ РІРёРґР° РёР· РєРёС‚Р° СЃС‡РёС‚Р°СЋС‚СЃСЏ Р’РњР•РЎРўР•: РЅСѓР¶РЅРѕ N С€С‚СѓРє СЃСѓРјРјР°СЂРЅРѕ, РµСЃС‚СЊ M -> РґРѕРєР»Р°РґС‹РІР°РµРј N-M.
+ *  3. Р”РѕРєР»Р°РґС‹РІР°РµРј СЃРЅР°С‡Р°Р»Р° РІ "СЃРІРѕРё" СЃР»РѕС‚С‹ РєРёС‚Р°, РЅРµ РїСЂРµРІС‹С€Р°СЏ РєРѕР»РёС‡РµСЃС‚РІРѕ СЌС‚РѕРіРѕ СЃР»РѕС‚Р°;
+ *     РѕСЃС‚Р°С‚РѕРє - РІ РіР»Р°РІРЅС‹Р№ РёРЅРІРµРЅС‚Р°СЂСЊ (0..35), РЅРёРєРѕРіРґР° РЅРµ РІ Р±СЂРѕРЅСЋ/РѕС„С„С…РµРЅРґ.
+ *  4. РњР°РіР°Р·РёРЅС‹ СЃ Р·Р°СЂСЏРґРѕРј (AGS/M2) РЅРµ РґСѓР±Р»РёСЂСѓСЋС‚СЃСЏ - Сѓ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… РїСЂРѕСЃС‚Рѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ Р·Р°СЂСЏРґ.
+ */
+public final class KitResupplier {
+    private KitResupplier() {}
+
+    /** РљР»СЋС‡Рё, РєРѕС‚РѕСЂС‹Рµ РјРµРЅСЏСЋС‚СЃСЏ СЃР°РјРё Рё РЅРµ РѕРїСЂРµРґРµР»СЏСЋС‚ "РєР°РєРѕР№ СЌС‚Рѕ РїСЂРµРґРјРµС‚".
+     *  Р•СЃР»Рё РёСЃРїРѕР»СЊР·СѓРµС€СЊ РѕСЂСѓР¶РёРµ РёР· РґСЂСѓРіРёС… РјРѕРґРѕРІ - РґРѕР±Р°РІСЊ СЃСЋРґР° РєР»СЋС‡Рё РµРіРѕ СЃС‡С‘С‚С‡РёРєР° РїР°С‚СЂРѕРЅРѕРІ. */
+    private static final Set<String> VOLATILE_KEYS = Set.of("Damage", "GeckoLibID", "Ammo");
+
+    private static final int SLOTS = 41;       // 0..35 РёРЅРІРµРЅС‚Р°СЂСЊ, 36..39 Р±СЂРѕРЅСЏ, 40 РѕС„С„С…РµРЅРґ
+    private static final int MAIN_SLOTS = 36;
+
+    public static boolean resupply(ServerPlayer player, AASWorldData.KitInfo kit, boolean skipAmmoBag) {
+        Inventory inv = player.getInventory();
+
+        List<Integer> slots = new ArrayList<>();
+        for (int i = 0; i < SLOTS; i++) {
+            if (i >= kit.resupplyFlags.length || !kit.resupplyFlags[i]) continue;
+            ItemStack kitStack = kit.inventory.get(i);
+            if (kitStack.isEmpty()) continue;
+            if (skipAmmoBag && kitStack.getItem() == ModItems.AMMO_BAG.get()) continue;
+            slots.add(i);
+        }
+
+        boolean changed = false;
+        boolean[] done = new boolean[SLOTS];
+        for (int i : slots) {
+            if (done[i]) continue;
+            ItemStack sample = kit.inventory.get(i);
+
+            List<Integer> group = new ArrayList<>();
+            boolean loose = isLoose(kit, i);
+            for (int j : slots) {
+                if (done[j]) continue;
+                if (matches(kit.inventory.get(j), sample, isLoose(kit, i) || isLoose(kit, j))) {
+                    group.add(j);
+                    done[j] = true;
+                    loose |= isLoose(kit, j);
+                }
+            }
+            if (resupplyGroup(inv, kit, group, sample, loose)) changed = true;
+        }
+        return changed;
+    }
+
+    private static boolean resupplyGroup(Inventory inv, AASWorldData.KitInfo kit,
+                                         List<Integer> group, ItemStack sample, boolean loose) {
+        boolean changed = false;
+        boolean charge = isCharge(sample);
+        int maxStack = Math.max(1, sample.getMaxStackSize());
+
+        int need = 0;
+        for (int s : group) need += Math.min(kit.inventory.get(s).getCount(), maxStack);
+
+        int have = 0;
+        List<Integer> owned = new ArrayList<>();
+        for (int j = 0; j < SLOTS; j++) {
+            ItemStack s = inv.getItem(j);
+            if (matches(s, sample, loose)) {
+                have += s.getCount();
+                owned.add(j);
+            }
+        }
+
+        // A. Р—Р°СЂСЏРґ: РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЃР°РјС‹Рµ РїСѓСЃС‚С‹Рµ РјР°РіР°Р·РёРЅС‹, РЅРѕ РЅРµ Р±РѕР»СЊС€Рµ С‡РµРј РїРѕР»РѕР¶РµРЅРѕ РєРёС‚Сѓ
+        if (charge) {
+            owned.sort(Comparator.comparingInt(j -> getCharge(inv.getItem(j))));
+            int left = need;
+            for (int j : owned) {
+                if (left <= 0) break;
+                ItemStack s = inv.getItem(j);
+                left -= s.getCount();
+                if (getCharge(s) < getMaxCharge(s)) {
+                    setFullCharge(s);
+                    changed = true;
+                }
+            }
+        }
+
+        // B. РќРµРґРѕСЃС‚Р°СЋС‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ
+        int missing = need - have;
+        if (missing <= 0) return changed;
+
+        // B1. Р’ СЃРІРѕРё СЃР»РѕС‚С‹ РєРёС‚Р°, РЅРµ Р±РѕР»СЊС€Рµ РєРѕР»РёС‡РµСЃС‚РІР° СЌС‚РѕРіРѕ СЃР»РѕС‚Р°
+        for (int s : group) {
+            if (missing <= 0) break;
+            ItemStack kitStack = kit.inventory.get(s);
+            int cap = Math.min(kitStack.getCount(), maxStack);
+            ItemStack cur = inv.getItem(s);
+
+            if (cur.isEmpty()) {
+                int put = Math.min(missing, cap);
+                ItemStack give = kitStack.copy();
+                give.setCount(put);
+                if (charge) setFullCharge(give);
+                inv.setItem(s, give);
+                missing -= put;
+                changed = true;
+            } else if (matches(cur, sample, loose)) {
+                int add = Math.min(missing, cap - cur.getCount());
+                if (add > 0) {
+                    cur.grow(add);
+                    missing -= add;
+                    changed = true;
+                }
+            }
+            // РІ СЃР»РѕС‚Рµ С‡СѓР¶РѕР№ РїСЂРµРґРјРµС‚ - РїСЂРѕРїСѓСЃРєР°РµРј, РѕСЃС‚Р°С‚РѕРє СѓР№РґС‘С‚ РІ B2
+        }
+
+        // B2. РћСЃС‚Р°С‚РѕРє (СЃРІРѕРё СЃР»РѕС‚С‹ Р·Р°РЅСЏС‚С‹ С‡СѓР¶РёРј): СЃРЅР°С‡Р°Р»Р° РґРѕР»РёРІР°РµРј СѓР¶Рµ РёРјРµСЋС‰РёРµСЃСЏ СЃС‚Р°РєРё...
+        for (int j = 0; j < MAIN_SLOTS && missing > 0; j++) {
+            if (group.contains(j)) continue;
+            ItemStack cur = inv.getItem(j);
+            if (matches(cur, sample, loose) && cur.getCount() < maxStack) {
+                int add = Math.min(missing, maxStack - cur.getCount());
+                cur.grow(add);
+                missing -= add;
+                changed = true;
+            }
+        }
+        // ...РїРѕС‚РѕРј РїСѓСЃС‚С‹Рµ СЃР»РѕС‚С‹: СЃРЅР°С‡Р°Р»Р° РЅРµ Р·Р°СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРЅС‹Рµ РєРёС‚РѕРј, Р·Р°С‚РµРј Р»СЋР±С‹Рµ
+        for (int pass = 0; pass < 2 && missing > 0; pass++) {
+            for (int j = 0; j < MAIN_SLOTS && missing > 0; j++) {
+                if (group.contains(j) || !inv.getItem(j).isEmpty()) continue;
+                if (pass == 0 && !kit.inventory.get(j).isEmpty()) continue;
+                int put = Math.min(missing, maxStack);
+                ItemStack give = sample.copy();
+                give.setCount(put);
+                if (charge) setFullCharge(give);
+                inv.setItem(j, give);
+                missing -= put;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    // ---------- СЃСЂР°РІРЅРµРЅРёРµ ----------
+
+    private static boolean isLoose(AASWorldData.KitInfo kit, int slot) {
+        return slot < kit.saveNbtFlags.length && kit.saveNbtFlags[slot];
+    }
+
+    static boolean matches(ItemStack stack, ItemStack sample, boolean loose) {
+        if (stack.isEmpty() || sample.isEmpty()) return false;
+        if (!ItemStack.isSameItem(stack, sample)) return false;
+        return loose || Objects.equals(identityTag(stack), identityTag(sample));
+    }
+
+    /** NBT Р±РµР· РёР·РјРµРЅС‡РёРІС‹С… РєР»СЋС‡РµР№; РїСѓСЃС‚РѕР№ NBT Рё РµРіРѕ РѕС‚СЃСѓС‚СЃС‚РІРёРµ СЃС‡РёС‚Р°СЋС‚СЃСЏ РѕРґРёРЅР°РєРѕРІС‹РјРё (null). */
+    private static CompoundTag identityTag(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag == null) return null;
+        CompoundTag copy = tag.copy();
+        for (String key : VOLATILE_KEYS) copy.remove(key);
+        return copy.isEmpty() ? null : copy;
+    }
+
+    // ---------- РјР°РіР°Р·РёРЅС‹ СЃ Р·Р°СЂСЏРґРѕРј ----------
+
+    private static boolean isCharge(ItemStack s) {
+        return s.getItem() instanceof AGSAmmoItem || s.getItem() instanceof M2AmmoItem;
+    }
+
+    private static int getCharge(ItemStack s) {
+        if (s.getItem() instanceof AGSAmmoItem) return AGSAmmoItem.getAmmo(s);
+        if (s.getItem() instanceof M2AmmoItem) return M2AmmoItem.getAmmo(s);
+        return 0;
+    }
+
+    private static int getMaxCharge(ItemStack s) {
+        if (s.getItem() instanceof AGSAmmoItem) return AGSAmmoItem.MAX_AMMO;
+        if (s.getItem() instanceof M2AmmoItem) return M2AmmoItem.MAX_AMMO;
+        return 0;
+    }
+
+    private static void setFullCharge(ItemStack s) {
+        if (s.getItem() instanceof AGSAmmoItem) AGSAmmoItem.setAmmo(s, AGSAmmoItem.MAX_AMMO);
+        else if (s.getItem() instanceof M2AmmoItem) M2AmmoItem.setAmmo(s, M2AmmoItem.MAX_AMMO);
     }
 }
 ==========================================
@@ -31798,6 +32418,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketRequestVehicleList.class, PacketRequestVehicleList::encode, PacketRequestVehicleList::decode, PacketRequestVehicleList::handle);
         INSTANCE.registerMessage(id++, PacketSyncVehicleList.class, PacketSyncVehicleList::encode, PacketSyncVehicleList::decode, PacketSyncVehicleList::handle);
         INSTANCE.registerMessage(id++, PacketTeamKillNotification.class, PacketTeamKillNotification::encode, PacketTeamKillNotification::decode, PacketTeamKillNotification::handle);
+        INSTANCE.registerMessage(id++, PacketSyncKitRanks.class, PacketSyncKitRanks::encode, PacketSyncKitRanks::decode, PacketSyncKitRanks::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
@@ -36051,6 +36672,63 @@ public class PacketSyncGameData {
     }
 }
 ==========================================
+FILE: PacketSyncKitRanks.java
+PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketSyncKitRanks.java
+==========================================
+package com.example.aas.network;
+
+import com.example.aas.client.ClientData;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.network.NetworkEvent;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
+
+/**
+ * РЎРµСЂРІРµСЂ -> РєР»РёРµРЅС‚. Р¤Р»Р°Рі "РїРѕРєР°Р·С‹РІР°С‚СЊ СЂР°РЅРіРё РєРёС‚РѕРІ" (РёР· РєРѕРЅС„РёРіР° showKitRanks)
+ * Рё РєР°СЂС‚Р° РЅРёРє -> СѓСЂРѕРІРµРЅСЊ С‚РµРєСѓС‰РµРіРѕ РєРёС‚Р° РёРіСЂРѕРєР°.
+ */
+public class PacketSyncKitRanks {
+    private final boolean enabled;
+    private final Map<String, Integer> ranks;
+
+    public PacketSyncKitRanks(boolean enabled, Map<String, Integer> ranks) {
+        this.enabled = enabled;
+        this.ranks = ranks;
+    }
+
+    public static void encode(PacketSyncKitRanks msg, FriendlyByteBuf buf) {
+        buf.writeBoolean(msg.enabled);
+        buf.writeVarInt(msg.ranks.size());
+        for (Map.Entry<String, Integer> e : msg.ranks.entrySet()) {
+            buf.writeUtf(e.getKey());
+            buf.writeVarInt(e.getValue());
+        }
+    }
+
+    public static PacketSyncKitRanks decode(FriendlyByteBuf buf) {
+        boolean enabled = buf.readBoolean();
+        int size = buf.readVarInt();
+        Map<String, Integer> ranks = new HashMap<>();
+        for (int i = 0; i < size; i++) {
+            ranks.put(buf.readUtf(), buf.readVarInt());
+        }
+        return new PacketSyncKitRanks(enabled, ranks);
+    }
+
+    public static void handle(PacketSyncKitRanks msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() ->
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                    ClientData.serverShowKitRanks = msg.enabled;
+                    ClientData.playerKitRanks = new HashMap<>(msg.ranks);
+                }));
+        ctx.get().setPacketHandled(true);
+    }
+}
+==========================================
 FILE: PacketSyncMapPlayers.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketSyncMapPlayers.java
 ==========================================
@@ -36516,35 +37194,43 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 /**
- * РЎРµСЂРІРµСЂ -> РєР»РёРµРЅС‚. РЈРІРµРґРѕРјР»РµРЅРёРµ Рѕ СѓР±РёР№СЃС‚РІРµ СЃРѕСЋР·РЅРёРєР°.
- *  youAreKiller = true  -> "Р’С‹ СѓР±РёР»Рё СЃРѕСЋР·РЅРёРєР°: <РЅРёРє Р¶РµСЂС‚РІС‹>"  (РїРѕР»СѓС‡Р°РµС‚ СѓР±РёР№С†Р°)
- *  youAreKiller = false -> "Р’Р°СЃ СѓР±РёР» СЃРѕСЋР·РЅРёРє: <РЅРёРє СѓР±РёР№С†С‹>"   (РїРѕР»СѓС‡Р°РµС‚ Р¶РµСЂС‚РІР°)
+ * РЎРµСЂРІРµСЂ -> РєР»РёРµРЅС‚. РЈРІРµРґРѕРјР»РµРЅРёРµ РѕР± СѓР±РёР№СЃС‚РІРµ/РЅРѕРєРµ СЃРѕСЋР·РЅРёРєР°.
+ *  youAreKiller = true  -> РїРѕР»СѓС‡Р°РµС‚ СѓР±РёР№С†Р°
+ *  youAreKiller = false -> РїРѕР»СѓС‡Р°РµС‚ Р¶РµСЂС‚РІР°
+ *  knocked      = true  -> СЃРѕСЋР·РЅРёРєР° С‚РѕР»СЊРєРѕ РЅРѕРєРЅСѓР»Рё (РЅРµ СѓР±РёР»Рё)
  */
 public class PacketTeamKillNotification {
     private final String otherName;
     private final boolean youAreKiller;
+    private final boolean knocked;
 
-    public PacketTeamKillNotification(String otherName, boolean youAreKiller) {
+    public PacketTeamKillNotification(String otherName, boolean youAreKiller, boolean knocked) {
         this.otherName = otherName;
         this.youAreKiller = youAreKiller;
+        this.knocked = knocked;
+    }
+
+    public PacketTeamKillNotification(String otherName, boolean youAreKiller) {
+        this(otherName, youAreKiller, false);
     }
 
     public static void encode(PacketTeamKillNotification msg, FriendlyByteBuf buf) {
         buf.writeUtf(msg.otherName);
         buf.writeBoolean(msg.youAreKiller);
+        buf.writeBoolean(msg.knocked);
     }
 
     public static PacketTeamKillNotification decode(FriendlyByteBuf buf) {
-        return new PacketTeamKillNotification(buf.readUtf(), buf.readBoolean());
+        return new PacketTeamKillNotification(buf.readUtf(), buf.readBoolean(), buf.readBoolean());
     }
 
     public static void handle(PacketTeamKillNotification msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> TeamKillOverlay.push(msg.otherName, msg.youAreKiller)));
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+                        TeamKillOverlay.push(msg.otherName, msg.youAreKiller, msg.knocked)));
         ctx.get().setPacketHandled(true);
     }
 }
-
 ==========================================
 FILE: PacketTeamSelect.java
 PATH: C:\Users\user\Desktop\mods\AAS\src\main\java\com\example\aas\network\PacketTeamSelect.java
@@ -37071,22 +37757,20 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class ResupplyHandler {
 
     /**
-     * Р вЂ™Р В«Р вЂќР С’Р В§Р С’ Р С™Р ВР СћР С’: Р С›РЎвЂЎР С‘РЎвЂ°Р В°Р ВµРЎвЂљ Р С‘Р Р…Р Р†Р ВµР Р…РЎвЂљР В°РЎР‚РЎРЉ Р С‘ Р В·Р В°Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р ВµР С–Р С•.
-     * Р РЋР В»Р С•РЎвЂљРЎвЂ№ 41-48 Р С—РЎвЂ№РЎвЂљР В°РЎР‹РЎвЂљРЎРѓРЎРЏ РЎРѓР Р…Р В°РЎвЂЎР В°Р В»Р В° Р С—Р С•Р С—Р В°РЎРѓРЎвЂљРЎРЉ Р Р† Curios.
+     * Р’Р«Р”РђР§Рђ РљРРўРђ: РѕС‡РёС‰Р°РµС‚ РёРЅРІРµРЅС‚Р°СЂСЊ Рё Р·Р°РїРѕР»РЅСЏРµС‚ РµРіРѕ.
+     * РЎР»РѕС‚С‹ 41-48 РїС‹С‚Р°СЋС‚СЃСЏ СЃРЅР°С‡Р°Р»Р° РїРѕРїР°СЃС‚СЊ РІ Curios.
      */
     public static void applyKitToPlayer(ServerPlayer player, AASWorldData.KitInfo kit) { applyKitToPlayer(player, kit, false); }
 
     public static void applyKitToPlayer(ServerPlayer player, AASWorldData.KitInfo kit, boolean isAlt) {
         Inventory pInv = player.getInventory();
         pInv.clearContent();
-        clearCurios(player); // <--- Р С›Р В§Р ВР В©Р С’Р вЂўР Сљ Р РЋР вЂєР С›Р СћР В« CURIOS
+        clearCurios(player);
 
         Map<Integer, CompoundTag> savedTags = GameLogicEvents.PERSISTENT_NBT_STORAGE.remove(player.getUUID());
 
@@ -37122,9 +37806,7 @@ public class ResupplyHandler {
                 new com.example.aas.network.PacketSyncMyKit(kit.name));
     }
 
-    /**
-     * Р С›РЎвЂЎР С‘РЎРѓРЎвЂљР С”Р В° Р Р†РЎРѓР ВµРЎвЂ¦ РЎРѓР В»Р С•РЎвЂљР С•Р Р† Curios
-     */
+    /** РћС‡РёСЃС‚РєР° РІСЃРµС… СЃР»РѕС‚РѕРІ Curios */
     public static void clearCurios(ServerPlayer player) {
         if (ModList.get().isLoaded("curios")) {
             try {
@@ -37140,9 +37822,7 @@ public class ResupplyHandler {
         }
     }
 
-    /**
-     * Р вЂєР С•Р С–Р С‘Р С”Р В° Р В°Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С•Р в„– РЎРЊР С”Р С‘Р С—Р С‘РЎР‚Р С•Р Р†Р С”Р С‘ Р Р† Curios (Р ВРЎРѓР С—РЎР‚Р В°Р Р†Р В»Р ВµР Р…Р С• Р С—Р С•Р Т‘ 1.20.1).
-     */
+    /** РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЌРєРёРїРёСЂРѕРІРєР° РІ Curios (1.20.1). */
     private static boolean tryEquipInCurios(ServerPlayer player, ItemStack stack) {
         try {
             return top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).map(handler -> {
@@ -37165,240 +37845,38 @@ public class ResupplyHandler {
     }
 
     /**
-     * РџРћРџРћР›РќР•РќРР• РљРРўРђ: СЂР°Р±РѕС‚Р°РµС‚ РЎРўР РћР“Рћ РїРѕ СЃР»РѕС‚Р°Рј РєРёС‚Р° (0..40 вЂ” РёРЅРІРµРЅС‚Р°СЂСЊ/Р±СЂРѕРЅСЏ/РѕС„С„С…РµРЅРґ).
-     * РљР°Р¶РґС‹Р№ РїСЂРµРґРјРµС‚ РїРѕРїР°РґР°РµС‚ СЂРѕРІРЅРѕ РІ С‚РѕС‚ СЃР»РѕС‚, РєСѓРґР° РµРіРѕ РїРѕР»РѕР¶РёР»Рё РІ СЂРµРґР°РєС‚РѕСЂРµ РєРёС‚Р°,
-     * РІРјРµСЃС‚Рѕ РїРѕРёСЃРєР° "РєСѓРґР° РІР»РµР·РµС‚" С‡РµСЂРµР· pInv.add().
+     * РџРћРџРћР›РќР•РќРР• РљРРўРђ. Р’СЃСЏ Р»РѕРіРёРєР° РІС‹РЅРµСЃРµРЅР° РІ KitResupplier
+     * (СЃСЂР°РІРЅРµРЅРёРµ РїСЂРµРґРјРµС‚РѕРІ Р±РµР· РёР·РјРµРЅС‡РёРІРѕРіРѕ NBT, СЃСѓРјРјР°СЂРЅС‹Р№ РїРѕРґСЃС‡С‘С‚, Р»РёРјРёС‚ РїРѕ СЃР»РѕС‚Р°Рј РєРёС‚Р°).
      */
     public static boolean resupplyPlayer(ServerPlayer player, AASWorldData.KitInfo kit, boolean isAmmoBagSource) {
-        boolean gaveSomething = false;
-        Inventory pInv = player.getInventory();
-
-        // 1. Р—Р°СЂСЏРґ-РїСЂРµРґРјРµС‚С‹ (РјР°РіР°Р·РёРЅС‹/РєРѕСЂРѕР±Р° СЃ NBT-СЃС‡С‘С‚С‡РёРєРѕРј) РѕР±СЂР°Р±Р°С‚С‹РІР°РµРј РѕС‚РґРµР»СЊРЅРѕ, РєР°Рє СЂР°РЅСЊС€Рµ вЂ”
-        //    Сѓ РЅРёС… СЃРІРѕСЏ Р»РѕРіРёРєР° "РїРѕР№РјР°С‚СЊ Р·Р°СЂСЏРґ", С‚.Рє. Count Сѓ РЅРёС… РІСЃРµРіРґР° 1.
-        List<Integer> countBasedSlots = new ArrayList<>();
-        for (int i = 0; i < 41; i++) {
-            if (!kit.resupplyFlags[i]) continue;
-            ItemStack targetStack = kit.inventory.get(i);
-            if (targetStack.isEmpty()) continue;
-            if (isAmmoBagSource && targetStack.getItem() == com.example.aas.item.ModItems.AMMO_BAG.get()) continue;
-
-            if (isChargeBasedAmmo(targetStack)) {
-                if (resupplyChargeItem(pInv, i, targetStack)) gaveSomething = true;
-            } else {
-                countBasedSlots.add(i);
-            }
-        }
-
-        // 2. РћР±С‹С‡РЅС‹Рµ (Count-based) СЃР»РѕС‚С‹ РіСЂСѓРїРїРёСЂСѓРµРј РїРѕ С‚РёРїСѓ РїСЂРµРґРјРµС‚Р°,
-        //    С‡С‚РѕР±С‹ РќР•РЎРљРћР›Р¬РљРћ СЃС‚РѕРїРѕРє РѕРґРЅРѕРіРѕ Рё С‚РѕРіРѕ Р¶Рµ РїСЂРµРґРјРµС‚Р° РІ РєРёС‚Рµ СѓС‡РёС‚С‹РІР°Р»РёСЃСЊ СЃСѓРјРјР°СЂРЅРѕ,
-        //    Р° РЅРµ "Р·Р°Р±С‹РІР°Р»Рё" РґСЂСѓРі РїСЂРѕ РґСЂСѓРіР°.
-        boolean[] grouped = new boolean[41];
-        for (int i : countBasedSlots) {
-            if (grouped[i]) continue;
-
-            ItemStack sample = kit.inventory.get(i);
-            List<Integer> slots = new ArrayList<>();
-            for (int j : countBasedSlots) {
-                if (!grouped[j] && ItemStack.isSameItemSameTags(kit.inventory.get(j), sample)) {
-                    slots.add(j);
-                    grouped[j] = true;
-                }
-            }
-
-            // РЎРєРѕР»СЊРєРѕ РІСЃРµРіРѕ РЅСѓР¶РЅРѕ СЃСѓРјРјР°СЂРЅРѕ РїРѕ Р’РЎР•Рњ РєРёС‚-СЃР»РѕС‚Р°Рј СЌС‚РѕРіРѕ С‚РёРїР°
-            int totalNeeded = 0;
-            for (int s : slots) totalNeeded += kit.inventory.get(s).getCount();
-
-            // РЎРєРѕР»СЊРєРѕ Сѓ РёРіСЂРѕРєР° СѓР¶Рµ РµСЃС‚СЊ СЃСѓРјРјР°СЂРЅРѕ РїРѕ РІСЃРµРјСѓ РёРЅРІРµРЅС‚Р°СЂСЋ
-            int haveCount = 0;
-            for (int j = 0; j < 41; j++) {
-                ItemStack s = pInv.getItem(j);
-                if (ItemStack.isSameItemSameTags(s, sample)) haveCount += s.getCount();
-            }
-
-            if (haveCount >= totalNeeded) continue; // РїРѕ СЌС‚РѕРјСѓ С‚РёРїСѓ РІСЃС‘ РІ РїРѕСЂСЏРґРєРµ
-
-            int missing = totalNeeded - haveCount;
-
-            // РЎРЅР°С‡Р°Р»Р° Р·Р°РєСЂС‹РІР°РµРј РЅРµРґРѕСЃС‚Р°С‡Сѓ РІ РЎР’РћРРҐ designated-СЃР»РѕС‚Р°С… (РїРѕ РїРѕСЂСЏРґРєСѓ РєРёС‚Р°) вЂ”
-            // РїСЂРёРѕСЂРёС‚РµС‚ РїСѓСЃС‚С‹Рј Рё СЃРІРѕРёРј Р¶Рµ СЃР»РѕС‚Р°Рј СЃ СЌС‚РёРј РїСЂРµРґРјРµС‚РѕРј.
-            for (int s : slots) {
-                if (missing <= 0) break;
-                ItemStack current = pInv.getItem(s);
-                int neededHere = kit.inventory.get(s).getCount();
-
-                if (current.isEmpty()) {
-                    int put = Math.min(missing, Math.min(neededHere, sample.getMaxStackSize()));
-                    ItemStack give = sample.copy();
-                    give.setCount(put);
-                    pInv.setItem(s, give);
-                    missing -= put;
-                    gaveSomething = true;
-                } else if (ItemStack.isSameItemSameTags(current, sample) && current.getCount() < current.getMaxStackSize()) {
-                    int add = Math.min(missing, current.getMaxStackSize() - current.getCount());
-                    if (add > 0) {
-                        current.setCount(current.getCount() + add);
-                        missing -= add;
-                        gaveSomething = true;
-                    }
-                }
-            }
-
-            // Р•СЃР»Рё РЅРµРґРѕСЃС‚Р°С‡Р° РѕСЃС‚Р°Р»Р°СЃСЊ (РІСЃРµ designated-СЃР»РѕС‚С‹ Р·Р°РЅСЏС‚С‹ С‡СѓР¶РёРјРё РїСЂРµРґРјРµС‚Р°РјРё) вЂ”
-            // РґРѕРєР»Р°РґС‹РІР°РµРј РІ Р»СЋР±С‹Рµ РґСЂСѓРіРёРµ РїРѕРґС…РѕРґСЏС‰РёРµ СЃР»РѕС‚С‹ РёРЅРІРµРЅС‚Р°СЂСЏ.
-            if (missing > 0) {
-                for (int j = 0; j < 41 && missing > 0; j++) {
-                    if (slots.contains(j)) continue;
-                    ItemStack s = pInv.getItem(j);
-                    if (ItemStack.isSameItemSameTags(s, sample) && s.getCount() < s.getMaxStackSize()) {
-                        int add = Math.min(missing, s.getMaxStackSize() - s.getCount());
-                        s.setCount(s.getCount() + add);
-                        missing -= add;
-                        gaveSomething = true;
-                    }
-                }
-                for (int j = 0; j < 41 && missing > 0; j++) {
-                    if (slots.contains(j)) continue;
-                    if (pInv.getItem(j).isEmpty()) {
-                        ItemStack give = sample.copy();
-                        int put = Math.min(missing, sample.getMaxStackSize());
-                        give.setCount(put);
-                        pInv.setItem(j, give);
-                        missing -= put;
-                        gaveSomething = true;
-                    }
-                }
-            }
-        }
-
-        return gaveSomething;
-    }
-
-    /** РџСЂРµРґРјРµС‚ С‚РёРїР° "РјР°РіР°Р·РёРЅ СЃ Р·Р°СЂСЏРґРѕРј РІ NBT" (AGSAmmoItem, M2AmmoItem Рё С‚.Рї.) */
-    private static boolean isChargeBasedAmmo(ItemStack stack) {
-        return stack.getItem() instanceof com.example.aas.item.AGSAmmoItem
-                || stack.getItem() instanceof com.example.aas.item.M2AmmoItem;
-    }
-
-    private static int getCurrentCharge(ItemStack stack) {
-        if (stack.getItem() instanceof com.example.aas.item.AGSAmmoItem) {
-            return com.example.aas.item.AGSAmmoItem.getAmmo(stack);
-        }
-        if (stack.getItem() instanceof com.example.aas.item.M2AmmoItem) {
-            return com.example.aas.item.M2AmmoItem.getAmmo(stack);
-        }
-        return 0;
-    }
-
-    private static int getMaxCharge(ItemStack stack) {
-        if (stack.getItem() instanceof com.example.aas.item.AGSAmmoItem) {
-            return com.example.aas.item.AGSAmmoItem.MAX_AMMO;
-        }
-        if (stack.getItem() instanceof com.example.aas.item.M2AmmoItem) {
-            return com.example.aas.item.M2AmmoItem.MAX_AMMO;
-        }
-        return 0;
-    }
-
-    private static void setFullCharge(ItemStack stack) {
-        if (stack.getItem() instanceof com.example.aas.item.AGSAmmoItem) {
-            com.example.aas.item.AGSAmmoItem.setAmmo(stack, com.example.aas.item.AGSAmmoItem.MAX_AMMO);
-        } else if (stack.getItem() instanceof com.example.aas.item.M2AmmoItem) {
-            com.example.aas.item.M2AmmoItem.setAmmo(stack, com.example.aas.item.M2AmmoItem.MAX_AMMO);
-        }
-    }
-
-    /**
-     * РџРѕРїРѕР»РЅРµРЅРёРµ Р·Р°СЂСЏРґ-РїСЂРµРґРјРµС‚Р° (РјР°РіР°Р·РёРЅ/РєРѕСЂРѕР±). РЎСЂР°РІРЅРµРЅРёРµ РїРѕ С‚РёРїСѓ РїСЂРµРґРјРµС‚Р°,
-     * С‚РµРі (С‚РµРєСѓС‰РёР№ Р·Р°СЂСЏРґ) РїСЂРё СЃСЂР°РІРЅРµРЅРёРё РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ вЂ” РёРЅР°С‡Рµ РїСѓСЃС‚РѕР№ РјР°РіР°Р·РёРЅ
-     * РЅРёРєРѕРіРґР° РЅРµ СЃС‡РёС‚Р°РµС‚СЃСЏ "С‚РµРј Р¶Рµ РїСЂРµРґРјРµС‚РѕРј", С‡С‚Рѕ Рё РїРѕР»РЅС‹Р№ СЌС‚Р°Р»РѕРЅ РІ РєРёС‚Рµ.
-     */
-    private static boolean resupplyChargeItem(Inventory pInv, int slotIndex, ItemStack targetStack) {
-        ItemStack current = pInv.getItem(slotIndex);
-
-        // 1. Р¦РµР»РµРІРѕР№ СЃР»РѕС‚ РїСѓСЃС‚ вЂ” РїСЂРѕСЃС‚Рѕ РєР»Р°РґС‘Рј РїРѕР»РЅС‹Р№ РјР°РіР°Р·РёРЅ
-        if (current.isEmpty()) {
-            pInv.setItem(slotIndex, targetStack.copy());
-            return true;
-        }
-
-        // 2. Р’ С†РµР»РµРІРѕРј СЃР»РѕС‚Рµ С‚РѕС‚ Р¶Рµ С‚РёРї РїСЂРµРґРјРµС‚Р° (РЅРµ РІР°Р¶РЅРѕ, СЃРєРѕР»СЊРєРѕ РІ РЅС‘Рј Р·Р°СЂСЏРґР°) вЂ” РґРѕР»РёРІР°РµРј РЅР° РјРµСЃС‚Рµ
-        if (ItemStack.isSameItem(current, targetStack)) {
-            if (getCurrentCharge(current) < getMaxCharge(current)) {
-                setFullCharge(current);
-                return true;
-            }
-            return false; // СѓР¶Рµ РїРѕР»РЅС‹Р№, РЅРёС‡РµРіРѕ РЅРµ РґРµР»Р°РµРј вЂ” СЌС‚Рѕ РќР• "already full" РґР»СЏ РІСЃРµРіРѕ РєРёС‚Р°, РїСЂРѕСЃС‚Рѕ РїРѕ СЌС‚РѕРјСѓ СЃР»РѕС‚Сѓ
-        }
-
-        // 3. Р’ С†РµР»РµРІРѕРј СЃР»РѕС‚Рµ Р»РµР¶РёС‚ РґСЂСѓРіРѕР№ РїСЂРµРґРјРµС‚ вЂ” РёС‰РµРј С‚Р°РєРѕР№ Р¶Рµ РјР°РіР°Р·РёРЅ РІ РґСЂСѓРіРѕРј РјРµСЃС‚Рµ РёРЅРІРµРЅС‚Р°СЂСЏ
-        for (int j = 0; j < 41; j++) {
-            if (j == slotIndex) continue;
-            ItemStack s = pInv.getItem(j);
-            if (ItemStack.isSameItem(s, targetStack)) {
-                if (getCurrentCharge(s) < getMaxCharge(s)) {
-                    setFullCharge(s);
-                    return true;
-                }
-                return false;
-            }
-        }
-
-        // 4. РўР°РєРѕРіРѕ РїСЂРµРґРјРµС‚Р° РЅРёРіРґРµ РЅРµС‚ вЂ” РєР»Р°РґС‘Рј РЅРѕРІС‹Р№ РІ РїРµСЂРІС‹Р№ СЃРІРѕР±РѕРґРЅС‹Р№ СЃР»РѕС‚
-        for (int j = 0; j < 41; j++) {
-            if (pInv.getItem(j).isEmpty()) {
-                pInv.setItem(j, targetStack.copy());
-                return true;
-            }
-        }
-
-        return false; // РЅРµРєСѓРґР° РїРѕР»РѕР¶РёС‚СЊ
-    }
-
-    /**
-     * Р СџР С•Р Т‘РЎРѓРЎвЂЎР ВµРЎвЂљ Р С—РЎР‚Р ВµР Т‘Р СР ВµРЎвЂљР С•Р Р† Р Р† РЎРѓР В»Р С•РЎвЂљР В°РЎвЂ¦ Curios (Р ВРЎРѓР С—РЎР‚Р В°Р Р†Р В»Р ВµР Р…Р С• Р С—Р С•Р Т‘ 1.20.1).
-     */
-    private static int countInCurios(ServerPlayer player, ItemStack target) {
-        return top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).map(handler -> {
-            int count = 0;
-            for (var entry : handler.getCurios().values()) {
-                var stacks = entry.getStacks();
-                for (int i = 0; i < stacks.getSlots(); i++) {
-                    ItemStack s = stacks.getStackInSlot(i);
-                    if (ItemStack.isSameItemSameTags(s, target)) {
-                        count += s.getCount();
-                    }
-                }
-            }
-            return count;
-        }).orElse(0);
+        return KitResupplier.resupply(player, kit, isAmmoBagSource);
     }
 
     public static void tryApplyPendingKit(ServerPlayer player, AASWorldData data) {
-        // --- 1. Р С›Р СџР В Р вЂўР вЂќР вЂўР вЂєР Р‡Р вЂўР Сљ Р В¦Р вЂўР вЂєР вЂўР вЂ™Р С›Р в„ў Р С™Р ВР Сћ ---
+        // --- 1. РћРџР Р•Р”Р•Р›РЇР•Рњ Р¦Р•Р›Р•Р’РћР™ РљРРў ---
         String pending = player.getPersistentData().getString("AAS_PendingKit");
         String current = player.getPersistentData().getString("AAS_CurrentKit");
         boolean pendingAlt = player.getPersistentData().getBoolean("AAS_PendingKitAlt");
         boolean currentAlt = player.getPersistentData().getBoolean("AAS_CurrentKitAlt");
 
-        // Р вЂўРЎРѓР В»Р С‘ Р ВµРЎРѓРЎвЂљРЎРЉ Р С•РЎвЂЎР ВµРЎР‚Р ВµР Т‘РЎРЉ (Pending) РІР‚вЂќ Р В±Р ВµРЎР‚Р ВµР С Р ВµРЎвЂ, Р ВµРЎРѓР В»Р С‘ Р С—РЎС“РЎРѓРЎвЂљР В° РІР‚вЂќ Р В±Р ВµРЎР‚Р ВµР С РЎвЂљР ВµР С”РЎС“РЎвЂ°Р С‘Р в„– Р С”Р С‘РЎвЂљ
+        // Р•СЃР»Рё РµСЃС‚СЊ РѕС‡РµСЂРµРґСЊ (Pending) вЂ” Р±РµСЂС‘Рј РµС‘, РµСЃР»Рё РїСѓСЃС‚Р° вЂ” Р±РµСЂС‘Рј С‚РµРєСѓС‰РёР№ РєРёС‚
         String targetKitName = !pending.isEmpty() ? pending : current;
         boolean targetIsAlt = !pending.isEmpty() ? pendingAlt : currentAlt;
 
-        // Р вЂўРЎРѓР В»Р С‘ Р С”Р С‘РЎвЂљР В° Р Р…Р ВµРЎвЂљ Р С‘Р В»Р С‘ РЎРЊРЎвЂљР С• "Unassigned", Р С—РЎР‚Р С•РЎРѓРЎвЂљР С• Р С•РЎвЂЎР С‘РЎвЂ°Р В°Р ВµР С Р С•РЎвЂЎР ВµРЎР‚Р ВµР Т‘РЎРЉ Р С‘ Р Р†РЎвЂ№РЎвЂ¦Р С•Р Т‘Р С‘Р С
+        // Р•СЃР»Рё РєРёС‚Р° РЅРµС‚ РёР»Рё СЌС‚Рѕ "Unassigned", РїСЂРѕСЃС‚Рѕ РѕС‡РёС‰Р°РµРј РѕС‡РµСЂРµРґСЊ Рё РІС‹С…РѕРґРёРј
         if (targetKitName.isEmpty() || targetKitName.equals("Unassigned")) {
             player.getPersistentData().remove("AAS_PendingKit");
             return;
         }
 
-        // --- Р СњР С›Р вЂ™Р С’Р Р‡ Р СџР В Р С›Р вЂ™Р вЂўР В Р С™Р С’: Р РЋР СћР С’Р В Р Сћ Р ВР вЂњР В Р В« ---
-        // Р вЂўРЎРѓР В»Р С‘ РЎР‚Р В°РЎС“Р Р…Р Т‘ Р ВµРЎвЂ°Р Вµ Р Р…Р Вµ Р Р…Р В°РЎвЂЎР В°РЎвЂљ, Р Р…Р Вµ Р Р†РЎвЂ№Р Т‘Р В°Р ВµР С Р С—РЎР‚Р ВµР Т‘Р СР ВµРЎвЂљРЎвЂ№, Р С—РЎР‚Р С•РЎРѓРЎвЂљР С• Р С•РЎРѓРЎвЂљР В°Р Р†Р В»РЎРЏР ВµР С Pending.
+        // --- РџР РћР’Р•Р РљРђ: РЎРўРђР Рў РР“Р Р« ---
+        // Р•СЃР»Рё СЂР°СѓРЅРґ РµС‰С‘ РЅРµ РЅР°С‡Р°С‚, РЅРµ РІС‹РґР°С‘Рј РїСЂРµРґРјРµС‚С‹, РїСЂРѕСЃС‚Рѕ РѕСЃС‚Р°РІР»СЏРµРј Pending.
         if (!data.isGameStarted && !player.isCreative()) {
             player.displayClientMessage(Component.translatable("aas.msg.kit_reserved", targetKitName).withStyle(ChatFormatting.YELLOW), true);
             return;
         }
 
-        // --- 2. Р СџР В Р С›Р вЂ™Р вЂўР В Р С™Р С’ Р СџР С›Р вЂќР вЂњР С›Р СћР С›Р вЂ™Р С™Р В Р вЂ™ INVASION ---
+        // --- 2. РџР РћР’Р•Р РљРђ РџРћР”Р“РћРўРћР’РљР Р’ INVASION ---
         if (data.gameMode.equalsIgnoreCase("INVASION") && data.invasionPrepTicks > 0) {
             String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
             if (!pTeam.equals(data.invasionDefender) && !player.isCreative()) {
@@ -37413,7 +37891,7 @@ public class ResupplyHandler {
         AASWorldData.KitInfo kit = data.getKitVariant(teamName, targetKitName, targetIsAlt);
         if (kit == null) return;
 
-        // --- 3. Р СџР В Р С›Р вЂ™Р вЂўР В Р С™Р С’ Р вЂєР ВР СљР ВР СћР С›Р вЂ™ (Р С™Р В Р С›Р СљР вЂў Р РЋР С’Р СљР С›Р вЂњР С› Р ВР вЂњР В Р С›Р С™Р С’) ---
+        // --- 3. РџР РћР’Р•Р РљРђ Р›РРњРРўРћР’ (РљР РћРњР• РЎРђРњРћР“Рћ РР“Р РћРљРђ) ---
         int teamCount = 0;
         int squadCount = 0;
         String pName = player.getScoreboardName();
@@ -37426,11 +37904,11 @@ public class ResupplyHandler {
         }
 
         for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-            if (p == player) continue; // Р СњР Вµ РЎРѓРЎвЂЎР С‘РЎвЂљР В°Р ВµР С РЎРѓР В°Р СР С•Р С–Р С• РЎРѓР ВµР В±РЎРЏ
+            if (p == player) continue; // РќРµ СЃС‡РёС‚Р°РµРј СЃР°РјРѕРіРѕ СЃРµР±СЏ
             if (p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(teamName)) {
                 String otherCurrent = p.getPersistentData().getString("AAS_CurrentKit");
                 String otherPending = p.getPersistentData().getString("AAS_PendingKit");
-                // Р вЂўРЎРѓР В»Р С‘ Р Т‘РЎР‚РЎС“Р С–Р С•Р в„– Р С‘Р С–РЎР‚Р С•Р С” РЎС“Р В¶Р Вµ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·РЎС“Р ВµРЎвЂљ Р С‘Р В»Р С‘ Р В·Р В°Р В±РЎР‚Р С•Р Р…Р С‘РЎР‚Р С•Р Р†Р В°Р В» РЎРЊРЎвЂљР С•РЎвЂљ Р С”Р С‘РЎвЂљ
+                // Р•СЃР»Рё РґСЂСѓРіРѕР№ РёРіСЂРѕРє СѓР¶Рµ РёСЃРїРѕР»СЊР·СѓРµС‚ РёР»Рё Р·Р°Р±СЂРѕРЅРёСЂРѕРІР°Р» СЌС‚РѕС‚ РєРёС‚
                 if (otherCurrent.equals(targetKitName) || otherPending.equals(targetKitName)) {
                     teamCount++;
                     if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) {
@@ -37446,21 +37924,21 @@ public class ResupplyHandler {
         if (kit.minSquadPlayers > 0 && (mySquad == null || mySquad.members.size() < kit.minSquadPlayers)) allowed = false;
         if (kit.isLeaderOnly && (mySquad == null || !mySquad.leader.equals(pName))) allowed = false;
 
-        // --- 4. Р СџР В Р ВР СљР вЂўР СњР вЂўР СњР ВР вЂў Р С™Р ВР СћР С’ ---
+        // --- 4. РџР РРњР•РќР•РќРР• РљРРўРђ ---
         if (allowed) {
-            // Р СљР ВµРЎвЂљР С•Р Т‘ applyKitToPlayer РЎРѓР В°Р С Р С•РЎвЂЎР С‘РЎРѓРЎвЂљР С‘РЎвЂљ Р С‘Р Р…Р Р†Р ВµР Р…РЎвЂљР В°РЎР‚РЎРЉ Р С—Р ВµРЎР‚Р ВµР Т‘ Р Р†РЎвЂ№Р Т‘Р В°РЎвЂЎР ВµР в„–
+            // applyKitToPlayer СЃР°Рј РѕС‡РёСЃС‚РёС‚ РёРЅРІРµРЅС‚Р°СЂСЊ РїРµСЂРµРґ РІС‹РґР°С‡РµР№
             applyKitToPlayer(player, kit, targetIsAlt);
         } else {
-            // Р вЂўРЎРѓР В»Р С‘ Р В·Р В° Р Р†РЎР‚Р ВµР СРЎРЏ РЎРѓР СР ВµРЎР‚РЎвЂљР С‘ Р В»Р С‘Р СР С‘РЎвЂљРЎвЂ№ Р Р…Р В° Р С”Р С‘РЎвЂљ Р В·Р В°Р В±Р С‘Р В»Р С‘РЎРѓРЎРЉ Р Т‘РЎР‚РЎС“Р С–Р С‘Р СР С‘ Р С‘Р С–РЎР‚Р С•Р С”Р В°Р СР С‘
+            // Р•СЃР»Рё Р·Р° РІСЂРµРјСЏ СЃРјРµСЂС‚Рё Р»РёРјРёС‚С‹ РЅР° РєРёС‚ Р·Р°Р±РёР»РёСЃСЊ РґСЂСѓРіРёРјРё РёРіСЂРѕРєР°РјРё
             player.sendSystemMessage(Component.translatable("aas.msg.kit_blocked", targetKitName).withStyle(ChatFormatting.RED));
             AASWorldData.KitInfo unassigned = teamName.equals("BLUE") ? data.blueKits.get("Unassigned") : data.redKits.get("Unassigned");
             if (unassigned != null) applyKitToPlayer(player, unassigned, false);
         }
 
-        // Р С›РЎвЂЎР С‘РЎвЂ°Р В°Р ВµР С Pending (Р В±РЎР‚Р С•Р Р…РЎРЉ), РЎвЂљР В°Р С” Р С”Р В°Р С” Р СРЎвЂ№ Р ВµРЎвЂ Р С•Р В±РЎР‚Р В°Р В±Р С•РЎвЂљР В°Р В»Р С‘
+        // РћС‡РёС‰Р°РµРј Pending (Р±СЂРѕРЅСЊ), С‚Р°Рє РєР°Рє РјС‹ РµС‘ РѕР±СЂР°Р±РѕС‚Р°Р»Рё
         player.getPersistentData().remove("AAS_PendingKit");
         player.getPersistentData().remove("AAS_PendingKitAlt");
-        // Р РЋР С‘Р Р…РЎвЂ¦РЎР‚Р С•Р Р…Р С‘Р В·Р С‘РЎР‚РЎС“Р ВµР С Р С‘Р С”Р С•Р Р…Р С”Р С‘ Р С”Р С‘РЎвЂљР С•Р Р† Р Р…Р В° Р С”Р В°РЎР‚РЎвЂљР Вµ
+        // РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј РёРєРѕРЅРєРё РєРёС‚РѕРІ РЅР° РєР°СЂС‚Рµ
         PacketHandler.sendToAllClients(player.serverLevel(), data);
     }
 }

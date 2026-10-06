@@ -103,7 +103,6 @@ public class AASOverlay {
         renderCompass(gui, mc, width, event.getPartialTick());
         renderCMDVotePanel(gui, mc, width);
         renderArtStrikeRequest(gui, mc, width);
-        renderReviveProgress(gui, mc, width, height);
         renderSquadLeaderPlaytime(gui, mc, width);
         // === ДОПИСАННАЯ ЧАСТЬ ДЛЯ НОКОВ ===
 

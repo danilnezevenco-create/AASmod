@@ -755,6 +755,12 @@ public class AASDeathScreen extends DeathScreen {
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
                         xOffset += 12;
+
+                        int rankLvl = KitRankIcons.levelOf(member);
+                        if (rankLvl > 0) {
+                            KitRankIcons.draw(gui, rankLvl, xOffset, currentY);
+                            xOffset += KitRankIcons.ROW_ADVANCE;
+                        }
                     }
 
                     gui.drawString(this.font, member, xOffset, currentY + 1, col, false);
@@ -771,6 +777,7 @@ public class AASDeathScreen extends DeathScreen {
                         if (memberIsDead) {
                             gui.blit(ICON_DEAD, statusIconX, statusIconY, 8, 8, 0f, 0f, 10, 10, 10, 10);
                         } else {
+                            RenderSystem.setShaderColor(0.831f, 0.204f, 0.208f, 1f); // #D43435
                             gui.blit(ICON_HEARTBEAT, statusIconX, statusIconY, 8, 8, 0f, 0f, 36, 36, 36, 36);
                         }
                         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
@@ -1316,7 +1323,10 @@ public class AASDeathScreen extends DeathScreen {
         int start = isSelf ? 44 : 30;
         int end = start;
         String kName = ClientData.playerKits.getOrDefault(member, "Unassigned");
-        if (!kName.equals("Unassigned") && !kName.isEmpty()) end += 12;
+        if (!kName.equals("Unassigned") && !kName.isEmpty()) {
+            end += 12; // иконка кита
+            if (KitRankIcons.levelOf(member) > 0) end += KitRankIcons.ROW_ADVANCE; // иконка ранга
+        }
         end += this.font.width(member);
         return mouseX >= start && mouseX <= end;
     }

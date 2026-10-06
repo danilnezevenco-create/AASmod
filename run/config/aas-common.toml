@@ -99,6 +99,8 @@
 	requireRiflemanForAmmoBag = true
 	#If true, chat messages about a destroyed/dismantled HUB, Rally Point or Vehicle are only sent to the team that owns/lost it - the opposing team will no longer see these messages. Players who are not on the BLUE or RED team (spectators, no team, etc.) still see both teams' messages. If false (default), everyone sees every destruction message like before.
 	separateTeamDestructionMessages = false
+	#Show kit ranks (level icon) between the kit icon and the player name
+	showKitRanks = true
 
 ["Balance Settings"]
 	#Range: 0 ~ 10000

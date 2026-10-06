@@ -56,7 +56,9 @@ public class DownedScreen extends Screen {
 
         // Иконка
         RenderSystem.enableBlend();
-        gui.blit(HEARTBEAT_ICON, cx - 18, baseY + 10, 0, 0, 36, 36, 36, 36);
+        float revProgress = com.example.aas.client.ClientData.reviveProgressSelf;
+        com.example.aas.client.gui.ReviveIconRenderer.drawGui(
+                gui, HEARTBEAT_ICON, cx, baseY + 28, 36f, 20.5f, 23.5f, revProgress);
 
         // Расстояние до союзников
         String allyStatus = getAllyDistanceStatus();

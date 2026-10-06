@@ -66,7 +66,7 @@ public class AASConfig {
     public static final ForgeConfigSpec.IntValue RALLY_BLOCK_ENEMY_COUNT;
     public static final ForgeConfigSpec.IntValue SUPPLY_TRUCK_CRATES;
     public static final ForgeConfigSpec.IntValue SUPPLY_CRATE_MATERIALS;
-
+    public static final ForgeConfigSpec.BooleanValue SHOW_KIT_RANKS;
 
     // РРјРµРЅР° РєРѕРјР°РЅРґ
     public static final ForgeConfigSpec.ConfigValue<String> BLUE_TEAM_CUSTOM_NAME;
@@ -135,6 +135,8 @@ public class AASConfig {
                 .define("requireSpecialistToDrive", false);
         AUTO_BALANCE_TEAMS = BUILDER.comment("Force auto-balance. Player cannot join a team if it has more players than the other.")
                 .define("autoBalanceTeams", false);
+        SHOW_KIT_RANKS = BUILDER.comment("Show kit ranks (level icon) between the kit icon and the player name")
+                .define("showKitRanks", false);
         INVASION_PREP_TIME_MINUTES = BUILDER.comment("Preparation time for defenders in Invasion mode (minutes)")
                 .defineInRange("invasionPrepTimeMinutes", 5, 1, 30);
         ONE_AMMO_BAG_PER_PLAYER = BUILDER.comment("Prevent players from carrying more than 1 Ammo Bag at a time.")

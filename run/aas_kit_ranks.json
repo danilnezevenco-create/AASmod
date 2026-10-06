@@ -1,0 +1,16 @@
+{
+  "Dev": {
+    "Grenadier": {
+      "level": 1,
+      "points": 0,
+      "seconds": 499
+    }
+  },
+  "Player2": {
+    "Grenadier": {
+      "level": 1,
+      "points": 0,
+      "seconds": 254
+    }
+  }
+}
