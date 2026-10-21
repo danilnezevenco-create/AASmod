@@ -18,7 +18,7 @@ public final class VictoryStats {
     /** Множитель отрядных очков — ТОЛЬКО для сравнения отрядов между собой. */
     public static final int SQUAD_POINTS_WEIGHT = 3;
 
-    private record Entry(ServerPlayer player, String team, int squadId,
+    private record Entry(String name, String team, int squadId,
                          int tp, int sp, int revives, int logi) {}
 
     public static VictoryData build(ServerLevel level, AASWorldData data, boolean blueWon,
@@ -75,11 +75,22 @@ public final class VictoryStats {
                 }
             }
             var tag = p.getPersistentData();
-            entries.add(new Entry(p, team, squadId,
+            entries.add(new Entry(pName, team, squadId,
                     tag.getInt(StatsHandler.KEY_TP), tag.getInt(StatsHandler.KEY_SP),
                     StatsHandler.getRevives(p), StatsHandler.getLogisticsPoints(p)));
         }
-
+        // вышедшие игроки (они остаются в отрядах до конца матча)
+        for (OfflineStats.Snap s : OfflineStats.offline(level.getServer(), dim)) {
+            int squadId = -1;
+            for (AASWorldData.Squad sq : data.squads) {
+                if (sq.members.contains(s.name) && numberById.containsKey(sq.id)
+                        && sq.team != null && sq.team.equalsIgnoreCase(s.team)) {
+                    squadId = sq.id;
+                    break;
+                }
+            }
+            entries.add(new Entry(s.name, s.team, squadId, s.tp, s.sp, s.revives, s.logi));
+        }
         // 3. Лучший отряд: сумма (TP + SP*3) онлайн-участников.
         //    Ничья: больше онлайн-участников, затем меньший номер отряда.
         int bestId = -1;
@@ -120,7 +131,7 @@ public final class VictoryStats {
             if (medic == null || e.revives > medic.revives
                     || (e.revives == medic.revives && (long) e.tp + e.sp > (long) medic.tp + medic.sp)
                     || (e.revives == medic.revives && (long) e.tp + e.sp == (long) medic.tp + medic.sp
-                        && e.player.getScoreboardName().compareToIgnoreCase(medic.player.getScoreboardName()) < 0)) {
+                        && e.name.compareToIgnoreCase(medic.name) < 0)) {
                 medic = e;
             }
         }
@@ -133,7 +144,7 @@ public final class VictoryStats {
             if (logist == null || e.logi > logist.logi
                     || (e.logi == logist.logi && (long) e.tp + e.sp > (long) logist.tp + logist.sp)
                     || (e.logi == logist.logi && (long) e.tp + e.sp == (long) logist.tp + logist.sp
-                        && e.player.getScoreboardName().compareToIgnoreCase(logist.player.getScoreboardName()) < 0)) {
+                        && e.name.compareToIgnoreCase(logist.name) < 0)) {
                 logist = e;
             }
         }
@@ -146,7 +157,7 @@ public final class VictoryStats {
                                         Map<Integer, Integer> numberById,
                                         Map<Integer, AASWorldData.Squad> squadById, AASWorldData data) {
         panel.present = true;
-        panel.name = e.player.getScoreboardName();
+        panel.name = e.name;
         panel.team = e.team;
         panel.value = value;
         if (e.squadId != -1) {

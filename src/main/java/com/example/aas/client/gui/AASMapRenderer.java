@@ -24,7 +24,7 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.GameRenderer;
 import org.joml.Matrix4f;
-import java.util.Comparator; // Р”РѕР±Р°РІСЊС‚Рµ СЌС‚Сѓ СЃС‚СЂРѕРєСѓ
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import java.util.ArrayList;
@@ -39,14 +39,26 @@ public class AASMapRenderer implements AutoCloseable {
     private ResourceLocation getCurrentMapTexture() {
         String img = ClientData.currentMapImage;
         if (img == null || img.isEmpty()) img = "map1";
-        // Р—Р°РіСЂСѓР¶Р°РµРј РёР· РїР°РїРєРё "maps/"
         return MAP_ICONS_CACHE.computeIfAbsent(img, k -> new ResourceLocation("aas", "textures/gui/maps/" + k + ".png"));
     }
 
     private int mapX, mapY, mapSize;
-    // РўРµРєСѓС‰РёР№ Р·СѓРј (СЃРєРѕР»СЊРєРѕ Р±Р»РѕРєРѕРІ РІ РѕРґРЅРѕРј РїРёРєСЃРµР»Рµ РёРЅС‚РµСЂС„РµР№СЃР°)
     private double getMapScale() { return ClientData.mapScale; }
     public String selectedSpawnId = "";
+
+    /**
+     * Только для экрана смерти: проверка "можно ли сейчас заспавниться на этой точке".
+     * Принимает id точки: "RALLY" или "HUB:x:y:z". На остальных экранах = null (иконки/обводка не меняются).
+     */
+    public java.util.function.Predicate<String> spawnAvailability = null;
+    /** Во сколько раз увеличивается иконка выбранной точки спавна. */
+    private static final float SELECTED_SPAWN_SCALE = 1.15f;
+    /** Период одного цикла "почти прозрачная -> непрозрачная -> почти прозрачная" для обводки доступных точек спавна (мс). */
+    private static final long SPAWN_PULSE_MS = 1400L;
+    /** Минимальная непрозрачность обводки в нижней точке пульсации (0..1). */
+    private static final float SPAWN_PULSE_MIN_ALPHA = 0.08f;
+    private boolean followMode = false;
+    public void setFollowMode(boolean follow) { this.followMode = follow; }
     private double mapPanX = 0;
     private double mapPanZ = 0;
     private boolean isDraggingMap = false;
@@ -61,6 +73,13 @@ public class AASMapRenderer implements AutoCloseable {
     private static final ResourceLocation MARKER_ATTACK = new ResourceLocation("aas", "textures/gui/map_icons/marker_attack.png");
     private static final ResourceLocation MARKER_DEFEND = new ResourceLocation("aas", "textures/gui/map_icons/marker_defend.png");
     private static final ResourceLocation MARKER_BUILD = new ResourceLocation("aas", "textures/gui/map_icons/marker_build.png");
+    // Метки ДРУГИХ отрядов (видят только лидеры отрядов своей команды)
+    private static final ResourceLocation MARKER_MOVE_ALLY = new ResourceLocation("aas", "textures/gui/map_icons/marker_move_ally.png");
+    private static final ResourceLocation MARKER_ATTACK_ALLY = new ResourceLocation("aas", "textures/gui/map_icons/marker_attack_ally.png");
+    private static final ResourceLocation MARKER_DEFEND_ALLY = new ResourceLocation("aas", "textures/gui/map_icons/marker_defend_ally.png");
+    private static final ResourceLocation MARKER_BUILD_ALLY = new ResourceLocation("aas", "textures/gui/map_icons/marker_build_ally.png");
+    private static final ResourceLocation PING_EYE_ALLY = new ResourceLocation("aas", "textures/gui/map_icons/ping_eye_ally.png");
+    private static final int COLOR_ALLY_LINE = 0xFF279FDB; // линия от лидера другого отряда до его метки
     private static final ResourceLocation FLAG_NEUTRAL = new ResourceLocation("aas", "textures/gui/flags/neutral.png");
     private static final ResourceLocation ICON_CIRCLE = new ResourceLocation("aas", "textures/gui/map_icons/player_circle.png");
     private static final ResourceLocation ICON_PLUS = new ResourceLocation("aas", "textures/gui/map_icons/medic_plus.png");
@@ -68,7 +87,7 @@ public class AASMapRenderer implements AutoCloseable {
     private static final ResourceLocation ICON_MEDIC_CIRCLE = new ResourceLocation("aas", "textures/gui/map_icons/medic_circle.png");
     private static final ResourceLocation MAP_GRID_TEXTURE = new ResourceLocation("aas", "textures/gui/map_grid.png");
     private static final ResourceLocation HUB_ICON = new ResourceLocation("aas", "textures/gui/map_icons/hub_icon.png");
-    private static final ResourceLocation HUB_UNBUILT_ICON = new ResourceLocation("aas", "textures/gui/map_icons/hub_icon_unbuilt.png"); // РќРћР’РђРЇ РРљРћРќРљРђ
+    private static final ResourceLocation HUB_UNBUILT_ICON = new ResourceLocation("aas", "textures/gui/map_icons/hub_icon_unbuilt.png");
     private static final ResourceLocation RALLY_ICON = new ResourceLocation("aas", "textures/gui/map_icons/rally_icon.png");
     private static final ResourceLocation MAIN_BASE_ICON = new ResourceLocation("aas", "textures/gui/map_icons/main_base.png");
     private static final ResourceLocation ICON_OBJ_ATTACK = new ResourceLocation("aas", "textures/gui/map_icons/objective_attack.png");
@@ -78,7 +97,10 @@ public class AASMapRenderer implements AutoCloseable {
     private static final int COLOR_CHARLIE_LINE = 0xFF00E5CC; // бирюзовый — Charlie
     private static final ResourceLocation HUB_SELECTED_ICON = new ResourceLocation("aas", "textures/gui/map_icons/hub_icon_selected.png");
     private static final ResourceLocation RALLY_SELECTED_ICON = new ResourceLocation("aas", "textures/gui/map_icons/rally_icon_selected.png");
+    private static final ResourceLocation HUB_AVAILABLE_ICON = new ResourceLocation("aas", "textures/gui/map_icons/hub_icon_available.png");
+    private static final ResourceLocation RALLY_AVAILABLE_ICON = new ResourceLocation("aas", "textures/gui/map_icons/rally_icon_available.png");
     private static final ResourceLocation MAIN_SELECTED_ICON = new ResourceLocation("aas", "textures/gui/map_icons/main_base_selected.png");
+    private static final ResourceLocation MAIN_AVAILABLE_ICON = new ResourceLocation("aas", "textures/gui/map_icons/main_base_available.png");
     private static final ResourceLocation MATS_ICON = new ResourceLocation("aas", "textures/gui/mats_icon.png");
     private static final ResourceLocation STATION_ICON = new ResourceLocation("aas", "textures/gui/map_icons/vehicle_station.png");
     private static final ResourceLocation RHOMBUS_CMD = new ResourceLocation("aas", "textures/gui/map_icons/squad_rhombus_cmd.png");
@@ -106,10 +128,9 @@ public class AASMapRenderer implements AutoCloseable {
         VEHICLE_ICONS.put("SPG", new ResourceLocation("aas", "textures/gui/map_icons/spg.png"));
     }
     private ResourceLocation getMarkerIcon(String type) {
-        // РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРµРІСЂР°С‰Р°РµС‚ "Enemy HUB" РІ "hub_marker.png", Р° "Tank" РІ "tank_marker.png"
         String path = type.toLowerCase()
-                .replace("enemy ", "") // СѓР±РёСЂР°РµРј РїСЂРёРїРёСЃРєСѓ "enemy", РµСЃР»Рё РѕРЅР° РµСЃС‚СЊ
-                .replace(" ", "_");    // РїСЂРѕР±РµР»С‹ РІ РЅРёР¶РЅРµРµ РїРѕРґС‡РµСЂРєРёРІР°РЅРёРµ
+                .replace("enemy ", "")
+                .replace(" ", "_");
 
         return new ResourceLocation("aas", "textures/gui/map_icons/" + path + "_marker.png");
     }
@@ -124,12 +145,10 @@ public class AASMapRenderer implements AutoCloseable {
         this.mapSize = size;
     }
     private void drawSquadNumber(GuiGraphics gui, net.minecraft.client.gui.Font font, String text, int x, int y, int color) {
-        // Р РёСЃСѓРµРј С‡РµСЂРЅСѓСЋ РѕР±РІРѕРґРєСѓ (СЃРјРµС‰РµРЅРёРµ РІ 4 СЃС‚РѕСЂРѕРЅС‹)
         gui.drawString(font, text, x - 1, y, 0xFF000000, false);
         gui.drawString(font, text, x + 1, y, 0xFF000000, false);
         gui.drawString(font, text, x, y - 1, 0xFF000000, false);
         gui.drawString(font, text, x, y + 1, 0xFF000000, false);
-        // Р РёСЃСѓРµРј РѕСЃРЅРѕРІРЅРѕР№ С‚РµРєСЃС‚ РїРѕ С†РµРЅС‚СЂСѓ
         gui.drawString(font, text, x, y, color, false);
     }
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -137,12 +156,13 @@ public class AASMapRenderer implements AutoCloseable {
         LocalPlayer localPlayer = mc.player;
         if (localPlayer == null) return;
 
-        // 1. РљРѕРѕСЂРґРёРЅР°С‚С‹ РєР°РјРµСЂС‹ (РёРіСЂРѕРє + РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РєР°СЂС‚С‹)
-        double currentScale = ClientData.mapScale;
+        boolean follow = followMode;
+        if (follow) { mapPanX = 0; mapPanZ = 0; } else { clampView(localPlayer); }
+
+        double currentScale = follow ? ClientData.miniMapScale : ClientData.mapScale;
         double cx = localPlayer.getX() + mapPanX;
         double cz = localPlayer.getZ() + mapPanZ;
 
-        // 2. Р Р°РјРєР° Рё С„РѕРЅ
         gui.fillGradient(mapX, mapY, mapX + mapSize, mapY + mapSize, 0xFF1A2430, 0xFF050505);
 
         gui.enableScissor(mapX, mapY, mapX + mapSize, mapY + mapSize);
@@ -150,39 +170,34 @@ public class AASMapRenderer implements AutoCloseable {
         PoseStack pose = gui.pose();
         pose.pushPose();
 
-        // 3. РњР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ Рё С†РµРЅС‚СЂРёСЂРѕРІР°РЅРёРµ
         pose.translate(mapX + mapSize / 2.0, mapY + mapSize / 2.0, 0);
         float scale = 1.0f / (float) currentScale;
         pose.scale(scale, scale, 1.0f);
 
         int s = ClientData.mapSizeBlocks;
 
-        // Р Р°СЃС‡РµС‚ СЃРјРµС‰РµРЅРёСЏ РґР»СЏ РѕР±РµРёС… С‚РµРєСЃС‚СѓСЂ (РєР°СЂС‚Р° Рё СЃРµС‚РєР°) РѕРґРёРЅР°РєРѕРІС‹Р№
         float drawX = (float) (ClientData.mapCenterX - (s / 2.0) - cx);
         float drawY = (float) (ClientData.mapCenterZ - (s / 2.0) - cz);
 
-        // --- РћС‚СЂРёСЃРѕРІРєР° РљРђР РўР« ---
         ResourceLocation dynamicMapTexture = getCurrentMapTexture();
 
-        setFilter(dynamicMapTexture, true); // Р’РљР›Р®Р§РђР•Рњ РњРЇР“РљРР• РџРРљРЎР•Р›Р
+        setFilter(dynamicMapTexture, true);
         RenderSystem.setShaderTexture(0, dynamicMapTexture);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        gui.blit(dynamicMapTexture, (int)drawX, (int)drawY, s, s, 0, 0, 1024, 1024, 1024, 1024);
+        gui.blit(dynamicMapTexture, (int) drawX, (int) drawY, s, s, 0, 0, 1024, 1024, 1024, 1024);
         setFilter(dynamicMapTexture, false);
-
-        // --- РћС‚СЂРёСЃРѕРІРєР° РЎР•РўРљР (Grid) ---
-        setFilter(MAP_GRID_TEXTURE, true);
-        RenderSystem.setShaderTexture(0, MAP_GRID_TEXTURE);
-        RenderSystem.enableBlend();
-        gui.blit(MAP_GRID_TEXTURE, (int)drawX, (int)drawY, s, s, 0, 0, 1024, 1024, 1024, 1024);
-        setFilter(MAP_GRID_TEXTURE, false);
 
         pose.popPose();
 
-        // 4. РћС‚СЂРёСЃРѕРІРєР° РѕР±СЉРµРєС‚РѕРІ
-        renderLatticeLines(gui, mc, cx, cz, currentScale); // Р›РёРЅРёРё РјРµР¶РґСѓ С‚РѕС‡РєР°РјРё (Р›Р°С‚С‚РёСЃ)
-        renderOverlays(gui, mc, cx, cz, currentScale);     // РўРѕС‡РєРё Р·Р°С…РІР°С‚Р°
-        renderMainBases(gui, mc, cx, cz, currentScale);    // РњРµР№РЅС‹ РєРѕРјР°РЅРґ
+        final int gridOffX = (int) drawX, gridOffY = (int) drawY;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        MapGrid.render(gui, mc.font, mapX, mapY, mapSize, gridOffX, gridOffY, s, currentScale);
+
+        renderLatticeLines(gui, mc, cx, cz, currentScale);
+        renderOverlays(gui, mc, cx, cz, currentScale);
+        renderMainBases(gui, mc, cx, cz, currentScale);
         renderArtilleryZones(gui, cx, cz, currentScale);
         renderStructures(gui, mc, cx, cz, currentScale);
         renderVehicles(gui, mc, cx, cz, currentScale);
@@ -192,13 +207,32 @@ public class AASMapRenderer implements AutoCloseable {
         renderSquadRhombusMarkers(gui, mc, cx, cz, currentScale);
         renderSquadPings(gui, cx, cz, currentScale);
 
+        if (follow) {
+            // рамка по краю карты: за ней тёмная пустота
+            double half = mapSize / 2.0;
+            int l = (int) (mapX + half + (ClientData.mapCenterX - s / 2.0 - cx) / currentScale);
+            int r = (int) (mapX + half + (ClientData.mapCenterX + s / 2.0 - cx) / currentScale);
+            int t = (int) (mapY + half + (ClientData.mapCenterZ - s / 2.0 - cz) / currentScale);
+            int b = (int) (mapY + half + (ClientData.mapCenterZ + s / 2.0 - cz) / currentScale);
+            int edge = 0xFFB0B8C0;
+            gui.fill(l - 1, t - 1, r + 1, t, edge);
+            gui.fill(l - 1, b, r + 1, b + 1, edge);
+            gui.fill(l - 1, t, l, b, edge);
+            gui.fill(r, t, r + 1, b, edge);
+        }
+
         gui.disableScissor();
+
+        if (isMouseOver(mouseX, mouseY)) {
+            MapGrid.renderHover(gui, mc.font, mapX, mapY, mapSize, gridOffX, gridOffY, s, currentScale,
+                    mouseX, mouseY,
+                    mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
+        }
     }
 
     private void renderOverlays(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
         if (ClientData.allCapturePoints == null) return;
 
-        // Р’РєР»СЋС‡Р°РµРј СЃРјРµС€РёРІР°РЅРёРµ Рё РѕС‚РєР»СЋС‡Р°РµРј С‚РµСЃС‚ РіР»СѓР±РёРЅС‹, С‡С‚РѕР±С‹ РёРєРѕРЅРєРё РЅРµ РјРµСЂС†Р°Р»Рё РїСЂРё РЅР°Р»РѕР¶РµРЅРёРё
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
@@ -214,7 +248,6 @@ public class AASMapRenderer implements AutoCloseable {
 
             if (!isPointOnMap(pX, pY)) continue;
 
-            // --- Р›РћР“РРљРђ Р¦Р’Р•РўРђ Р РџР РћР—Р РђР§РќРћРЎРўР ---
             String owner = cp.owner.toUpperCase();
             String capTeam = cp.capturingTeam.toUpperCase();
             float progress = cp.progress;
@@ -245,7 +278,6 @@ public class AASMapRenderer implements AutoCloseable {
                 }
             }
 
-            // --- Р’Р«Р‘РћР  РўР•РљРЎРўРЈР Р« ---
             ResourceLocation flagTex = FLAG_NEUTRAL;
             int tintColor = 0xFFFFFFFF;
             boolean useTint = false;
@@ -258,7 +290,6 @@ public class AASMapRenderer implements AutoCloseable {
                 if (flagTex == null) { flagTex = FLAG_NEUTRAL; tintColor = 0xFFFF5555; useTint = true; }
             }
 
-            // --- Р Р•РќР”Р•Р  РРљРћРќРљР ---
             float r = 1.0f, g = 1.0f, b = 1.0f;
             if (useTint) {
                 r = ((tintColor >> 16) & 0xFF) / 255.0f;
@@ -266,33 +297,26 @@ public class AASMapRenderer implements AutoCloseable {
                 b = (tintColor & 0xFF) / 255.0f;
             }
 
-            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С†РІРµС‚ Рё Р°Р»СЊС„Сѓ РґР»СЏ С€РµР№РґРµСЂР°
             RenderSystem.setShaderColor(r, g, b, alpha);
             setFilter(flagTex, true);
 
-            // Р РµРЅРґРµСЂРёРј С„Р»Р°Рі
             gui.blit(flagTex, pX - 8, pY - 4, 16, 9, 0, 0, 64, 36, 64, 36);
 
             setFilter(flagTex, false);
 
-            // --- Р Р•РќР”Р•Р  РўР•РљРЎРўРђ ---
-            // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С†РІРµС‚ С‚РµРєСЃС‚Р°
             int textColor = 0xFFFFFF;
 
             gui.pose().pushPose();
-            // РЎРґРІРёРіР°РµРј РїРѕ Z (101), С‡С‚РѕР±С‹ С‚РµРєСЃС‚ Р±С‹Р» РїРѕРІРµСЂС… РІСЃРµРіРѕ
             gui.pose().translate(pX, pY + 7, 101);
             float textScale = 0.6f;
             gui.pose().scale(textScale, textScale, 1.0f);
 
-            // РЎР±СЂР°СЃС‹РІР°РµРј С†РІРµС‚ С€РµР№РґРµСЂР° РїРµСЂРµРґ С‚РµРєСЃС‚РѕРј, С‡С‚РѕР±С‹ RenderSystem.setShaderColor РЅРµ РєСЂР°СЃРёР» С€СЂРёС„С‚
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
             gui.drawCenteredString(mc.font, cp.name, 0, 0, textColor);
             gui.pose().popPose();
         }
 
-        // Р’РѕР·РІСЂР°С‰Р°РµРј РЅР°СЃС‚СЂРѕР№РєРё СЂРµРЅРґРµСЂР° РІ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ
         RenderSystem.enableDepthTest();
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
@@ -327,17 +351,15 @@ public class AASMapRenderer implements AutoCloseable {
         long currentTime = mc.level.getGameTime();
         boolean amIMedic = "Medic".equalsIgnoreCase(ClientData.myCurrentKit);
 
-        // --- 1. Р вЂњР  Р Р€Р СџР СџР ВР  Р Р€Р вЂўР Сљ Р ВР вЂњР  Р С›Р С™Р С›Р вЂ™ Р вЂ™ Р СћР вЂўР ТђР СњР ВР С™Р вЂў ---
         Map<Integer, List<MapPlayerInfo>> vehicleGroups = new HashMap<>();
 
         for (MapPlayerInfo info : ClientData.mapPlayers.values()) {
             if (info.isDead) continue;
             if (info.inVehicle) {
                 vehicleGroups.computeIfAbsent(info.vehicleId, k -> new ArrayList<>()).add(info);
-                continue; // Р СџРЎР‚Р С•Р С—РЎС“РЎРѓР С”Р В°Р ВµР С Р С—Р ВµРЎв‚¬РЎС“РЎР‹ Р С•РЎвЂљРЎР‚Р С‘РЎРѓР С•Р Р†Р С”РЎС“
+                continue;
             }
 
-            // --- 2. Р С›Р СћР  Р ВР РЋР С›Р вЂ™Р С™Р С’ Р СџР вЂўР РЃР вЂўР ТђР С›Р вЂќР С›Р вЂ™ ---
             double dx = (info.x - cx) / bpp;
             double dy = (info.z - cz) / bpp;
             int sx = (int) (mapX + (mapSize / 2) + dx);
@@ -345,7 +367,6 @@ public class AASMapRenderer implements AutoCloseable {
 
             if (!isPointOnMap(sx, sy)) continue;
 
-            // Р’С‹РґРµР»РµРЅРЅС‹Р№ РёРіСЂРѕРє: Р±РµР»С‹Рµ СѓРіРѕР»РєРё РІРѕРєСЂСѓРі РёРєРѕРЅРєРё (СЃРµР±СЏ СЂРёСЃСѓРµС‚ renderSelf)
             if (!info.name.equals(myName) && ClientData.isHighlighted(info.name)) {
                 drawHighlightBrackets(gui, sx, sy, 6);
             }
@@ -366,20 +387,16 @@ public class AASMapRenderer implements AutoCloseable {
                         gui.blit(ICON_PLUS, sx - 4, sy - 4, 8, 8, 0, 0, 16, 16, 16, 16);
                     }
                 } else {
-                    // РћРїСЂРµРґРµР»СЏРµРј С†РІРµС‚ (Р·РµР»РµРЅС‹Р№ РґР»СЏ СЃРІРѕРµРіРѕ РѕС‚СЂСЏРґР°, СЃРёРЅРёР№ РґР»СЏ РѕСЃС‚Р°Р»СЊРЅС‹С…)
                     float r = 0.2f, g = 0.6f, b = 1.0f;
                     if (info.squadId != -1 && info.squadId == myInternalSquadId) {
                         r = 0.0f; g = 1.0f; b = 0.0f;
                     }
                     RenderSystem.setShaderColor(r, g, b, 1.0f);
 
-                    // Р’С‹Р±РёСЂР°РµРј РєР°РєСѓСЋ РєР°СЂС‚РёРЅРєСѓ СЂРёСЃРѕРІР°С‚СЊ: РјРµРґРёРєР° РёР»Рё РѕР±С‹С‡РЅСѓСЋ
                     ResourceLocation iconToDraw = info.isMedic ? ICON_MEDIC_CIRCLE : ICON_CIRCLE;
 
-                    // Р РёСЃСѓРµРј РІС‹Р±СЂР°РЅРЅСѓСЋ РёРєРѕРЅРєСѓ (РёРіСЂР° РїРѕРєСЂР°СЃРёС‚ РµС‘ РІ РЅСѓР¶РЅС‹Р№ С†РІРµС‚ РёР·-Р·Р° setShaderColor РІС‹С€Рµ)
                     gui.blit(iconToDraw, sx - 3, sy - 3, 6, 6, 0, 0, 16, 16, 16, 16);
 
-                    // РЎР±СЂР°СЃС‹РІР°РµРј С†РІРµС‚ РѕР±СЂР°С‚РЅРѕ РЅР° Р±РµР»С‹Р№
                     RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 }
 
@@ -395,7 +412,6 @@ public class AASMapRenderer implements AutoCloseable {
                     gui.pose().popPose();
                 }
 
-                // РќРћР’РћР•: РЅР°Рґ РєСЂСѓР¶РєРѕРј вЂ” Р±СѓРєРІР° B/C РґР»СЏ РіР»Р°РІС‹ С„Р°РµСЂС‚РёРјР°, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёРј С†РІРµС‚РѕРј
                 if (!info.isDowned && info.fireteamRole != null && !info.fireteamRole.isEmpty()) {
                     int fireteamColor = "B".equals(info.fireteamRole) ? COLOR_BRAVO_LINE : COLOR_CHARLIE_LINE;
                     gui.pose().pushPose();
@@ -408,15 +424,12 @@ public class AASMapRenderer implements AutoCloseable {
             }
         }
 
-        // --- 3. Р С›Р СћР  Р ВР РЋР С›Р вЂ™Р С™Р С’ Р РЋР СџР ВР РЋР С™Р С›Р вЂ™ Р вЂ™ Р СћР вЂўР ТђР СњР ВР С™Р вЂў ---
         if (isShowNicksHeld) {
             for (List<MapPlayerInfo> group : vehicleGroups.values()) {
                 if (group.isEmpty()) continue;
 
-                // Р РЋР С•РЎР‚РЎвЂљР С‘РЎР‚РЎС“Р ВµР С: 0 Р СР ВµРЎРѓРЎвЂљР С• (Р Р†Р С•Р Т‘Р С‘РЎвЂљР ВµР В»РЎРЉ) РЎРѓР Р†Р ВµРЎР‚РЎвЂ¦РЎС“, Р С•РЎРѓРЎвЂљР В°Р В»РЎРЉР Р…РЎвЂ№Р Вµ Р Р…Р С‘Р В¶Р Вµ
                 group.sort(Comparator.comparingInt(p -> p.seatIndex));
 
-                // Р С™Р С•Р С•РЎР‚Р Т‘Р С‘Р Р…Р В°РЎвЂљРЎвЂ№ Р В±Р ВµРЎР‚Р ВµР С РЎС“ Р Р†Р С•Р Т‘Р С‘РЎвЂљР ВµР В»РЎРЏ
                 MapPlayerInfo driver = group.get(0);
                 double dx = (driver.x - cx) / bpp;
                 double dy = (driver.z - cz) / bpp;
@@ -425,7 +438,6 @@ public class AASMapRenderer implements AutoCloseable {
 
                 if (!isPointOnMap(sx, sy)) continue;
 
-                // Р СџР С•Р Т‘Р Р…Р С‘Р СР В°Р ВµР С Р Р…Р В°РЎвЂЎР В°Р В»РЎРЉР Р…РЎС“РЎР‹ РЎвЂљР С•РЎвЂЎР С”РЎС“ РЎРѓР С—Р С‘РЎРѓР С”Р В° Р Р† Р В·Р В°Р Р†Р С‘РЎРѓР С‘Р СР С•РЎРѓРЎвЂљР С‘ Р С•РЎвЂљ Р С”Р С•Р В»Р С‘РЎвЂЎР ВµРЎРѓРЎвЂљР Р†Р В° Р С‘Р С–РЎР‚Р С•Р С”Р С•Р Р†, РЎвЂЎРЎвЂљР С•Р В±РЎвЂ№ РЎРѓР С—Р С‘РЎРѓР С•Р С” РЎвЂ Р ВµР Р…РЎвЂљРЎР‚Р С‘РЎР‚Р С•Р Р†Р В°Р В»РЎРѓРЎРЏ Р Р…Р В°Р Т‘ Р СР В°РЎв‚¬Р С‘Р Р…Р С•Р в„–
                 int yOffset = sy - 10 - ((group.size() - 1) * 8);
 
                 for (MapPlayerInfo pInfo : group) {
@@ -433,19 +445,18 @@ public class AASMapRenderer implements AutoCloseable {
                     gui.pose().translate(sx, yOffset, 450);
                     gui.pose().scale(0.6f, 0.6f, 1.0f);
 
-                    int nickColor = 0xFFFFFFFF; // Р вЂР ВµР В»РЎвЂ№Р в„–
-                    if (pInfo.squadId != -1 && pInfo.squadId == myInternalSquadId) nickColor = 0xFF55FF55; // Р вЂ”Р ВµР В»Р ВµР Р…РЎвЂ№Р в„– Р Т‘Р В»РЎРЏ РЎРѓР С”Р Р†Р В°Р Т‘Р В°
-                    if (pInfo.name.equals(myName)) nickColor = 0xFFFFFF55; // Р вЂ“Р ВµР В»РЎвЂљРЎвЂ№Р в„– Р Т‘Р В»РЎРЏ РЎРѓР ВµР В±РЎРЏ
+                    int nickColor = 0xFFFFFFFF;
+                    if (pInfo.squadId != -1 && pInfo.squadId == myInternalSquadId) nickColor = 0xFF55FF55;
+                    if (pInfo.name.equals(myName)) nickColor = 0xFFFFFF55;
 
                     gui.drawCenteredString(mc.font, Component.literal(pInfo.name), 0, 0, nickColor);
                     gui.pose().popPose();
 
-                    yOffset += 8; // Р РЋР С—РЎС“РЎРѓР С”Р В°Р ВµР СРЎРѓРЎРЏ Р Р…Р В° РЎРѓРЎвЂљРЎР‚Р С•РЎвЂЎР С”РЎС“ Р Р…Р С‘Р В¶Р Вµ Р Т‘Р В»РЎРЏ РЎРѓР В»Р ВµР Т‘РЎС“РЎР‹РЎвЂ°Р ВµР С–Р С• Р С—Р В°РЎРѓРЎРѓР В°Р В¶Р С‘РЎР‚Р В°
+                    yOffset += 8;
                 }
             }
         }
 
-        // Р’С‹РґРµР»РµРЅРЅС‹Рµ РёРіСЂРѕРєРё РІ С‚РµС…РЅРёРєРµ: СЂР°РјРєР° РІРѕРєСЂСѓРі РёРєРѕРЅРєРё С‚РµС…РЅРёРєРё
         for (List<MapPlayerInfo> group : vehicleGroups.values()) {
             for (MapPlayerInfo p : group) {
                 if (!ClientData.isHighlighted(p.name)) continue;
@@ -471,7 +482,6 @@ public class AASMapRenderer implements AutoCloseable {
         int mySy = (int) (mapY + (mapSize / 2) + myDy);
 
         if (isPointOnMap(mySx, mySy)) {
-            // Р РёСЃСѓРµРј СЃРµР±СЏ СЃС‚СЂРµР»РѕС‡РєРѕР№ РўРћР›Р¬РљРћ РµСЃР»Рё РјС‹ РїРµС€РєРѕРј
             if (!inVehicle) {
                 gui.pose().pushPose();
                 gui.pose().translate(mySx, mySy, 300);
@@ -484,12 +494,10 @@ public class AASMapRenderer implements AutoCloseable {
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 gui.pose().popPose();
 
-                // Р•СЃР»Рё РІС‹РґРµР»РёР»Рё СЃР°РјРѕРіРѕ СЃРµР±СЏ РІ СЃРїРёСЃРєРµ РѕС‚СЂСЏРґРѕРІ
                 if (ClientData.isHighlighted(self.getScoreboardName())) {
                     drawHighlightBrackets(gui, mySx, mySy, 8);
                 }
 
-                // РРјСЏ РґР»СЏ СЃРµР±СЏ РїРµС€РєРѕРј СЂРёСЃСѓРµС‚СЃСЏ С‚СѓС‚ (РґР»СЏ С‚РµС…РЅРёРєРё РѕРЅРѕ СЂРёСЃСѓРµС‚СЃСЏ РІ С†РёРєР»Рµ РІС‹С€Рµ)
                 if (isShowNicknamesHeld()) {
                     gui.pose().pushPose();
                     gui.pose().translate(mySx, mySy - 10, 450);
@@ -506,28 +514,33 @@ public class AASMapRenderer implements AutoCloseable {
         return x >= mapX && x <= mapX + mapSize && y >= mapY && y <= mapY + mapSize;
     }
 
-    // Р‘РµР»Р°СЏ СЂР°РјРєР°-В«СѓРіРѕР»РєРёВ» РІРѕРєСЂСѓРі РёРєРѕРЅРєРё РІС‹РґРµР»РµРЅРЅРѕРіРѕ РёРіСЂРѕРєР°.
-    // cx, cy - С†РµРЅС‚СЂ РёРєРѕРЅРєРё, half - РїРѕР»РѕРІРёРЅР° СЃС‚РѕСЂРѕРЅС‹ СЂР°РјРєРё (РІ РїРёРєСЃРµР»СЏС… GUI)
     private void drawHighlightBrackets(GuiGraphics gui, int cx, int cy, int half) {
-        final int arm = 3;              // РґР»РёРЅР° РєР°Р¶РґРѕРіРѕ СѓРіРѕР»РєР°
-        final int color = 0xFFFFFFFF;   // Р±РµР»С‹Р№
+        drawHighlightBrackets(gui, cx, cy, half, 0xFFFFFFFF);
+    }
+
+    // Плавно пульсирующий белый цвет (ARGB) для обводки доступных точек спавна
+    private int spawnPulseColor() {
+        double phase = (System.currentTimeMillis() % SPAWN_PULSE_MS) / (double) SPAWN_PULSE_MS;
+        float k = (float) (0.5 - 0.5 * Math.cos(phase * Math.PI * 2.0)); // 0..1, плавно
+        float a = SPAWN_PULSE_MIN_ALPHA + (1.0f - SPAWN_PULSE_MIN_ALPHA) * k;
+        return (Math.round(a * 255.0f) << 24) | 0x00FFFFFF;
+    }
+
+    private void drawHighlightBrackets(GuiGraphics gui, int cx, int cy, int half, int color) {
+        final int arm = 3;
         int x1 = cx - half, y1 = cy - half;
         int x2 = cx + half, y2 = cy + half;
 
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         gui.pose().pushPose();
-        gui.pose().translate(0, 0, 340); // РїРѕРІРµСЂС… РёРєРѕРЅРѕРє РёРіСЂРѕРєРѕРІ/С‚РµС…РЅРёРєРё
+        gui.pose().translate(0, 0, 340);
 
-        // Р»РµРІС‹Р№ РІРµСЂС…РЅРёР№
         gui.fill(x1, y1, x1 + arm, y1 + 1, color);
         gui.fill(x1, y1, x1 + 1, y1 + arm, color);
-        // РїСЂР°РІС‹Р№ РІРµСЂС…РЅРёР№
         gui.fill(x2 - arm, y1, x2, y1 + 1, color);
         gui.fill(x2 - 1, y1, x2, y1 + arm, color);
-        // Р»РµРІС‹Р№ РЅРёР¶РЅРёР№
         gui.fill(x1, y2 - 1, x1 + arm, y2, color);
         gui.fill(x1, y2 - arm, x1 + 1, y2, color);
-        // РїСЂР°РІС‹Р№ РЅРёР¶РЅРёР№
         gui.fill(x2 - arm, y2 - 1, x2, y2, color);
         gui.fill(x2 - 1, y2 - arm, x2, y2, color);
 
@@ -542,11 +555,20 @@ public class AASMapRenderer implements AutoCloseable {
     public void centerOnPlayer() { mapPanX = 0; mapPanZ = 0; }
     public double getCenterX(LocalPlayer player) { return player.getX() + mapPanX; }
     public double getCenterZ(LocalPlayer player) { return player.getZ() + mapPanZ; }
-    public double getBlocksPerPixel() { return ClientData.mapScale; }
-
+    public double getBlocksPerPixel() { return followMode ? ClientData.miniMapScale : ClientData.mapScale; }
+    /** Keeps the view inside the map so the background gradient is never visible. */
+    private void clampView(LocalPlayer p) {
+        if (mapSize <= 0) return;
+        double maxBpp = MapGrid.maxBpp(ClientData.mapSizeBlocks, mapSize, 0.5);
+        if (ClientData.mapScale > maxBpp) ClientData.mapScale = maxBpp;
+        double view = mapSize * ClientData.mapScale;
+        double cx = MapGrid.clampCenter(p.getX() + mapPanX, ClientData.mapCenterX, ClientData.mapSizeBlocks, view);
+        double cz = MapGrid.clampCenter(p.getZ() + mapPanZ, ClientData.mapCenterZ, ClientData.mapSizeBlocks, view);
+        mapPanX = cx - p.getX();
+        mapPanZ = cz - p.getZ();
+    }
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (isMouseOver(mouseX, mouseY)) {
-            // Р’С‹Р·С‹РІР°РµРј Р±РµР·РѕРїР°СЃРЅС‹Р№ Р·СѓРј РёР· ClientData
             ClientData.zoomMap(delta);
             return true;
         }
@@ -557,7 +579,6 @@ public class AASMapRenderer implements AutoCloseable {
 
         PoseStack pose = gui.pose();
 
-        // РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРјР°РЅРґС‹ РёРіСЂРѕРєР°
         String myTeam = "NEUTRAL";
         if (mc.player.getTeam() != null) {
             String name = mc.player.getTeam().getName().toUpperCase();
@@ -567,11 +588,8 @@ public class AASMapRenderer implements AutoCloseable {
         boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
 
         for (AASWorldData.VehicleRecord record : ClientData.clientVehicles) {
-            // Р¤РёР»СЊС‚СЂ: РІРёРґРёРј С‚РѕР»СЊРєРѕ СЃРІРѕСЋ РєРѕРјР°РЅРґСѓ (РёР»Рё Р°РґРјРёРЅ)
             if (!record.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
-            // Р’РђР–РќРћ: РСЃРїРѕР»СЊР·СѓРµРј РєРѕРѕСЂРґРёРЅР°С‚С‹ x Рё z РїСЂСЏРјРѕ РёР· record (СЃРµСЂРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ)
-            // Р­С‚Рѕ РїРѕР·РІРѕР»СЏРµС‚ РІРёРґРµС‚СЊ С‚РµС…РЅРёРєСѓ, РґР°Р¶Рµ РµСЃР»Рё РѕРЅР° РЅРµ РїСЂРѕРіСЂСѓР¶РµРЅР° Сѓ С‚РµР±СЏ Р»РёС‡РЅРѕ
             double dx = (record.x - cx) / bpp;
             double dy = (record.z - cz) / bpp;
 
@@ -596,7 +614,6 @@ public class AASMapRenderer implements AutoCloseable {
             gui.blit(icon, -6, -6, 12, 12, 0, 0, 16, 16, 16, 16);
             pose.popPose();
 
-            // Р’Р«РљР›Р®Р§РђР•Рњ
             setFilter(icon, false);
         }
     }
@@ -607,11 +624,9 @@ public class AASMapRenderer implements AutoCloseable {
 
         String currentDim = mc.level.dimension().location().toString();
 
-        // 1. РЎРѕСЂС‚РёСЂСѓРµРј С‚РѕС‡РєРё Р·Р°С…РІР°С‚Р° РѕС‚ РЎРёРЅРµР№ Р±Р°Р·С‹ Рє РљСЂР°СЃРЅРѕР№ (РїРѕ bluePriority РїРѕ РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ)
         List<AASWorldData.CapturePoint> sortedPoints = new ArrayList<>(ClientData.allCapturePoints);
         sortedPoints.sort(Comparator.comparingInt(p -> p.bluePriority));
 
-        // 2. РЎС‚СЂРѕРёРј РµРґРёРЅС‹Р№ РїСѓС‚СЊ РёР· РєРѕРѕСЂРґРёРЅР°С‚: РЎРёРЅРёР№ РњРµР№РЅ -> РўРѕС‡РєРё -> РљСЂР°СЃРЅС‹Р№ РњРµР№РЅ
         List<Vec3> path = new ArrayList<>();
 
         if (ClientData.blueSpawns.containsKey(currentDim)) {
@@ -628,8 +643,7 @@ public class AASMapRenderer implements AutoCloseable {
             path.add(new Vec3(rPos.getX() + 0.5, rPos.getY(), rPos.getZ() + 0.5));
         }
 
-        // 3. РћС‚СЂРёСЃРѕРІС‹РІР°РµРј РѕС‚СЂРµР·РєРё РјРµР¶РґСѓ РІСЃРµРјРё С‚РѕС‡РєР°РјРё РїСѓС‚Рё
-        int lineColor = 0x66FFFFFF; // Р‘РµР»С‹Р№, РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅС‹Р№ (alpha ~ 40%)
+        int lineColor = 0x66FFFFFF;
 
         for (int i = 0; i < path.size() - 1; i++) {
             Vec3 p1 = path.get(i);
@@ -644,29 +658,24 @@ public class AASMapRenderer implements AutoCloseable {
         }
     }
 
-    // === Р“Р›РђР’РќР«Р• Р‘РђР—Р« (MAIN) ===
-    // Р’ С„Р°Р№Р»Рµ AASMapRenderer.java
+    // === ГЛАВНЫЕ БАЗЫ (MAIN) ===
 
     private void renderMainBases(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
         if (mc.level == null) return;
         String currentDim = mc.level.dimension().location().toString();
-        String playerTeam = getPlayerTeamStrict(mc); // Р’РµСЂРЅРµС‚ "BLUE", "RED" РёР»Рё "NEUTRAL"
+        String playerTeam = getPlayerTeamStrict(mc);
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
 
-        // РћС‚СЂРёСЃРѕРІРєР° РЎРёРЅРµРіРѕ РјРµР№РЅР°
         if (ClientData.blueSpawns.containsKey(currentDim)) {
             BlockPos pos = ClientData.blueSpawns.get(currentDim);
-            // РџСЂРѕРІРµСЂСЏРµРј: РµСЃР»Рё РёРіСЂРѕРє РІ РЎРёРЅРµР№ РєРѕРјР°РЅРґРµ, С‚Рѕ РґР»СЏ РЅРµРіРѕ СЌС‚РѕС‚ РјРµР№РЅ - "СЃРІРѕР№"
             boolean isFriendly = playerTeam.equals("BLUE");
             drawMainBaseIcon(gui, mc, pos, cx, cz, bpp, ClientData.BLUE_FACTION, 0xFF3366CC, isFriendly);
         }
 
-        // РћС‚СЂРёСЃРѕРІРєР° РљСЂР°СЃРЅРѕРіРѕ РјРµР№РЅР°
         if (ClientData.redSpawns.containsKey(currentDim)) {
             BlockPos pos = ClientData.redSpawns.get(currentDim);
-            // РџСЂРѕРІРµСЂСЏРµРј: РµСЃР»Рё РёРіСЂРѕРє РІ РљСЂР°СЃРЅРѕР№ РєРѕРјР°РЅРґРµ, С‚Рѕ РґР»СЏ РЅРµРіРѕ СЌС‚РѕС‚ РјРµР№РЅ - "СЃРІРѕР№"
             boolean isFriendly = playerTeam.equals("RED");
             drawMainBaseIcon(gui, mc, pos, cx, cz, bpp, ClientData.RED_FACTION, 0xFFCC3333, isFriendly);
         }
@@ -678,11 +687,10 @@ public class AASMapRenderer implements AutoCloseable {
 
         if (!isPointOnMap(pX, pY)) return;
 
-        // РўРµРїРµСЂСЊ Р»РѕРіРёРєР° РІС‹Р±РѕСЂР° РёРєРѕРЅРєРё:
-        // Р•СЃР»Рё СЌС‚Рѕ Р±Р°Р·Р° РЅР°С€РµР№ РєРѕРјР°РЅРґС‹ Р РІ РјРµРЅСЋ РІС‹Р±СЂР°РЅРѕ "MAIN" -> СЂРёСЃСѓРµРј РІС‹РґРµР»РµРЅРЅСѓСЋ РёРєРѕРЅРєСѓ
-        ResourceLocation icon = (isFriendly && "MAIN".equals(this.selectedSpawnId)) ? MAIN_SELECTED_ICON : MAIN_BASE_ICON;
+        boolean mainSelected = isFriendly && "MAIN".equals(this.selectedSpawnId);
+        boolean mainAvailable = isFriendly && spawnAvailability != null && spawnAvailability.test("MAIN");
+        ResourceLocation icon = mainSelected ? MAIN_SELECTED_ICON : (mainAvailable ? MAIN_AVAILABLE_ICON : MAIN_BASE_ICON);
 
-        // Р РµРЅРґРµСЂ С„Р»Р°РіР° РїРѕРґ РёРєРѕРЅРєРѕР№
         ResourceLocation flagTex = getFlagTexture(faction);
         if (flagTex != null && !faction.equals("none")) {
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -693,35 +701,37 @@ public class AASMapRenderer implements AutoCloseable {
             gui.fill(pX - 8, pY - 4, pX + 8, pY + 5, fallbackColor);
         }
 
-        // Р РµРЅРґРµСЂ СЃР°РјРѕР№ РёРєРѕРЅРєРё РґРѕРјРёРєР°
         setFilter(icon, true);
         gui.pose().pushPose();
         gui.pose().translate(pX, pY, 150);
+        if (mainSelected) gui.pose().scale(SELECTED_SPAWN_SCALE, SELECTED_SPAWN_SCALE, 1.0f);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         gui.blit(icon, -6, -6, 12, 12, 0, 0, 16, 16, 16, 16);
         gui.pose().popPose();
         setFilter(icon, false);
+
+        if (mainAvailable) {
+            drawHighlightBrackets(gui, pX, pY, 9, spawnPulseColor());
+        }
     }
 
 
-    // === РџР РЇРњРђРЇ РўРћР›РЎРўРђРЇ Р›РРќРРЇ ===
+    // === ПРЯМАЯ ТОЛСТАЯ ЛИНИЯ ===
     private void drawSolidLine(GuiGraphics gui, int x1, int y1, int x2, int y2, int color) {
         float dx = x2 - x1;
         float dy = y2 - y1;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len < 1) return;
 
-        // Р’С‹С‡РёСЃР»СЏРµРј СѓРіРѕР» РЅР°РєР»РѕРЅР° Р»РёРЅРёРё
         float angle = (float) Math.toDegrees(Math.atan2(dy, dx));
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
 
         gui.pose().pushPose();
-        gui.pose().translate(x1, y1, 0); // РЎС‚Р°РІРёРј СЃС‚Р°СЂС‚ РІ (x1, y1)
-        gui.pose().mulPose(Axis.ZP.rotationDegrees(angle)); // РџРѕРІРѕСЂР°С‡РёРІР°РµРј С‚СѓРґР°, РіРґРµ РЅР°С…РѕРґРёС‚СЃСЏ (x2, y2)
+        gui.pose().translate(x1, y1, 0);
+        gui.pose().mulPose(Axis.ZP.rotationDegrees(angle));
 
-        // Р РёСЃСѓРµРј Р»РёРЅРёСЋ РЅСѓР¶РЅРѕР№ РґР»РёРЅС‹ (С‚РѕР»С‰РёРЅР° 3 РїРёРєСЃРµР»СЏ: РѕС‚ -1 РґРѕ +1 РїРѕ Y)
         gui.fill(0, 0, (int)len, 1, color);
 
         gui.pose().popPose();
@@ -749,7 +759,6 @@ public class AASMapRenderer implements AutoCloseable {
 
         int segments = 128;
 
-        // Р РёСЃСѓРµРј РєРѕР»СЊС†Рѕ С‚СЂРµСѓРіРѕР»СЊРЅРѕР№ Р»РµРЅС‚РѕР№ РјРµР¶РґСѓ innerR Рё outerR
         bufferbuilder.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         for (int i = 0; i <= segments; i++) {
             float angle = i * ((float) Math.PI * 2F) / segments;
@@ -768,25 +777,67 @@ public class AASMapRenderer implements AutoCloseable {
 
         RenderSystem.disableBlend();
     }
+    /** Пунктирная окружность (радиус и толщина в пикселях GUI, цвет ARGB). Штрихи постоянной длины по дуге. */
+    private void drawDashedCircle(GuiGraphics gui, float cx, float cy, float radius, int color, float lineWidth) {
+        if (radius < 2f) return;
+
+        final float dashLen = 6f;   // длина штриха, px
+        final float gapLen = 4f;    // длина промежутка, px
+        int dashes = Math.max(12, Math.min(400, (int) Math.round(2.0 * Math.PI * radius / (dashLen + gapLen))));
+        float step = (float) (Math.PI * 2.0) / dashes;
+        float dashAngle = step * dashLen / (dashLen + gapLen);
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder bb = tesselator.getBuilder();
+        Matrix4f matrix = gui.pose().last().pose();
+
+        float a = (float) (color >> 24 & 255) / 255.0F;
+        float r = (float) (color >> 16 & 255) / 255.0F;
+        float g = (float) (color >> 8 & 255) / 255.0F;
+        float b = (float) (color & 255) / 255.0F;
+
+        float half = lineWidth / 2.0f;
+        float innerR = radius - half;
+        float outerR = radius + half;
+        final int sub = 3;   // каждый штрих режем на 3 четырёхугольника, чтобы дуга выглядела гладко
+
+        bb.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        for (int i = 0; i < dashes; i++) {
+            float start = i * step;
+            for (int k = 0; k < sub; k++) {
+                float a0 = start + dashAngle * k / sub;
+                float a1 = start + dashAngle * (k + 1) / sub;
+                float c0 = Mth.cos(a0), s0 = Mth.sin(a0);
+                float c1 = Mth.cos(a1), s1 = Mth.sin(a1);
+                bb.vertex(matrix, cx + c0 * outerR, cy + s0 * outerR, 0.0F).color(r, g, b, a).endVertex();
+                bb.vertex(matrix, cx + c0 * innerR, cy + s0 * innerR, 0.0F).color(r, g, b, a).endVertex();
+                bb.vertex(matrix, cx + c1 * innerR, cy + s1 * innerR, 0.0F).color(r, g, b, a).endVertex();
+                bb.vertex(matrix, cx + c1 * outerR, cy + s1 * outerR, 0.0F).color(r, g, b, a).endVertex();
+            }
+        }
+        tesselator.end();
+
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+    }
+
     private void renderArtilleryZones(GuiGraphics gui, double cx, double cz, double bpp) {
-        // РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё Р°РєС‚РёРІРЅС‹Рµ РѕР±СЃС‚СЂРµР»С‹ РІ РґР°РЅРЅС‹С… РєР»РёРµРЅС‚Р°
         if (ClientData.activeStrikes == null || ClientData.activeStrikes.isEmpty()) return;
 
         float radius = com.example.aas.config.AASConfig.ART_STRIKE_RADIUS.get().floatValue();
 
         for (AASWorldData.ActiveStrike strike : ClientData.activeStrikes) {
-            // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј СЌРєСЂР°РЅРЅС‹Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹ С†РµРЅС‚СЂР° РѕР±СЃС‚СЂРµР»Р°
             double dx = (strike.pos.getX() + 0.5 - cx) / bpp;
             double dy = (strike.pos.getZ() + 0.5 - cz) / bpp;
             float sx = (float) (mapX + (mapSize / 2.0) + dx);
             float sy = (float) (mapY + (mapSize / 2.0) + dy);
 
-            // Р РёСЃСѓРµРј РєСЂР°СЃРЅС‹Р№ РєСЂСѓРі.
-            // 0xFFFF0000 - СЃРїР»РѕС€РЅРѕР№ РєСЂР°СЃРЅС‹Р№, РёР»Рё 0x80FF0000 РґР»СЏ РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅРѕРіРѕ
             drawSmoothCircle(gui, sx, sy, radius / (float)bpp, 0xFFFF0000, 1.0f);
-
-            // РћРїС†РёРѕРЅР°Р»СЊРЅРѕ: РјРѕР¶РЅРѕ РЅР°СЂРёСЃРѕРІР°С‚СЊ РµС‰Рµ РѕРґРёРЅ Р·Р°РєСЂР°С€РµРЅРЅС‹Р№ РєСЂСѓРі РІРЅСѓС‚СЂРё РґР»СЏ Р·Р°РјРµС‚РЅРѕСЃС‚Рё
-            // gui.fill((int)sx-2, (int)sy-2, (int)sx+2, (int)sy+2, 0xFFFF0000);
         }
     }
     private void renderStructures(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
@@ -795,10 +846,11 @@ public class AASMapRenderer implements AutoCloseable {
         String myName = mc.player.getScoreboardName();
         boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
 
-        double minHubDist = com.example.aas.config.AASConfig.MIN_HUB_DISTANCE.get();
-        double buildRad = com.example.aas.config.AASConfig.HUB_BUILD_RADIUS.get();
+        // Значения приходят с сервера (ClientData), а не из локального конфига клиента
+        double minHubDist = ClientData.minHubDistance();
+        double buildRad = ClientData.hubBuildRadius();
+        int spawnPulse = spawnPulseColor();
 
-        // 1. Р РµРЅРґРµСЂ РҐРђР‘РѕРІ
         for (AASWorldData.HubInfo hub : ClientData.clientHubs) {
             if (!hub.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
@@ -807,7 +859,6 @@ public class AASMapRenderer implements AutoCloseable {
             float sx = (float) (mapX + (mapSize / 2.0) + dx);
             float sy = (float) (mapY + (mapSize / 2.0) + dy);
 
-            // РљСЂСѓРіРё СЂР°РґРёСѓСЃР° СЂРёСЃСѓРµРј С‚РѕР»СЊРєРѕ РґР»СЏ РґРѕСЃС‚СЂРѕРµРЅРЅРѕРіРѕ С…Р°Р±Р°
             if (hub.constructed) {
                 pose.pushPose();
                 pose.translate(0, 0, 50);
@@ -818,22 +869,30 @@ public class AASMapRenderer implements AutoCloseable {
 
             if (isPointOnMap((int)sx, (int)sy)) {
                 ResourceLocation icon;
+                boolean hubSelected = false;
+                boolean hubAvailable = false;
                 if (!hub.constructed) {
                     icon = HUB_UNBUILT_ICON;
                 } else {
                     String hubId = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
-                    icon = hubId.equals(this.selectedSpawnId) ? HUB_SELECTED_ICON : HUB_ICON;
+                    hubSelected = hubId.equals(this.selectedSpawnId);
+                    hubAvailable = spawnAvailability != null && spawnAvailability.test(hubId);
+                    icon = hubSelected ? HUB_SELECTED_ICON : (hubAvailable ? HUB_AVAILABLE_ICON : HUB_ICON);
                 }
 
                 setFilter(icon, true);
                 pose.pushPose();
                 pose.translate(sx, sy, 160);
+                if (hubSelected) pose.scale(SELECTED_SPAWN_SCALE, SELECTED_SPAWN_SCALE, 1.0f);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 gui.blit(icon, -6, -6, 12, 12, 0, 0, 16, 16, 16, 16);
                 pose.popPose();
                 setFilter(icon, false);
 
-                // === Р›РћР“РРљРђ РћРўР РРЎРћР’РљР РњРђРўР•Р РРђР›РћР’ вЂ” С‚РѕР»СЊРєРѕ РґР»СЏ РґРѕСЃС‚СЂРѕРµРЅРЅРѕРіРѕ С…Р°Р±Р° ===
+                if (hubAvailable) {
+                    drawHighlightBrackets(gui, Math.round(sx), Math.round(sy), 9, spawnPulse);
+                }
+
                 if (hub.constructed) {
                     String matValue = String.valueOf(hub.materials);
                     int textWidth = mc.font.width(matValue);
@@ -860,7 +919,6 @@ public class AASMapRenderer implements AutoCloseable {
             }
         }
 
-        // 2. Р РµРЅРґРµСЂ Р Р°Р»Р»Рё-РїРѕРёРЅС‚РѕРІ
         for (AASWorldData.Squad squad : ClientData.clientSquads) {
             if (squad.rallyPos == null) continue;
             if (!squad.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
@@ -872,19 +930,25 @@ public class AASMapRenderer implements AutoCloseable {
 
             if (isPointOnMap((int)sx, (int)sy)) {
                 boolean isMySquad = squad.members.contains(myName);
-                ResourceLocation icon = (isMySquad && "RALLY".equals(this.selectedSpawnId)) ? RALLY_SELECTED_ICON : RALLY_ICON;
+                boolean rallySelected = isMySquad && "RALLY".equals(this.selectedSpawnId);
+                boolean rallyAvailable = isMySquad && spawnAvailability != null && spawnAvailability.test("RALLY");
+                ResourceLocation icon = rallySelected ? RALLY_SELECTED_ICON : (rallyAvailable ? RALLY_AVAILABLE_ICON : RALLY_ICON);
 
                 setFilter(icon, true);
                 pose.pushPose();
                 pose.translate(sx, sy, 170);
+                if (rallySelected) pose.scale(SELECTED_SPAWN_SCALE, SELECTED_SPAWN_SCALE, 1.0f);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 gui.blit(icon, -5, -5, 10, 10, 0, 0, 16, 16, 16, 16);
                 pose.popPose();
                 setFilter(icon, false);
+
+                if (rallyAvailable) {
+                    drawHighlightBrackets(gui, Math.round(sx), Math.round(sy), 8, spawnPulse);
+                }
             }
         }
 
-        // Р’РЅСѓС‚СЂРё РјРµС‚РѕРґР° renderStructures РІ СЃР°РјРѕРј РєРѕРЅС†Рµ
         for (AASWorldData.StationInfo station : ClientData.clientStations) {
             if (!station.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
 
@@ -898,7 +962,6 @@ public class AASMapRenderer implements AutoCloseable {
                 gui.pose().pushPose();
                 gui.pose().translate(sx, sy, 155);
 
-                // РЈР±СЂР°Р»Рё РїСЂРѕРІРµСЂРєСѓ РєРѕРјР°РЅРґС‹ Рё РїРѕРєСЂР°СЃРєСѓ, РїСЂРѕСЃС‚Рѕ СЃС‚Р°РІРёРј Р±РµР»С‹Р№ С†РІРµС‚
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
                 gui.blit(STATION_ICON, -5, -5, 10, 10, 0, 0, 16, 16, 16, 16);
@@ -926,11 +989,10 @@ public class AASMapRenderer implements AutoCloseable {
         boolean isBravo   = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
         boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
 
-        // РњРµС‚РєР° Р»РёРґРµСЂР° вЂ” РІРёРґСЏС‚ РІСЃРµ, РІСЃРµРіРґР° СЃ РїСѓРЅРєС‚РёСЂРѕРј
         if (mySquad.marker != null && mySquad.marker.type != 6) {
             drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.marker,
                     getSquadMarkerIcon(mySquad.marker.type),
-                    COLOR_SQUAD_LINE, // ← было getSquadMarkerColor(mySquad.marker.type)
+                    COLOR_SQUAD_LINE,
                     true);
         }
 
@@ -938,7 +1000,7 @@ public class AASMapRenderer implements AutoCloseable {
         if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6) {
             boolean canSee = isSL || isBravo;
             if (canSee) {
-                boolean withDash = isSL || isBravo; // свои — с пунктиром
+                boolean withDash = isSL || isBravo;
                 drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.bravoMarker,
                         getBravoMarkerIcon(mySquad.bravoMarker.type), COLOR_BRAVO_LINE, withDash);
             }
@@ -948,16 +1010,13 @@ public class AASMapRenderer implements AutoCloseable {
         if (mySquad.charlieMarker != null && mySquad.charlieMarker.type != 6) {
             boolean canSee = isSL || isCharlie;
             if (canSee) {
-                boolean withDash = isSL || isCharlie; // свои — с пунктиром
+                boolean withDash = isSL || isCharlie;
                 drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.charlieMarker,
                         getCharlieMarkerIcon(mySquad.charlieMarker.type), COLOR_CHARLIE_LINE, withDash);
             }
         }
 
-        // === Р§РЈР–РР• Р¤РђР™Р РўРРњР« (Bravo/Charlie РєРѕС‚РѕСЂС‹Рµ РЅРµ С‚РІРѕРё) ===
-        // Bravo РІРёРґРЅРѕ Charlie Рё РЅР°РѕР±РѕСЂРѕС‚ вЂ” Р±РµР· РїСѓРЅРєС‚РёСЂР°
         if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6 && !isSL && !isBravo) {
-            // isCharlie РёР»Рё РїСЂРѕСЃС‚Рѕ РЅРµ Bravo Рё РЅРµ SL вЂ” РІРёРґРёС‚ РјРµС‚РєСѓ Р±РµР· РїСѓРЅРєС‚РёСЂР°
             drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.bravoMarker,
                     getBravoMarkerIcon(mySquad.bravoMarker.type), COLOR_BRAVO_LINE, false);
         }
@@ -966,9 +1025,99 @@ public class AASMapRenderer implements AutoCloseable {
             drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.charlieMarker,
                     getCharlieMarkerIcon(mySquad.charlieMarker.type), COLOR_CHARLIE_LINE, false);
         }
+
+        // === МЕТКИ ДРУГИХ ОТРЯДОВ: их видят только лидеры отрядов (SL) своей команды ===
+        // Линия идёт от лидера отряда-автора до его метки.
+        if (isSL) {
+            String myTeam = getPlayerTeamStrict(mc);
+            for (AASWorldData.Squad other : ClientData.clientSquads) {
+                if (other.id == mySquad.id) continue;
+                if (!other.team.equalsIgnoreCase(myTeam)) continue;
+                if (other.marker == null || other.marker.type == 6) continue;
+                drawAllyMarkerAndLine(gui, mc, cx, cz, bpp, other.marker,
+                        getAllyMarkerIcon(other.marker.type), other);
+            }
+        }
     }
 
-    // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РѕС‚СЂРёСЃРѕРІРєРё Р»СЋР±РѕР№ РјРµС‚РєРё РѕС‚СЂСЏРґР° Рё Р»РёРЅРёРё Рє РЅРµР№
+    // Метка и линия ДРУГОГО отряда: линия от его лидера до метки, цвет #279fdb.
+    // Под иконкой пишется номер отряда-автора (вместо дистанции).
+    private void drawAllyMarkerAndLine(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp,
+                                       AASWorldData.SquadMarker m, ResourceLocation icon, AASWorldData.Squad ownerSquad) {
+
+        int mx = (int) (mapX + (mapSize / 2) + (m.x - cx) / bpp);
+        int my = (int) (mapY + (mapSize / 2) + (m.z - cz) / bpp);
+
+        // Лидер-автор метки: если его нет в данных карты (мёртв/не синхронизирован) - линию не рисуем
+        MapPlayerInfo leaderInfo = findMapPlayerByName(ownerSquad.leader);
+        if (leaderInfo != null) {
+            int lx = (int) (mapX + (mapSize / 2) + (leaderInfo.x - cx) / bpp);
+            int ly = (int) (mapY + (mapSize / 2) + (leaderInfo.z - cz) / bpp);
+            drawSolidLine(gui, lx, ly, mx, my, COLOR_ALLY_LINE);
+        }
+
+        if (isPointOnMap(mx, my)) {
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            gui.blit(icon, mx - 6, my - 6, 0, 0, 12, 12, 12, 12);
+
+            drawAllySquadNumberLabel(gui, mc, mx, my, ownerSquad);
+        }
+    }
+
+    // Номер отряда под чужой меткой (тот же номер, что показывается на карте у лидера отряда)
+    private void drawAllySquadNumberLabel(GuiGraphics gui, Minecraft mc, int mx, int my, AASWorldData.Squad ownerSquad) {
+        int num = getSquadDisplayNumber(mc, ownerSquad);
+        if (num <= 0) return;
+        String numText = String.valueOf(num);
+
+        gui.pose().pushPose();
+        gui.pose().translate(mx, my + 8, 600);
+        gui.pose().scale(0.8f, 0.8f, 1.0f);
+        int textWidth = mc.font.width(numText);
+        gui.drawString(mc.font, numText, -(textWidth / 2), 0, COLOR_ALLY_LINE, true);
+        gui.pose().popPose();
+    }
+
+    // Порядковый номер отряда в своей команде: CMD-отряд первый, остальные по id (как в renderAllPlayers)
+    private int getSquadDisplayNumber(Minecraft mc, AASWorldData.Squad target) {
+        String team = target.team;
+        boolean isBlue = team != null && team.toUpperCase().contains("BLUE");
+        int cmdId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
+
+        List<AASWorldData.Squad> teamSquads = ClientData.clientSquads.stream()
+                .filter(s -> s.team.equalsIgnoreCase(team))
+                .collect(Collectors.toList());
+        teamSquads.sort((s1, s2) -> {
+            if (s1.id == cmdId && cmdId != -1) return -1;
+            if (s2.id == cmdId && cmdId != -1) return 1;
+            return Integer.compare(s1.id, s2.id);
+        });
+
+        for (int i = 0; i < teamSquads.size(); i++) {
+            if (teamSquads.get(i).id == target.id) return i + 1;
+        }
+        return 0;
+    }
+
+    private MapPlayerInfo findMapPlayerByName(String name) {
+        if (name == null || name.isEmpty()) return null;
+        for (MapPlayerInfo info : ClientData.mapPlayers.values()) {
+            if (!info.isDead && name.equals(info.name)) return info;
+        }
+        return null;
+    }
+
+    private ResourceLocation getAllyMarkerIcon(int type) {
+        switch (type) {
+            case 1: return MARKER_ATTACK_ALLY;
+            case 2: return MARKER_DEFEND_ALLY;
+            case 3: return MARKER_BUILD_ALLY;
+            case 5: return MARKER_ATTACK_ALLY;
+            default: return MARKER_MOVE_ALLY;
+        }
+    }
+
     private void drawMapMarkerAndLine(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp,
                                       AASWorldData.SquadMarker m, ResourceLocation icon, int color, boolean withDash) {
 
@@ -979,7 +1128,7 @@ public class AASMapRenderer implements AutoCloseable {
         int py = (int) (mapY + (mapSize / 2) + (mc.player.getZ() - cz) / bpp);
 
         if (withDash) {
-            drawSolidLine(gui, px, py, mx, my, color);   // ← было drawDashedLine(gui, px, py, mx, my, color);
+            drawSolidLine(gui, px, py, mx, my, color);
         }
 
         if (isPointOnMap(mx, my)) {
@@ -1000,14 +1149,14 @@ public class AASMapRenderer implements AutoCloseable {
     }
 
     private int getSquadMarkerColor(int type) {
-        return COLOR_SQUAD_LINE; // теперь всегда салатовый, независимо от типа метки (move/attack/build/...)
+        return COLOR_SQUAD_LINE;
     }
     private ResourceLocation getSquadMarkerIcon(int type) {
         switch (type) {
             case 1: return MARKER_ATTACK;
             case 2: return MARKER_DEFEND;
             case 3: return MARKER_BUILD;
-            case 5: return MARKER_ATTACK; // РРєРѕРЅРєР° РґР»СЏ РѕР±РЅР°СЂСѓР¶РµРЅРЅРѕРіРѕ РІСЂР°РіР° (РєСЂР°СЃРЅР°СЏ)
+            case 5: return MARKER_ATTACK;
             default: return MARKER_MOVE;
         }
     }
@@ -1054,9 +1203,6 @@ public class AASMapRenderer implements AutoCloseable {
         }
         return "NEUTRAL";
     }
-    // Р’ С„Р°Р№Р»Рµ AASMapRenderer.java
-    // Р’ AASMapRenderer.java РґРѕР±Р°РІСЊС‚Рµ РІ РєРѕРЅРµС† РјРµС‚РѕРґРѕРІ СЂРµРЅРґРµСЂРёРЅРіР° (РЅР°РїСЂРёРјРµСЂ, РІ render РёР»Рё РѕС‚РґРµР»СЊРЅС‹Р№ РјРµС‚РѕРґ)
-    // Р”РѕР±Р°РІРёС‚СЊ РІ AASMapRenderer.java
     private void renderSquadPings(GuiGraphics gui, double cx, double cz, double bpp) {
         Minecraft mc = Minecraft.getInstance();
         String myName = mc.player.getScoreboardName();
@@ -1072,24 +1218,48 @@ public class AASMapRenderer implements AutoCloseable {
         if (mySquad != null) {
             long time = mc.level.getGameTime();
 
-            // 1. РџРёРЅРі Р›РёРґРµСЂР° (Р—РµР»С‘РЅС‹Р№) вЂ” РІРёРґСЏС‚ РІСЃРµ
+            // 1. Пинг Лидера (Зелёный) — видят все
             if (mySquad.pingPos != null && time < mySquad.pingExpiry) {
                 drawPingOnMap(gui, mySquad.pingPos, new ResourceLocation("aas", "textures/gui/map_icons/ping_eye.png"), cx, cz, bpp);
             }
 
-            // 2. РџРёРЅРі Bravo (Р¤РёРѕР»РµС‚РѕРІС‹Р№) вЂ” С‚РµРїРµСЂСЊ РІРёРґРёС‚ РІРµСЃСЊ РѕС‚СЂСЏРґ
+            // 2. Пинг Bravo (Фиолетовый) — теперь видит весь отряд
             if (mySquad.bravoPingPos != null && time < mySquad.bravoPingExpiry) {
                 drawPingOnMap(gui, mySquad.bravoPingPos, new ResourceLocation("aas", "textures/gui/map_icons/ping_eye_bravo.png"), cx, cz, bpp);
             }
 
-            // 3. РџРёРЅРі Charlie (Р‘РёСЂСЋР·РѕРІС‹Р№) вЂ” С‚РµРїРµСЂСЊ РІРёРґРёС‚ РІРµСЃСЊ РѕС‚СЂСЏРґ
+            // 3. Пинг Charlie (Бирюзовый) — теперь видит весь отряд
             if (mySquad.charliePingPos != null && time < mySquad.charliePingExpiry) {
                 drawPingOnMap(gui, mySquad.charliePingPos, new ResourceLocation("aas", "textures/gui/map_icons/ping_eye_charlie.png"), cx, cz, bpp);
+            }
+
+            // 4. «Глаз» ДРУГИХ отрядов — видят только лидеры отрядов своей команды (без линии, как у своего)
+            if (mySquad.leader.equals(myName)) {
+                String myTeam = getPlayerTeamStrict(mc);
+                for (AASWorldData.Squad other : ClientData.clientSquads) {
+                    if (other.id == mySquad.id) continue;
+                    if (!other.team.equalsIgnoreCase(myTeam)) continue;
+                    if (other.pingPos != null && time < other.pingExpiry) {
+                        drawAllyPingOnMap(gui, mc, other, cx, cz, bpp);
+                    }
+                }
             }
         }
     }
 
-    // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ С‡РёСЃС‚РѕС‚С‹ РєРѕРґР°
+    // «Глаз» другого отряда: иконка + номер отряда под ней (без линии и без дистанции)
+    private void drawAllyPingOnMap(GuiGraphics gui, Minecraft mc, AASWorldData.Squad ownerSquad, double cx, double cz, double bpp) {
+        BlockPos pos = ownerSquad.pingPos;
+        int px = (int) (mapX + (mapSize / 2) + (pos.getX() + 0.5 - cx) / bpp);
+        int py = (int) (mapY + (mapSize / 2) + (pos.getZ() + 0.5 - cz) / bpp);
+
+        if (isPointOnMap(px, py)) {
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            gui.blit(PING_EYE_ALLY, px - 6, py - 6, 0, 0, 12, 12, 12, 12);
+            drawAllySquadNumberLabel(gui, mc, px, py, ownerSquad);
+        }
+    }
+
     private void drawPingOnMap(GuiGraphics gui, BlockPos pos, ResourceLocation icon, double cx, double cz, double bpp) {
         double dx = (pos.getX() + 0.5 - cx) / bpp;
         double dz = (pos.getZ() + 0.5 - cz) / bpp;
@@ -1105,19 +1275,15 @@ public class AASMapRenderer implements AutoCloseable {
         String myTeam = getPlayerTeamStrict(mc);
         long currentTime = mc.level.getGameTime();
 
-        // РЎС‚Р°РЅРґР°СЂС‚РЅРѕРµ РІСЂРµРјСЏ Р¶РёР·РЅРё РјРµС‚РєРё, РєРѕС‚РѕСЂРѕРµ РјС‹ Р·Р°РґР°Р»Рё РІ РїР°РєРµС‚Рµ (3600 С‚РёРєРѕРІ = 3 РјРёРЅСѓС‚С‹)
         float totalLifetime = 3600.0f;
 
         for (AASWorldData.MapMarker m : ClientData.activeMarkers) {
             if (!m.team.equalsIgnoreCase(myTeam)) continue;
 
-            // Р’С‹С‡РёСЃР»СЏРµРј РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ
             long timeLeft = m.expiryTick - currentTime;
 
-            // Р•СЃР»Рё РІСЂРµРјСЏ РІС‹С€Р»Рѕ, РїСЂРѕРїСѓСЃРєР°РµРј (С…РѕС‚СЏ СЃРµСЂРІРµСЂ РґРѕР»Р¶РµРЅ РёС… СѓРґР°Р»СЏС‚СЊ, СЌС‚Рѕ РґР»СЏ РїР»Р°РІРЅРѕСЃС‚Рё)
             if (timeLeft <= 0) continue;
 
-            // РљРѕСЌС„С„РёС†РёРµРЅС‚ РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё: РѕС‚ 1.0 (РЅРѕРІР°СЏ) РґРѕ 0.0 (РёСЃС‡РµР·Р°СЋС‰Р°СЏ)
             float alpha = Mth.clamp((float)timeLeft / totalLifetime, 0.0f, 1.0f);
 
             // Стрелка: тип "Arrow:<x>:<z>", начало = m.pos, конец записан в типе
@@ -1142,6 +1308,18 @@ public class AASMapRenderer implements AutoCloseable {
             int sx = (int) (mapX + (mapSize / 2) + dx);
             int sy = (int) (mapY + (mapSize / 2) + dy);
 
+            // Метка хаба: золотистые пунктирные радиусы (запрет другого хаба + радиус стройки).
+            // Рисуем до проверки "центр на карте", чтобы большие круги были видны, даже если иконка за краем.
+            if (m.type.equals("Hub Marker")) {
+                int hubAlpha = (int) (Mth.clamp(alpha, 0.25f, 1.0f) * 255f);
+                int goldColor = (hubAlpha << 24) | 0xFFD700;
+                gui.pose().pushPose();
+                gui.pose().translate(0, 0, 50);
+                drawDashedCircle(gui, sx, sy, (float) (ClientData.minHubDistance() / bpp), goldColor, 1.33f);
+                drawDashedCircle(gui, sx, sy, (float) (ClientData.hubBuildRadius() / bpp), goldColor, 1.33f);
+                gui.pose().popPose();
+            }
+
             if (!isPointOnMap(sx, sy)) continue;
 
             ResourceLocation icon = getMarkerIcon(m.type);
@@ -1150,15 +1328,12 @@ public class AASMapRenderer implements AutoCloseable {
             gui.pose().pushPose();
             gui.pose().translate(sx, sy, 120);
 
-            // Р’РєР»СЋС‡Р°РµРј СЃРјРµС€РёРІР°РЅРёРµ С†РІРµС‚РѕРІ (Blend) Рё СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha); // alpha РјРµРЅСЏРµС‚СЃСЏ СЃРѕ РІСЂРµРјРµРЅРµРј
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
 
-            // Р РµРЅРґРµСЂ РёРєРѕРЅРєРё
             gui.blit(icon, -8, -8, 16, 16, 0, 0, 32, 32, 32, 32);
 
-            // РЎР±СЂР°СЃС‹РІР°РµРј С†РІРµС‚ РѕР±СЂР°С‚РЅРѕ РІ 1.0, С‡С‚РѕР±С‹ РЅРµ РїРѕРєСЂР°СЃРёС‚СЊ РґСЂСѓРіРёРµ СЌР»РµРјРµРЅС‚С‹ РёРЅС‚РµСЂС„РµР№СЃР°
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
             gui.pose().popPose();
@@ -1189,10 +1364,8 @@ public class AASMapRenderer implements AutoCloseable {
             boolean canSee = squad.members.contains(myName) || amISquadLeader;
             if (!canSee) continue;
 
-            // Определяем, является ли этот отряд CMD (командирским)
             boolean isCMDSquad = (teamCMDIdForNums != -1 && squad.id == teamCMDIdForNums);
 
-            // --- Метки SL + метки фаертима Bravo + метки фаертима Charlie ---
             drawRhombusMarkerList(gui, mc, squad.rhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp, isCMDSquad);
             drawRhombusMarkerList(gui, mc, squad.bravoRhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp, isCMDSquad);
             drawRhombusMarkerList(gui, mc, squad.charlieRhombusMarkers, squad, teamSquadsForNums, time, cx, cz, bpp, isCMDSquad);
@@ -1200,8 +1373,6 @@ public class AASMapRenderer implements AutoCloseable {
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
-    // Отрисовка одного списка свободных меток отряда (общая для SL / Bravo / Charlie).
-// Параметр isCMDSquad определяет, какую текстуру использовать.
     private void drawRhombusMarkerList(GuiGraphics gui, Minecraft mc, List<AASWorldData.SquadMarker> markers,
                                        AASWorldData.Squad squad, List<AASWorldData.Squad> teamSquadsForNums,
                                        long time, double cx, double cz, double bpp, boolean isCMDSquad) {
@@ -1211,7 +1382,7 @@ public class AASMapRenderer implements AutoCloseable {
 
             float alpha = Mth.clamp((float) timeLeft / 3600f, 0.1f, 1.0f);
 
-            // NEW: стрелка отряда (тип 7) — рисуем зелёную стрелку вместо ромбика
+            // стрелка отряда (тип 7) — рисуем зелёную стрелку вместо ромбика
             if (rm.type == 7) {
                 drawSquadArrow(gui, mc, rm, squad, alpha, cx, cz, bpp);
                 continue;
@@ -1221,7 +1392,6 @@ public class AASMapRenderer implements AutoCloseable {
             int my = (int) (mapY + (mapSize / 2) + (rm.z - cz) / bpp);
 
             if (isPointOnMap(mx, my)) {
-                // Выбираем текстуру: CMD использует свою, обычные — стандартную
                 ResourceLocation rhombusTex = isCMDSquad ? RHOMBUS_CMD : RHOMBUS_NORMAL;
 
                 RenderSystem.enableBlend();
@@ -1276,10 +1446,10 @@ public class AASMapRenderer implements AutoCloseable {
         int black = (a << 24);
         int fillCol = (a << 24) | (rgb & 0xFFFFFF);
 
-        float headLen = Math.min(7f, len * 0.6f);   // длина конуса
+        float headLen = Math.min(7f, len * 0.6f);
         float baseX = len - headLen;
         int shaftEnd = (int) (baseX + 1);
-        float cy = 1f;                              // ось стрелки (середина древка)
+        float cy = 1f;
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -1288,10 +1458,8 @@ public class AASMapRenderer implements AutoCloseable {
         gui.pose().translate(x1, y1, 0);
         gui.pose().mulPose(Axis.ZP.rotationDegrees(angle));
 
-        // чёрная обводка: древко (толщина 4) и конус
         gui.fill(-1, -1, shaftEnd, 3, black);
         fillTriangle(gui, len + 1.5f, cy, baseX - 0.75f, cy - 4.25f, baseX - 0.75f, cy + 4.25f, black);
-        // цветная заливка: древко (толщина 2) и конус
         gui.fill(0, 0, shaftEnd, 2, fillCol);
         fillTriangle(gui, len, cy, baseX, cy - 3f, baseX, cy + 3f, fillCol);
 
@@ -1337,7 +1505,6 @@ public class AASMapRenderer implements AutoCloseable {
         if (button == 0) isDraggingMap = false;
     }
 
-    // Р”РѕР±Р°РІРёС‚СЊ СЌС‚РѕС‚ РјРµС‚РѕРґ РІ Р»СЋР±РѕРµ РјРµСЃС‚Рѕ РІРЅСѓС‚СЂРё РєР»Р°СЃСЃР° AASMapRenderer (РЅР°РїСЂРёРјРµСЂ, РїРµСЂРµРґ СЃР°РјС‹Рј close()):
     private boolean isSquadLeaderOrFTL(LocalPlayer player) {
         if (player == null) return false;
         String pName = player.getScoreboardName();
@@ -1368,7 +1535,6 @@ public class AASMapRenderer implements AutoCloseable {
         public AASWorldData.MapMarker mapMarker;
         public int screenX, screenY;
 
-        // НОВЫЕ ПОЛЯ: мировые координаты метки
         public double worldX;
         public double worldZ;
 
@@ -1487,18 +1653,16 @@ public class AASMapRenderer implements AutoCloseable {
 
     private int[] getPendingDeleteHitScreenPos() {
         if (pendingDeleteHit == null) return null;
-        // Мы уже сохранили screenX и screenY при обнаружении попадания,
-        // поэтому просто возвращаем их.
         return new int[]{pendingDeleteHit.screenX, pendingDeleteHit.screenY};
     }
 
     private MarkerHit checkMarkerListHit(AASWorldData.Squad squad, List<AASWorldData.SquadMarker> list, String listName,
                                          double mouseX, double mouseY, double cx, double cz, double bpp, long time) {
-        Minecraft mc = Minecraft.getInstance();   // NEW
+        Minecraft mc = Minecraft.getInstance();
         for (AASWorldData.SquadMarker rm : list) {
             if (time >= rm.expiryTick) continue;
 
-            // NEW: стрелку отряда видят и удаляют только члены этого отряда
+            // стрелку отряда видят и удаляют только члены этого отряда
             if (rm.type == 7 && (mc.player == null
                     || !squad.members.contains(mc.player.getScoreboardName()))) continue;
 
@@ -1543,7 +1707,6 @@ public class AASMapRenderer implements AutoCloseable {
 
     /**
      * Проверяет, вправе ли текущий игрок удалить эту метку.
-     * Новая логика:
      * - SL может удалять ЛЮБЫЕ метки (отрядные и тактические) всей своей команды.
      * - FTL может удалять ЛЮБЫЕ метки (SL, Bravo, Charlie, ромбики) ТОЛЬКО своего отряда.
      */
@@ -1553,7 +1716,6 @@ public class AASMapRenderer implements AutoCloseable {
 
         String myName = mc.player.getScoreboardName();
 
-        // 1. Определяем роль игрока и его отряд (ищем строго по нику, чтобы избежать проблем с названиями команд)
         boolean isSL = false;
         boolean isFTL = false;
         AASWorldData.Squad mySquad = null;
@@ -1562,33 +1724,25 @@ public class AASMapRenderer implements AutoCloseable {
             if (s.leader.equals(myName)) {
                 isSL = true;
                 mySquad = s;
-                break; // Мы нашли свой отряд как SL
+                break;
             } else if (s.bravoLeader.equals(myName) || s.charlieLeader.equals(myName)) {
                 isFTL = true;
                 mySquad = s;
-                break; // Мы нашли свой отряд как FTL
+                break;
             }
         }
 
-        // Если игрок не является лидером (ни SL, ни FTL), он не может удалять метки
         if (!isSL && !isFTL) return false;
 
-        // 2. Логика для ТАКТИЧЕСКИХ меток (TEAM, ENEMY, SUPPLY и т.д.)
         if (hit.category == MarkerHit.MarkerCategory.TACTICAL) {
-            // Теперь FTL тоже может удалять тактические метки своей команды
             return isSL || isFTL;
         }
 
-        // 3. Логика для меток ОТРЯДА (SQUAD)
         if (hit.squad == null || mySquad == null) return false;
 
-        // Проверяем, принадлежит ли метка нашему отряду
         if (hit.squad.id == mySquad.id) {
-            // Если метка нашего отряда, удалять могут и SL, и FTL
-            // (это покрывает метки SL, Bravo и Charlie, а также ромбики внутри этого отряда)
             return true;
         } else {
-            // Если метка ЧУЖОГО отряда, удалять может ТОЛЬКО SL
             return isSL;
         }
     }
@@ -1601,7 +1755,7 @@ public class AASMapRenderer implements AutoCloseable {
      * Если подходящей метки нет - возвращает false, поведение как раньше.
      */
     public boolean tryOpenMarkerDeleteMenu(double mouseX, double mouseY) {
-        MarkerHit hit = findMarkerAt(mouseX, mouseY); // Было: findRhombusMarkerAt
+        MarkerHit hit = findMarkerAt(mouseX, mouseY);
         if (hit != null && canDeleteMarker(hit)) {
             pendingDeleteHit = hit;
             return true;
@@ -1613,8 +1767,6 @@ public class AASMapRenderer implements AutoCloseable {
     /**
      * Рисует серый квадратик с иконкой удаления (окрашенной в красный) под меткой,
      * по которой кликнули правой кнопкой мыши.
-     * Текстуру "aas:textures/gui/map_icons/marker_delete.png" нужно добавить отдельно -
-     * это простая монохромная иконка (крестик/корзина), она будет окрашена в красный цвет кодом ниже.
      */
     public void renderMarkerDeleteMenu(GuiGraphics gui, int mouseX, int mouseY) {
         if (pendingDeleteHit == null) return;
@@ -1622,7 +1774,6 @@ public class AASMapRenderer implements AutoCloseable {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        // ПЕРЕСЧЁТ ПОЗИЦИИ КАЖДЫЙ КАДР
         double bpp = getBlocksPerPixel();
         double cx = getCenterX(mc.player);
         double cz = getCenterZ(mc.player);
@@ -1640,10 +1791,8 @@ public class AASMapRenderer implements AutoCloseable {
 
         boolean hover = mouseX >= x && mouseX <= x + size && mouseY >= y && mouseY <= y + size;
 
-        // СВЕТЛЕЕ ПРИ НАВЕДЕНИИ: было 0xFF6A6A6A, стало 0xFF8A8A8A
         gui.fill(x, y, x + size, y + size, hover ? 0xFF8A8A8A : 0xFF4A4A4A);
 
-        // Иконка удаления, окрашенная в красный (увеличена в 1.5 раза)
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(0.95f, 0.25f, 0.25f, 1.0f);
         int baseIconSize = Math.round((size - 4) / 1.3f);
@@ -1663,7 +1812,6 @@ public class AASMapRenderer implements AutoCloseable {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) { pendingDeleteHit = null; return true; }
 
-        // ПЕРЕСЧЁТ ПОЗИЦИИ
         double bpp = getBlocksPerPixel();
         double cx = getCenterX(mc.player);
         double cz = getCenterZ(mc.player);

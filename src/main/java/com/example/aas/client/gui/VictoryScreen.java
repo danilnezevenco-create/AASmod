@@ -4,15 +4,18 @@ import com.example.aas.client.ClientData;
 import com.example.aas.network.VictoryData;
 import com.example.aas.util.VictoryTitles;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Экран победы: заголовок по итогу, кнопка «Счёт», флаги победителей/проигравших с тикетами
@@ -29,7 +32,12 @@ public class VictoryScreen extends Screen {
     private SquadButton scoreButton;
 
     // Вертикальная раскладка (считается в computeLayout): весь контент — единый блок по центру экрана
-    private static final int TITLE_H = 20;
+    // Баннер результата (полоса на всю ширину): тонкая линия + цветная полоса с заголовком + тёмная полоска с победителем + тонкая линия
+    private static final int BANNER_EDGE = 1;
+    private static final int BANNER_TITLE_H = 34;
+    private static final int BANNER_SUB_H = 17;
+    private static final int BANNER_H = BANNER_EDGE + BANNER_TITLE_H + BANNER_SUB_H + BANNER_EDGE;
+    private static final int TITLE_H = BANNER_H;
     private static final int FLAG_W = 128;
     private static final int FLAG_H = 72;
     private static final int BUTTON_H = 20;
@@ -135,15 +143,10 @@ public class VictoryScreen extends Screen {
             int a = (int) (contentAlpha * 255);
             RenderSystem.enableBlend();
 
-            // --- 1. ЗАГОЛОВОК (зависит от исхода для локального игрока и тикетов победителя) ---
+            // --- 1. БАННЕР РЕЗУЛЬТАТА (зелёный — игрок победил, красный — проиграл; заголовок зависит от тикетов победителя) ---
             boolean won = localPlayerWon();
             Component title = Component.translatable(VictoryTitles.titleKey(won, data.winnerTickets()));
-            int titleColor = (a << 24) | (won ? 0x55FF55 : 0xFF5555);
-            gui.pose().pushPose();
-            gui.pose().translate(cx, titleY, 0);
-            gui.pose().scale(2.0f, 2.0f, 1.0f);
-            gui.drawCenteredString(this.font, title, 0, 0, titleColor);
-            gui.pose().popPose();
+            drawResultBanner(gui, titleY, won, title, a);
 
             // --- 2. ФЛАГИ: победители слева, проигравшие справа ---
             String winTeam = data.blueWon ? "BLUE" : "RED";
@@ -171,6 +174,84 @@ public class VictoryScreen extends Screen {
         }
 
         super.render(gui, mouseX, mouseY, partialTick);
+    }
+
+    /**
+     * Полоса результата на всю ширину экрана: сверху цветная полоса с крупным заголовком
+     * (зелёная при победе игрока, красная при поражении), под ней тёмная полоска
+     * «НАЗВАНИЕ КОМАНДЫ — ПОБЕДИТЕЛЬ». a — общая прозрачность (0..255) для плавного появления.
+     */
+    private void drawResultBanner(GuiGraphics gui, int y, boolean won, Component title, int a) {
+        int w = this.width;
+        int cx = w / 2;
+
+        int edgeRGB = won ? 0x1F5E3A : 0x6A2428;     // края цветной полосы (темнее)
+        int centerRGB = won ? 0x47B06E : 0xBF4A4A;   // центр цветной полосы (светлее)
+        int accentRGB = won ? 0x9BF0B8 : 0xFF9C9C;   // тонкие светящиеся линии сверху/снизу
+        int stripRGB = 0x0D1014;                     // тёмная нижняя полоска
+
+        int titleTop = y + BANNER_EDGE;
+        int titleBot = titleTop + BANNER_TITLE_H;
+        int subTop = titleBot;
+        int subBot = subTop + BANNER_SUB_H;
+
+        // 1. Цветная полоса: к центру светлее, к краям темнее + лёгкая вертикальная тень (сверху светлее, снизу темнее)
+        fillCentreGradient(gui, 0, titleTop, w, titleBot, edgeRGB, centerRGB, a);
+        gui.fillGradient(0, titleTop, w, titleBot, ((int) (a * 0.18f) << 24) | 0xFFFFFF, ((int) (a * 0.28f) << 24));
+
+        // 2. Тёмная полоска под ней
+        gui.fill(0, subTop, w, subBot, ((int) (a * 0.92f) << 24) | stripRGB);
+
+        // 3. Тонкие линии: верх, граница между полосами, низ
+        gui.fill(0, y, w, y + BANNER_EDGE, (a << 24) | accentRGB);
+        gui.fill(0, subTop, w, subTop + 1, ((int) (a * 0.45f) << 24) | accentRGB);
+        gui.fill(0, subBot, w, subBot + BANNER_EDGE, (a << 24) | accentRGB);
+
+        // Текст рисуем только когда прозрачность заметна (у шрифта alpha < 4 трактуется как полностью непрозрачный)
+        if (a < 8) return;
+
+        // 4. Заголовок: ЗАГЛАВНЫМИ, жирным, с восклицательным знаком; сжимается, если не влезает в экран
+        MutableComponent titleText = Component.literal(title.getString().toUpperCase(Locale.ROOT) + "!")
+                .withStyle(ChatFormatting.BOLD);
+        int titleW = Math.max(1, this.font.width(titleText));
+        float titleScale = Math.min(2.5f, (w - 40) / (float) titleW);
+        gui.pose().pushPose();
+        gui.pose().translate(cx, titleTop + (BANNER_TITLE_H - 9 * titleScale) / 2.0f + 0.5f, 0);
+        gui.pose().scale(titleScale, titleScale, 1.0f);
+        gui.drawCenteredString(this.font, titleText, 0, 0, (a << 24) | 0xFFFFFF);
+        gui.pose().popPose();
+
+        // 5. Победитель: название команды жёлтым + «— ПОБЕДИТЕЛЬ» белым
+        String winnerName = data.blueWon ? data.blueName : data.redName;
+        if (winnerName == null || winnerName.isEmpty()) winnerName = data.blueWon ? "BLUE" : "RED";
+        MutableComponent nameText = Component.literal(winnerName.toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD);
+        MutableComponent suffixText = Component.translatable("aas.victory.winner_suffix").withStyle(ChatFormatting.BOLD);
+        int gap = 5;
+        int nameW = this.font.width(nameText);
+        int totalW = Math.max(1, nameW + gap + this.font.width(suffixText));
+        float subScale = Math.min(1.4f, (w - 40) / (float) totalW);
+        gui.pose().pushPose();
+        gui.pose().translate(cx, subTop + (BANNER_SUB_H - 9 * subScale) / 2.0f + 0.5f, 0);
+        gui.pose().scale(subScale, subScale, 1.0f);
+        gui.drawString(this.font, nameText, -totalW / 2, 0, (a << 24) | 0xFFD42A, true);
+        gui.drawString(this.font, suffixText, -totalW / 2 + nameW + gap, 0, (a << 24) | 0xFFFFFF, true);
+        gui.pose().popPose();
+    }
+
+    /** Заливка полосы с плавным переходом от цвета краёв к цвету центра (шагом по 4 px, сглаженно). */
+    private void fillCentreGradient(GuiGraphics gui, int x1, int y1, int x2, int y2, int edgeRGB, int centerRGB, int a) {
+        float half = (x2 - x1) / 2.0f;
+        float mid = x1 + half;
+        final int step = 4;
+        for (int x = x1; x < x2; x += step) {
+            int xe = Math.min(x + step, x2);
+            float t = 1.0f - Math.abs((x + xe) / 2.0f - mid) / half;   // 0 у краёв .. 1 в центре
+            t = t * t * (3.0f - 2.0f * t);                              // smoothstep
+            int r = Math.round(((edgeRGB >> 16) & 0xFF) * (1 - t) + ((centerRGB >> 16) & 0xFF) * t);
+            int g = Math.round(((edgeRGB >> 8) & 0xFF) * (1 - t) + ((centerRGB >> 8) & 0xFF) * t);
+            int b = Math.round((edgeRGB & 0xFF) * (1 - t) + (centerRGB & 0xFF) * t);
+            gui.fill(x, y1, xe, y2, (a << 24) | (r << 16) | (g << 8) | b);
+        }
     }
 
     /** Флаг команды + название команды над ним + «Сколько тикетов осталось» под ним. */
@@ -239,7 +320,7 @@ public class VictoryScreen extends Screen {
         float b = (colorARGB & 0xFF) / 255f;
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(r, g, b, alpha);
-        gui.blit(CIRCLE_BADGE, x, y, 0, 0, size, size, size, size);
+        com.example.aas.client.BadgeCircle.blit(gui, x, y, size);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         if (label != null && !label.isEmpty()) {
             gui.drawCenteredString(this.font, label, x + size / 2, y + (size - 8) / 2, (a << 24) | 0xFFFFFF);

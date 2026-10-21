@@ -28,6 +28,9 @@ public class ClientData {
     public static String myCurrentKit = "Unassigned";
     public static final Map<String, Long> SQUAD_SPEAKERS = new java.util.concurrent.ConcurrentHashMap<>();
     public static final Map<String, Long> RADIO_SPEAKERS = new java.util.concurrent.ConcurrentHashMap<>();
+    // Голосовые каналы: локальный (V, синий ник) и командирский (*, ник со звёздочкой)
+    public static final Map<String, Long> LOCAL_SPEAKERS = new java.util.concurrent.ConcurrentHashMap<>();
+    public static final Map<String, Long> COMMAND_SPEAKERS = new java.util.concurrent.ConcurrentHashMap<>();
     public static long globalDeathTimestamp = 0;
     public static long deathFadeStartTime = 0;
     public static boolean deathFadePlayed = false;
@@ -66,6 +69,13 @@ public class ClientData {
     public static String currentMapImage = "map1";
     public static boolean isMapOpen = false;
     public static float mapTransition = 0f;
+    public static double miniMapScale = 1.5;   // блоков на пиксель для миникарты (меньше = ближе)
+
+    public static void zoomMiniMap(double delta) {
+        double zoomFactor = 1.2;
+        if (delta > 0) miniMapScale = Math.max(0.5, miniMapScale / zoomFactor);
+        else miniMapScale = Math.min(4.0, miniMapScale * zoomFactor);
+    }
 
     public static void zoomMap(double delta) {
         double zoomFactor = 1.2;
@@ -117,6 +127,19 @@ public class ClientData {
     public static void addChatMessage(Component msg) {
         menuChatHistory.add(0, msg);
         if (menuChatHistory.size() > 50) menuChatHistory.remove(menuChatHistory.size() - 1);
+    }
+    public static int serverMinHubDistance = -1;   // -1 = ещё не пришло от сервера
+    public static int serverHubBuildRadius = -1;
+    public static int serverCrateBuildRadius = -1;
+    public static int serverHubRequiresCrate = -1;   // -1 = ещё не пришло от сервера, 0 = нет, 1 = да
+
+    public static int minHubDistance()   { return serverMinHubDistance   >= 0 ? serverMinHubDistance   : com.example.aas.config.AASConfig.MIN_HUB_DISTANCE.get(); }
+    public static int hubBuildRadius()   { return serverHubBuildRadius   >= 0 ? serverHubBuildRadius   : com.example.aas.config.AASConfig.HUB_BUILD_RADIUS.get(); }
+    public static int crateBuildRadius() { return serverCrateBuildRadius >= 0 ? serverCrateBuildRadius : com.example.aas.config.AASConfig.CRATE_BUILD_RADIUS.get(); }
+    public static boolean hubRequiresCrate() {
+        return serverHubRequiresCrate >= 0
+                ? serverHubRequiresCrate == 1
+                : com.example.aas.config.AASConfig.HUB_PLACEMENT_REQUIRES_CRATE.get();
     }
 
     // По умолчанию считаем "не подключен", пока Simple Voice Chat явно не подтвердит обратное
@@ -210,5 +233,5 @@ public class ClientData {
     }
     public static boolean serverShowKitRanks = false;
     public static Map<String, Integer> playerKitRanks = new HashMap<>();
+    public static Map<String, com.example.aas.network.KitRankProgress> playerKitRankProgress = new HashMap<>();
 }
-

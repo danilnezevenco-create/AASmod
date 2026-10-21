@@ -99,6 +99,11 @@ public class SquadPanelOverlay {
     public static void onRenderOverlayPre(RenderGuiOverlayEvent.Pre event) {
         if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
 
+        // Пока открыта наша панель чата - прячем ванильный чат сверху и панель отряда (она в том же углу)
+        if (Minecraft.getInstance().screen instanceof com.example.aas.client.gui.AASChatScreen) {
+            event.setCanceled(true);
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
         if (mc.options.hideGui) return;
@@ -235,8 +240,8 @@ public class SquadPanelOverlay {
         int cursorX = x + STRIPE_W + 4;
 
         // Иконка кита игрока (вместо прежних ●/◆). Если кит не назначен — маленькая цветная точка-заглушка.
-                // Если игрок дисконектнулся — рисуем иконку дисконекта.
-                String kitName = ClientData.playerKits.getOrDefault(name, "Unassigned");
+        // Если игрок дисконектнулся — рисуем иконку дисконекта.
+        String kitName = ClientData.playerKits.getOrDefault(name, "Unassigned");
         boolean hasKit = kitName != null && !kitName.isEmpty() && !kitName.equalsIgnoreCase("Unassigned");
         boolean isOnline = mc.getConnection() != null && mc.getConnection().getPlayerInfo(name) != null;
 
@@ -248,8 +253,9 @@ public class SquadPanelOverlay {
             gui.blit(ICON_DISCONNECT, cursorX, y + 2, kitSize, kitSize, 0f, 0f, 10, 10, 10, 10);
         } else if (hasKit) {
             ResourceLocation kitIcon = new ResourceLocation("aas", "textures/gui/kits/" + kitName.toLowerCase().replace(" ", "_") + ".png");
-            setAlpha(panelAlpha);
+            KitIconStyle.apply(KitIconStyle.DEFAULT_COLOR, panelAlpha);   // в панели иконка кита всегда одного цвета
             gui.blit(kitIcon, cursorX, y + 2, kitSize, kitSize, 0f, 0f, 10, 10, 10, 10);
+            setAlpha(panelAlpha);
         } else {
             int dotColor = isLeader ? COLOR_ALPHA : 0xFF777777;
             gui.fill(cursorX + 2, y + 4, cursorX + 7, y + 9, withAlpha(dotColor, panelAlpha));
@@ -286,10 +292,10 @@ public class SquadPanelOverlay {
             setAlpha(panelAlpha); // вернуть прежний цвет панели
         }
 
-        // микрофон — виден ТОЛЬКО когда игрок реально говорит, иначе не рисуется вовсе.
+        // микрофон — виден ТОЛЬКО когда игрок реально говорит; картинка зависит от громкости (тихо / средний / нормальный).
         if (isSpeaking) {
             RenderSystem.setShaderColor(0.4f, 1f, 0.4f, panelAlpha);
-            gui.blit(ICON_MIC, micX, iconY, 0, 0, 8, 8, 8, 8);
+            gui.blit(VoiceIcons.forPlayer(name), micX, iconY, 0, 0, 8, 8, 8, 8);
         }
 
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
@@ -300,6 +306,7 @@ public class SquadPanelOverlay {
         Long squadTs = ClientData.SQUAD_SPEAKERS.get(name);
         if (squadTs != null && now - squadTs < 300) return true;
         Long radioTs = ClientData.RADIO_SPEAKERS.get(name);
+        // Локальный (V) и командирский (*) чаты в панели отряда НЕ показываем — только отряд и рацию.
         return radioTs != null && now - radioTs < 300;
     }
 
@@ -325,7 +332,7 @@ public class SquadPanelOverlay {
 
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(r, g, b, a);
-        gui.blit(CIRCLE_BADGE, x, y, 0, 0, size, size, size, size);
+        com.example.aas.client.BadgeCircle.blit(gui, x, y, size);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
         if (label != null && !label.isEmpty()) {

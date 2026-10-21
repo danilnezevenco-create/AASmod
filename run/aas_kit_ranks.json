@@ -3,14 +3,24 @@
     "Grenadier": {
       "level": 1,
       "points": 0,
-      "seconds": 499
+      "seconds": 517
+    },
+    "LAT": {
+      "level": 1,
+      "points": 0,
+      "seconds": 155
     }
   },
   "Player2": {
     "Grenadier": {
       "level": 1,
       "points": 0,
-      "seconds": 254
+      "seconds": 296
+    },
+    "LAT": {
+      "level": 1,
+      "points": 0,
+      "seconds": 69
     }
   }
 }

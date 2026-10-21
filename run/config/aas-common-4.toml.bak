@@ -6,7 +6,7 @@
 	ammoStackDestruction = true
 	#Digging speed multiplier
 	#Range: 0.1 ~ 10.0
-	diggingSpeedMultiplier = 1.0
+	diggingSpeedMultiplier = 5.0
 	#If true, in Survival/Adventure mode players CANNOT interact with storage/loot blocks: chests, trapped chests, ender chests, barrels, shulker boxes, furnaces/blast furnaces/smokers, hoppers, dispensers/droppers, brewing stands, trapdoors and anvils. Everything else (doors, fence gates, buttons, levers, crafting table, etc.) is now allowed.
 	restrictInteractionsToDoorsAndGates = false
 	#Prevent players from breaking blocks

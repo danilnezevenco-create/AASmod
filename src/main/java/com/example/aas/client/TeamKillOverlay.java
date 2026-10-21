@@ -15,46 +15,75 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Плашка "Вы убили союзника" / "Вас убил союзник".
- * Оформление один в один как плашка кровотечения из AAS Medicine
- * (чёрный фон 0xAA000000, цветная полоса слева, иконка 16x16, выезд слева),
- * но расположена НИЖЕ неё: у кровотечения y=40, высота 26 -> наша начинается с y=72.
+ * Плашки слева сверху: тимкилл + личные уведомления фаертима (Bravo/Charlie).
  */
 @Mod.EventBusSubscriber(modid = "aas", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class TeamKillOverlay {
 
     private static final ResourceLocation ICON = new ResourceLocation("aas", "textures/gui/teamkill_icon.png");
 
-    // --- геометрия (как у плашки кровотечения) ---
-    private static final int HEIGHT = 26;
-    private static final int BASE_Y = 72;        // кровотечение: y=40..66, зазор 6px
-    private static final int STACK_GAP = 4;      // расстояние между несколькими плашками
-    private static final int MAX_VISIBLE = 3;
-    private static final int STRIPE_COLOR = 0xFFE03B3B; // красная полоса (у кровотечения золотая 0xFFFFD700)
+    // Иконки фаертима (белый силуэт 16x16 на прозрачном фоне, красится в цвет группы).
+    // Индекс = тип уведомления: 0 добавили, 1 вы лидер, 2 лидер сменился, 3 ваш лидер.
+    // Сейчас везде один шеврон; чтобы сделать разные - просто поменяй пути.
+    private static final ResourceLocation FT_CHEVRON = new ResourceLocation("aas", "textures/gui/fireteam_chevron.png");
+    private static final ResourceLocation[] FT_ICONS = { FT_CHEVRON, FT_CHEVRON, FT_CHEVRON, FT_CHEVRON };
 
-    // --- тайминги ---
+    private static final int COLOR_BRAVO = 0xFFAA33FF;
+    private static final int COLOR_CHARLIE = 0xFF00E5CC;
+
+    private static final int HEIGHT = 26;
+    private static final int BASE_Y = 72;
+    private static final int STACK_GAP = 4;
+    private static final int MAX_VISIBLE = 4;
+    private static final int STRIPE_COLOR = 0xFFE03B3B;
+
     private static final long SLIDE_MS = 400;
     private static final long HOLD_MS = 5000;
     private static final long TOTAL_MS = SLIDE_MS + HOLD_MS + SLIDE_MS;
 
     private static class Entry {
         final Component text;
+        final ResourceLocation icon;
+        final int stripe;
+        final boolean tintIcon;
         final long start = System.currentTimeMillis();
 
-        Entry(Component text) {
+        Entry(Component text, ResourceLocation icon, int stripe, boolean tintIcon) {
             this.text = text;
+            this.icon = icon;
+            this.stripe = stripe;
+            this.tintIcon = tintIcon;
         }
     }
 
     private static final List<Entry> ENTRIES = new CopyOnWriteArrayList<>();
 
-    /** Вызывается из PacketTeamKillNotification на клиенте. */
-    public static void push(String otherName, boolean youAreKiller, boolean knocked) {
-        String key = "aas.hud.teamkill." + (knocked ? "knock." : "") + (youAreKiller ? "killer" : "victim");
-        ENTRIES.add(new Entry(Component.translatable(key, otherName)));
+    private static void add(Entry e) {
+        ENTRIES.add(e);
         while (ENTRIES.size() > MAX_VISIBLE) {
             ENTRIES.remove(0);
         }
+    }
+
+    /** Вызывается из PacketTeamKillNotification на клиенте. */
+    public static void push(String otherName, boolean youAreKiller, boolean knocked) {
+        String key = "aas.hud.teamkill." + (knocked ? "knock." : "") + (youAreKiller ? "killer" : "victim");
+        add(new Entry(Component.translatable(key, otherName), ICON, STRIPE_COLOR, false));
+    }
+
+    /** Вызывается из PacketFireteamNotification на клиенте. */
+    public static void pushFireteam(int type, boolean bravo, String name) {
+        String group = bravo ? "Bravo" : "Charlie";
+        Component text;
+        switch (type) {
+            case 0: text = Component.translatable("aas.hud.fireteam.added", group); break;
+            case 1: text = Component.translatable("aas.hud.fireteam.you_leader", group); break;
+            case 2: text = Component.translatable("aas.hud.fireteam.leader_changed", group, name); break;
+            case 3: text = Component.translatable("aas.hud.fireteam.your_leader", group, name); break;
+            default: return;
+        }
+        ResourceLocation icon = FT_ICONS[Math.max(0, Math.min(type, FT_ICONS.length - 1))];
+        add(new Entry(text, icon, bravo ? COLOR_BRAVO : COLOR_CHARLIE, true));
     }
 
     @SubscribeEvent
@@ -89,10 +118,18 @@ public class TeamKillOverlay {
 
             RenderSystem.enableBlend();
             g.fill(x, y, x + width, y + HEIGHT, 0xAA000000);
-            g.fill(x, y, x + 3, y + HEIGHT, STRIPE_COLOR);
+            g.fill(x, y, x + 3, y + HEIGHT, e.stripe);
 
+            if (e.tintIcon) {
+                float r = ((e.stripe >> 16) & 0xFF) / 255f;
+                float gr = ((e.stripe >> 8) & 0xFF) / 255f;
+                float b = (e.stripe & 0xFF) / 255f;
+                RenderSystem.setShaderColor(r, gr, b, 1.0f);
+            } else {
+                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+            g.blit(e.icon, x + 8, y + 5, 0, 0, 16, 16, 16, 16);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            g.blit(ICON, x + 8, y + 5, 0, 0, 16, 16, 16, 16);
 
             g.drawString(mc.font, e.text, x + 32, y + 9, 0xFFFFFFFF, true);
             RenderSystem.disableBlend();

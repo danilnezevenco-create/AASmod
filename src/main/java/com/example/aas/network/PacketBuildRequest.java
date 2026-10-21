@@ -41,6 +41,7 @@
         }
 
         public static void handle(PacketBuildRequest msg, Supplier<NetworkEvent.Context> ctx) {
+
             ctx.get().enqueueWork(() -> {
                 ServerPlayer player = ctx.get().getSender();
                 if (player == null) return;

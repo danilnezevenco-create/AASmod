@@ -2,7 +2,8 @@ package com.example.aas.voicechat;
 
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketRadioVoiceActivity;
-import com.example.aas.network.PacketVoiceActivity;
+import com.example.aas.network.PacketVoiceChannelActivity;
+import com.example.aas.config.AASConfig;
 import com.example.aas.world.AASWorldData;
 import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
 import de.maxhenkel.voicechat.api.Group;
@@ -12,9 +13,14 @@ import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
+import de.maxhenkel.voicechat.api.packets.LocationalSoundPacket;
+import de.maxhenkel.voicechat.api.packets.MicrophonePacket;
+import de.maxhenkel.voicechat.api.packets.StaticSoundPacket;
 import de.maxhenkel.voicechat.api.events.PlayerConnectedEvent;
+import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -37,6 +43,7 @@ public class AASVoicechatPlugin implements VoicechatPlugin {
     // ее напрямую вместо повторного поиска по id.
     private static final Map<Integer, Group> squadToGroupMap = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> lastVoiceActivity = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> lastRadioActivity = new ConcurrentHashMap<>();
 
     // Namespace предмета(ов) walkie-talkie мода. Подтверждено логом сервера:
     // "Registering C2S receiver with id walkietalkie:..." и NBT предмета
@@ -47,6 +54,16 @@ public class AASVoicechatPlugin implements VoicechatPlugin {
     private static final String TAG_ACTIVATE = "walkietalkie.activate"; // byte (0/1) — рация включена
     private static final String TAG_CANAL = "walkietalkie.canal";       // int — номер канала/частоты
     private static final String TAG_MUTE = "walkietalkie.mute";         // byte (0/1) — микрофон заглушен
+
+    // ---- Командирский чат: «в правом ухе 100%, в левом ~30%» ----
+    // Simple Voice Chat играет StaticSoundPacket одинаково в оба уха, поэтому панорамирование делаем так:
+    // шлём каждому слушателю ПОЗИЦИОННЫЙ пакет, а позицию ставим рядом с его головой, правее направления взгляда
+    // (пересчитывается по yaw на каждый пакет, т.е. звук «приклеен» к голове). Громкость не падает: расстояние ~2 блока.
+    // Левое ухо ≈ 30% громкости правого получается при угле PAN_AZIMUTH_DEG ≈ 39° (0° = прямо, 90° = только правое ухо).
+    // Хочешь тише слева — увеличь угол (до 90), громче слева — уменьши.
+    private static final double COMMAND_PAN_AZIMUTH_DEG = 39.0;
+    private static final double COMMAND_PAN_DISTANCE = 2.0;    // блоков от головы слушателя
+    private static final float COMMAND_PAN_RANGE = 32.0f;      // дальность пакета (должна быть > COMMAND_PAN_DISTANCE)
 
     @Override
     public String getPluginId() {
@@ -61,6 +78,8 @@ public class AASVoicechatPlugin implements VoicechatPlugin {
         registration.registerEvent(VoicechatServerStartedEvent.class, this::onServerStarted);
         registration.registerEvent(MicrophonePacketEvent.class, this::onMicPacket);
         registration.registerEvent(PlayerConnectedEvent.class, this::onPlayerConnectedVoice);
+        // Игрок отключился от voice chat — освобождаем его Opus-декодер (замер громкости).
+        registration.registerEvent(PlayerDisconnectedEvent.class, e -> VoiceLevelMeter.remove(e.getPlayerUuid()));
         registerNameTagIconHider(registration);
         registerConnectionListener(registration);
     }
@@ -128,63 +147,214 @@ public class AASVoicechatPlugin implements VoicechatPlugin {
         serverApi = event.getVoicechat();
     }
 
-    // Рассылка пакета сокомандникам для зелёного индикатора отряда +
-    // рассылка ТОЛЬКО игрокам с рацией на той же частоте для красного индикатора
-    // рации (с троттлингом 150мс). Событие от Voice Chat завёрнуто в try/catch,
-    // чтобы любая ошибка здесь не крашила tick сервера и не затрагивала логику отрядов.
+    // ======================= ГОЛОСОВЫЕ КАНАЛЫ =======================
+    // V (локальный) / B (отряд) / * (командирский) — игрок зажимает клавишу, клиент сообщает
+    // серверу номер канала (PacketVoiceChannel -> VoiceChannelState). Здесь мы ПЕРЕХВАТЫВАЕМ
+    // каждый голосовой пакет Simple Voice Chat, отменяем стандартную обработку (иначе SVC
+    // сам раздал бы звук по расстоянию / группам) и отправляем звук только тем, кому он положен:
+    //   LOCAL   — все игроки в радиусе VOICE_LOCAL_RANGE (в т.ч. противники), позиционный звук;
+    //   SQUAD   — только участники отряда, на любом расстоянии;
+    //   COMMAND — только лидеры отрядов своей команды, на любом расстоянии.
+    // Ни один канал не зажат -> пакет отбрасывается (никто не слышит).
+    // Мёртвый игрок НЕ говорит в локальный чат и НЕ слышит локальный чат (отряд / командирский / рация — без изменений).
+    // Рация (walkietalkie): если у игрока в руке включённая рация и ни один наш канал не зажат,
+    // событие НЕ отменяется — мод рации работает как раньше.
+    //
+    // Громкость голоса: каждый пакет декодируется в VoiceLevelMeter, а уровень (0 тихо / 1 средний /
+    // 2 нормальный) отправляется клиентам вместе с индикатором «говорит» — от него зависит иконка микрофона.
     private void onMicPacket(MicrophonePacketEvent event) {
         try {
             if (serverApi == null || ServerLifecycleHooks.getCurrentServer() == null) return;
+            if (event.getSenderConnection() == null) return;
 
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             UUID playerUuid = event.getSenderConnection().getPlayer().getUuid();
-            long now = System.currentTimeMillis();
+            ServerPlayer sender = server.getPlayerList().getPlayer(playerUuid);
+            if (sender == null) return;
 
-            if (now - lastVoiceActivity.getOrDefault(playerUuid, 0L) > 150) {
-                lastVoiceActivity.put(playerUuid, now);
+            int channel = VoiceChannelState.get(playerUuid);
 
-                // Получаем майнкрафтовского игрока через Forge
-                ServerPlayer sender = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(playerUuid);
-                if (sender == null) return;
+            // --- РАЦИЯ: индикатор рации (как раньше) ---
+            Integer talkerCanal = getActiveWalkieTalkieCanal(sender);
+            if (talkerCanal != null) {
+                notifyRadioActivity(server, sender, talkerCanal);
+                if (channel == VoiceChannelState.NONE) return;   // говорит только в рацию — не вмешиваемся
+            }
 
-                String pName = sender.getScoreboardName();
+            // Дальше всё решаем сами: стандартную раздачу звука SVC отключаем.
+            event.cancel();
+            if (channel == VoiceChannelState.NONE) return;
 
-                // === РАЦИЯ (walkietalkie-forge) ===
-                // Проверяем рацию в руке у говорящего. Она должна быть:
-                // 1) предметом мода walkietalkie,
-                // 2) включена (activate = true),
-                // 3) у говорящего не должен быть включён mute (иначе мод вообще не
-                //    передавал бы звук, но проверяем на всякий случай).
-                Integer talkerCanal = getActiveWalkieTalkieCanal(sender);
-                if (talkerCanal != null) {
-                    PacketRadioVoiceActivity radioPacket = new PacketRadioVoiceActivity(pName);
+            // Мёртвый игрок не может говорить в локальный чат (после event.cancel(), чтобы SVC не раздал звук сам)
+            if (channel == VoiceChannelState.LOCAL && !sender.isAlive()) return;
 
-                    for (ServerPlayer p : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
-                        if (p.getUUID().equals(sender.getUUID())) continue;
-                        if (playerHasWalkieTalkieOnCanal(p, talkerCanal)) {
-                            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), radioPacket);
-                        }
-                    }
-                }
+            MicrophonePacket mic = event.getPacket();
+            byte[] opus = mic.getOpusEncodedData();
 
-                AASWorldData data = AASWorldData.get(sender.serverLevel());
+            // Замер громкости голоса (для иконки микрофона)
+            VoiceLevelMeter.update(serverApi, playerUuid, opus);
 
-                // Ищем отряд
-                for (AASWorldData.Squad s : data.squads) {
-                    if (s.members.contains(pName)) {
-                        PacketVoiceActivity packet = new PacketVoiceActivity(pName);
-                        for (String member : s.members) {
-                            ServerPlayer p = sender.server.getPlayerList().getPlayerByName(member);
-                            if (p != null) {
-                                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), packet);
-                            }
-                        }
-                        break;
-                    }
-                }
+            AASWorldData data = AASWorldData.get(sender.serverLevel());
+            String pName = sender.getScoreboardName();
+
+            switch (channel) {
+                case VoiceChannelState.LOCAL -> routeLocal(server, sender, mic, opus);
+                case VoiceChannelState.SQUAD -> routeSquad(server, data, sender, pName, mic, opus);
+                case VoiceChannelState.COMMAND -> routeCommand(server, data, sender, pName, mic, opus);
+                default -> { }
             }
         } catch (Exception e) {
             // никогда не даем ошибке voicechat уронить tick сервера
             System.err.println("[AAS Voicechat] onMicPacket failed: " + e);
+        }
+    }
+
+    // ---------- V: локальный чат ----------
+    private void routeLocal(MinecraftServer server, ServerPlayer sender, MicrophonePacket mic, byte[] opus) {
+        float range = getLocalRange();
+        double r2 = (double) range * range;
+
+        LocationalSoundPacket packet = mic.locationalSoundPacketBuilder()
+                .position(serverApi.createPosition(sender.getX(), sender.getEyeY(), sender.getZ()))
+                .distance(range)
+                .opusEncodedData(opus)
+                .build();
+
+        boolean report = shouldReportActivity(sender.getUUID());
+        // level берём только когда реально отправляем индикатор (takeLevel начинает новое окно замера)
+        PacketVoiceChannelActivity activity = report
+                ? new PacketVoiceChannelActivity(sender.getScoreboardName(), VoiceChannelState.LOCAL,
+                VoiceLevelMeter.takeLevel(sender.getUUID()))
+                : null;
+
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (p.level() != sender.level()) continue;
+            if (p.distanceToSqr(sender) > r2) continue;
+
+            // Мёртвый слушатель не слышит локальный чат (индикатор «говорит» ему по-прежнему шлём ниже)
+            if (p != sender && p.isAlive()) {
+                VoicechatConnection conn = serverApi.getConnectionOf(p.getUUID());
+                if (conn != null) serverApi.sendLocationalSoundPacketTo(conn, packet);
+            }
+            // Индикатор в списке слева: только союзникам (и самому говорящему). Противник не видит.
+            if (report && (p == sender || isAlly(sender, p))) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), activity);
+            }
+        }
+    }
+
+    // ---------- B: чат отряда ----------
+    private void routeSquad(MinecraftServer server, AASWorldData data, ServerPlayer sender, String pName,
+                            MicrophonePacket mic, byte[] opus) {
+        AASWorldData.Squad squad = findSquad(data, pName);
+        if (squad == null) return;   // не в отряде — никто не слышит
+
+        StaticSoundPacket packet = mic.staticSoundPacketBuilder().opusEncodedData(opus).build();
+        boolean report = shouldReportActivity(sender.getUUID());
+        PacketVoiceChannelActivity activity = report
+                ? new PacketVoiceChannelActivity(pName, VoiceChannelState.SQUAD,
+                VoiceLevelMeter.takeLevel(sender.getUUID()))
+                : null;
+
+        for (String member : new java.util.ArrayList<>(squad.members)) {
+            ServerPlayer p = server.getPlayerList().getPlayerByName(member);
+            if (p == null) continue;
+            if (p != sender) {
+                VoicechatConnection conn = serverApi.getConnectionOf(p.getUUID());
+                if (conn != null) serverApi.sendStaticSoundPacketTo(conn, packet);
+            }
+            if (report) PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), activity);
+        }
+    }
+
+    // ---------- *: командирский чат (только лидеры отрядов) ----------
+    private void routeCommand(MinecraftServer server, AASWorldData data, ServerPlayer sender, String pName,
+                              MicrophonePacket mic, byte[] opus) {
+        AASWorldData.Squad own = findSquad(data, pName);
+        if (own == null || !pName.equals(own.leader)) return;   // говорить может только лидер отряда
+
+        boolean report = shouldReportActivity(sender.getUUID());
+        PacketVoiceChannelActivity activity = report
+                ? new PacketVoiceChannelActivity(pName, VoiceChannelState.COMMAND,
+                VoiceLevelMeter.takeLevel(sender.getUUID()))
+                : null;
+
+        for (AASWorldData.Squad s : new java.util.ArrayList<>(data.squads)) {
+            if (s.leader == null || s.leader.isEmpty()) continue;
+            ServerPlayer p = server.getPlayerList().getPlayerByName(s.leader);
+            if (p == null) continue;
+            if (p != sender && !isAlly(sender, p)) continue;   // только своя команда
+
+            if (p != sender) {
+                VoicechatConnection conn = serverApi.getConnectionOf(p.getUUID());
+                if (conn != null) serverApi.sendLocationalSoundPacketTo(conn, buildCommandPannedPacket(mic, opus, p));
+            }
+            if (report) PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), activity);
+        }
+    }
+
+    // Позиционный пакет для слушателя: источник звука рядом с его головой, смещён вправо от направления взгляда.
+    private LocationalSoundPacket buildCommandPannedPacket(MicrophonePacket mic, byte[] opus, ServerPlayer listener) {
+        double yaw = Math.toRadians(listener.getYRot());
+        double az = Math.toRadians(COMMAND_PAN_AZIMUTH_DEG);
+        // Minecraft: yaw 0 = взгляд на +Z (юг); вперёд = (-sin yaw, cos yaw); вправо = (-cos yaw, -sin yaw)
+        double fx = -Math.sin(yaw), fz = Math.cos(yaw);
+        double rx = -Math.cos(yaw), rz = -Math.sin(yaw);
+        double x = listener.getX() + (fx * Math.cos(az) + rx * Math.sin(az)) * COMMAND_PAN_DISTANCE;
+        double z = listener.getZ() + (fz * Math.cos(az) + rz * Math.sin(az)) * COMMAND_PAN_DISTANCE;
+        double y = listener.getEyeY();
+        return mic.locationalSoundPacketBuilder()
+                .position(serverApi.createPosition(x, y, z))
+                .distance(COMMAND_PAN_RANGE)
+                .opusEncodedData(opus)
+                .build();
+    }
+
+    // ---------- вспомогательное ----------
+    private static AASWorldData.Squad findSquad(AASWorldData data, String playerName) {
+        for (AASWorldData.Squad s : data.squads) {
+            if (s.members.contains(playerName)) return s;
+        }
+        return null;
+    }
+
+    // Союзник = тот же скорборд-команда (BLUE/RED). Игроки без команды никому не союзники.
+    private static boolean isAlly(ServerPlayer a, ServerPlayer b) {
+        if (a.getTeam() == null || b.getTeam() == null) return false;
+        return a.getTeam().getName().equals(b.getTeam().getName());
+    }
+
+    private static float getLocalRange() {
+        try {
+            return (float) AASConfig.VOICE_LOCAL_RANGE.get();
+        } catch (Throwable t) {
+            return 30.0f;   // конфиг ещё не загружен
+        }
+    }
+
+    // Индикатор «говорит» шлём не чаще раза в 150 мс на игрока (звук при этом идёт каждый пакет).
+    private static boolean shouldReportActivity(UUID playerUuid) {
+        long now = System.currentTimeMillis();
+        if (now - lastVoiceActivity.getOrDefault(playerUuid, 0L) > 150) {
+            lastVoiceActivity.put(playerUuid, now);
+            return true;
+        }
+        return false;
+    }
+
+    // Красный индикатор рации: только игроки с рацией на том же канале (как раньше, троттлинг 150 мс).
+    private void notifyRadioActivity(MinecraftServer server, ServerPlayer sender, int talkerCanal) {
+        long now = System.currentTimeMillis();
+        UUID id = sender.getUUID();
+        if (now - lastRadioActivity.getOrDefault(id, 0L) <= 150) return;
+        lastRadioActivity.put(id, now);
+
+        PacketRadioVoiceActivity radioPacket = new PacketRadioVoiceActivity(sender.getScoreboardName());
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (p.getUUID().equals(id)) continue;
+            if (playerHasWalkieTalkieOnCanal(p, talkerCanal)) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), radioPacket);
+            }
         }
     }
 
@@ -260,9 +430,9 @@ public class AASVoicechatPlugin implements VoicechatPlugin {
             ServerPlayer player = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(playerUuid);
             if (player == null) return;
 
-            // Если он в отряде - закидываем в группу
-            int squadId = player.getPersistentData().getInt("AAS_SquadID");
-            if (squadId > 0) joinGroup(player, squadId);
+            // Раньше здесь игрок добавлялся в группу SVC. Теперь группы не нужны; на всякий случай
+            // выводим из любой старой группы, чтобы она не подмешивала звук.
+            leaveGroup(player);
         } catch (Exception e) {
             System.err.println("[AAS Voicechat] onPlayerConnectedVoice failed: " + e);
         }
@@ -273,6 +443,9 @@ public class AASVoicechatPlugin implements VoicechatPlugin {
     // никогда прерывать выполнение PacketSquadAction.handle() на стороне вызывающего.
 
     public static void createAndJoinGroup(ServerPlayer player, int squadId, String squadName) {
+        // Группы Simple Voice Chat больше НЕ используются: звук отряда раздаётся вручную (см. routeSquad),
+        // потому что OPEN-группа слышала игрока даже когда он говорил с кем-то не из отряда.
+        if (true) return;
         if (serverApi == null) return;
         try {
             String password = UUID.randomUUID().toString().substring(0, 8); // Случайный секретный пароль
@@ -302,6 +475,7 @@ public class AASVoicechatPlugin implements VoicechatPlugin {
     }
 
     public static void joinGroup(ServerPlayer player, int squadId) {
+        if (true) return;   // см. createAndJoinGroup
         if (serverApi == null) return;
         try {
             Group group = squadToGroupMap.get(squadId);

@@ -1,5 +1,7 @@
 package com.example.aas.client.gui;
 
+import com.example.aas.client.KitIconStyle;
+
 import com.example.aas.client.AASClipboard;
 import com.example.aas.client.KitKeyUtil;
 import com.example.aas.network.*;
@@ -83,8 +85,9 @@ public class KitListScreen extends Screen {
             ResourceLocation iconLoc = new ResourceLocation("aas", "textures/gui/kits/" + iconPath + ".png");
             int iconX = startX + col * 110 + (70 / 2) - 12;
             int iconY = startY + row * ROW_HEIGHT;
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            KitIconStyle.apply(KitIconStyle.DEFAULT_COLOR, 1.0f);
             gui.blit(iconLoc, iconX, iconY, 0, 0, 24, 24, 24, 24);
+            KitIconStyle.reset();
         }
         super.render(gui, mx, my, pt);
     }

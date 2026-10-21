@@ -35,7 +35,9 @@ public class ModCommands {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("aas")
                 .requires(s -> s.hasPermission(2))
-
+                .then(Commands.literal("rebuildvehiclelist")
+                        .executes(ctx -> com.example.aas.world.VehicleRegistryRebuilder.startFromCommand(ctx.getSource()))
+                )
                 // --- УПРАВЛЕНИЕ ИГРОЙ ---
                 .then(Commands.literal("gamestart")
                         .then(Commands.argument("active", BoolArgumentType.bool())
@@ -417,6 +419,7 @@ public class ModCommands {
                 // TP, SP, киллы, смерти и счётчики уничтоженной техники (общий и по категориям)
                 com.example.aas.events.StatsHandler.resetStats(p);
             }
+            com.example.aas.events.OfflineStats.resetAll();
         } else {
             data.isGameStarted = false;
             GameLogicEvents.cancelCountdown(level);

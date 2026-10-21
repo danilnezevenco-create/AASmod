@@ -123,9 +123,9 @@ key_key.whisper:key.keyboard.unknown
 key_key.mute_microphone:key.keyboard.m
 key_key.disable_voice_chat:key.keyboard.n
 key_key.hide_icons:key.keyboard.h
-key_key.voice_chat:key.keyboard.v
+key_key.voice_chat:key.keyboard.v:CONTROL
 key_key.voice_chat_settings:key.keyboard.unknown
-key_key.voice_chat_group:key.keyboard.g
+key_key.voice_chat_group:key.keyboard.unknown
 key_key.voice_chat_toggle_recording:key.keyboard.unknown
 key_key.voice_chat_adjust_volumes:key.keyboard.unknown
 key_key.aas.drop_supply:key.keyboard.x
@@ -136,6 +136,9 @@ key_key.aas.place_ping:key.mouse.4
 key_key.aas.open_stats:key.keyboard.caps.lock
 key_key.aas.toggle_squad_panel:key.keyboard.y
 key_key.aas.revive:key.keyboard.f
+key_key.aas.voice_local:key.keyboard.v
+key_key.aas.voice_squad:key.keyboard.b
+key_key.aas.voice_command:key.keyboard.keypad.multiply
 key_key.curios.open.desc:key.keyboard.g
 soundCategory_master:1.0
 soundCategory_music:0.0

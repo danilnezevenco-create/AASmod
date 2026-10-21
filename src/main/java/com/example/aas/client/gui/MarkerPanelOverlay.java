@@ -32,10 +32,11 @@ import java.util.Map;
  *   5) ПЕРВОЙ строкой keyPressed():                          ->  if (markerPanel.handleEscapePressed(keyCode)) return true;
  *   6) (по желанию) в начале mouseDragged():                 ->  if (markerPanel.isOpen()) return true;
  *
- * Раскладка:            [8]
+ * Раскладка:            [11]
+ *                        [8]
  *              [10] [7] [1] [2] [3] [4] [5] [6] [9]
  * Центр кнопки [1] в момент открытия находится ровно под курсором.
- * SL видит все 8 кнопок; у FTL слот [1] (ромб) просто пустой, позиции не сдвигаются.
+ * SL видит все кнопки; у FTL слот [1] (ромб) просто пустой, позиции не сдвигаются.
  *
  * Закрытие: ESC, клик вне панели, установка метки. Клик вне панели ничего не ставит.
  */
@@ -117,11 +118,18 @@ public class MarkerPanelOverlay {
         final int stubColor;
         final String mapType;         // != null -> PacketPlaceMapMarker(x, z, mapType)
         final int squadType;          // >= 0    -> PacketSquadMarker(x, z, squadType)
+        final int squadGroup;         // 0 = отряд, 1 = Bravo, 2 = Charlie (только для squadType 0..3, видно только SL)
         final Entry[] sub;            // подменю или null
 
         Entry(int slot, String nameKey, ResourceLocation icon, String stub, int stubColor,
               String mapType, int squadType, Entry... sub) {
+            this(slot, nameKey, icon, stub, stubColor, mapType, squadType, 0, sub);
+        }
+
+        Entry(int slot, String nameKey, ResourceLocation icon, String stub, int stubColor,
+              String mapType, int squadType, int squadGroup, Entry... sub) {
             this.slot = slot;
+            this.squadGroup = squadGroup;
             this.nameKey = nameKey;
             this.icon = icon;
             this.stub = stub;
@@ -139,6 +147,9 @@ public class MarkerPanelOverlay {
     private static final int C_STR = 0xFFFF6B55;   // строения
     private static final int C_SQD = 0xFFFFD755;   // метки отряда / ромб
     private static final int C_SUP = 0xFF3399FF;   // снабжение
+    private static final int C_HUB = 0xFFFFD700;
+    private static final int C_BRAVO   = 0xFFAA33FF;   // совпадает с COLOR_BRAVO_LINE на карте
+    private static final int C_CHARLIE = 0xFF00E5CC;   // совпадает с COLOR_CHARLIE_LINE на карте   // метка хаба (золотистый)
 
     private static Entry mapMarker(int slot, String key, String type, int color, String stub, Entry... sub) {
         return new Entry(slot, key, markerIcon(type), stub, color, type, -1, sub);
@@ -154,6 +165,23 @@ public class MarkerPanelOverlay {
 
     private static Entry squadSub(String key, ResourceLocation icon, int type, int color, String stub) {
         return new Entry(-1, key, icon, stub, color, null, type);
+    }
+
+    /** Кнопка «метки для Bravo/Charlie» (только SL): та же схема, что у [7], но с иконками группы. */
+    private static Entry groupMarker(int slot, String prefix, ResourceLocation[] icons, int group, int color, String stub) {
+        return new Entry(slot, "aas.gui.map_marker." + prefix + "_move", icons[0], stub + "M", color, null, 0, group,
+                groupSub("aas.gui.map_marker." + prefix + "_attack", icons[1], 1, group, color, stub + "A"),
+                groupSub("aas.gui.map_marker." + prefix + "_defend", icons[2], 2, group, color, stub + "D"),
+                groupSub("aas.gui.map_marker." + prefix + "_build",  icons[3], 3, group, color, stub + "B"));
+    }
+
+    private static Entry groupSub(String key, ResourceLocation icon, int type, int group, int color, String stub) {
+        return new Entry(-1, key, icon, stub, color, null, type, group);
+    }
+
+    /** Слоты, которые видит только SL. */
+    private static boolean slOnly(Entry e) {
+        return e.slot == 1 || e.slot == 9 || e.slot == 10 || e.slot == 12 || e.slot == 13;
     }
 
     /**
@@ -200,11 +228,18 @@ public class MarkerPanelOverlay {
                     mapSub("aas.gui.map_marker.tow",         "TOW",         C_STR, "TW")),
             // [8] МЕТКИ КОМАНДЫ — Supply Request, без подменю
             mapMarker(8, "aas.gui.map_marker.supply_request", "Supply Request", C_SUP, "SR"),
+            // [11] МЕТКА ХАБА — Hub Marker, без подменю, стоит над [8].
+            // На карте рисуется своей иконкой + золотистыми пунктирными радиусами хаба (см. AASMapRenderer).
+            mapMarker(11, "aas.gui.map_marker.hub_marker", "Hub Marker", C_HUB, "HM"),
             // [9] СТРЕЛКА — только SL
             squadMarker(9, "aas.gui.map_marker.arrow", ICON_ARROW_MENU, ARROW_ACTION, C_STR, "AR"),
             // [10] СТРЕЛКА ОТРЯДА — только SL, слева от [7]
             squadMarker(10, "aas.gui.map_marker.arrow_squad", ICON_SQUAD_ARROW_MENU,
-                    SQUAD_ARROW_ACTION, 0xFF33DD33, "AS")
+                    SQUAD_ARROW_ACTION, 0xFF33DD33, "AS"),
+            // [12] МЕТКИ ДЛЯ BRAVO — только SL, слева от [10]. Заменяют метку Bravo-фаертима.
+            groupMarker(12, "bravo", BRAVO_ICONS, PacketSquadMarker.GROUP_BRAVO, C_BRAVO, "B"),
+            // [13] МЕТКИ ДЛЯ CHARLIE — только SL, слева от [12]. Заменяют метку Charlie-фаертима.
+            groupMarker(13, "charlie", CHARLIE_ICONS, PacketSquadMarker.GROUP_CHARLIE, C_CHARLIE, "C")
     };
 
     // =========================== СОСТОЯНИЕ ==========================
@@ -275,8 +310,8 @@ public class MarkerPanelOverlay {
         int screenW = mc.getWindow().getGuiScaledWidth();
         int screenH = mc.getWindow().getGuiScaledHeight();
 
-        panelW = PAD * 2 + 9 * CELL + 8 * GAP;
-        panelH = PAD * 2 + 2 * CELL + GAP;
+        panelW = PAD * 2 + 11 * CELL + 10 * GAP;
+        panelH = PAD * 2 + 3 * CELL + 2 * GAP;   // 3 ряда: [11] / [8] / основной ряд
 
         int maxSub = 0;
         for (Entry e : PANEL) {
@@ -285,8 +320,8 @@ public class MarkerPanelOverlay {
         int longestSubH = PAD * 2 + maxSub * CELL + (maxSub - 1) * GAP;
         int totalH = panelH + GAP + longestSubH;
 
-        int wantX = (int) mouseX - (PAD + 2 * (CELL + GAP) + CELL / 2);
-        int wantY = (int) mouseY - (PAD + (CELL + GAP) + CELL / 2);
+        int wantX = (int) mouseX - (PAD + 4 * (CELL + GAP) + CELL / 2);
+        int wantY = (int) mouseY - (PAD + 2 * (CELL + GAP) + CELL / 2);
 
         panelX = Mth.clamp(wantX, 0, Math.max(0, screenW - panelW));
         int yMax = screenH - totalH;
@@ -388,7 +423,7 @@ public class MarkerPanelOverlay {
 
         // 2) главные кнопки: клик ставит метку по умолчанию
         for (Entry e : PANEL) {
-            if ((e.slot == 1 || e.slot == 9 || e.slot == 10) && !isSL) continue;
+            if (slOnly(e) && !isSL) continue;
             if (inCell(e, mx, my)) {
                 place(e);
                 return true;
@@ -427,7 +462,7 @@ public class MarkerPanelOverlay {
 
         // --- основные кнопки (общей подложки нет) ---
         for (Entry e : PANEL) {
-            if ((e.slot == 1 || e.slot == 9 || e.slot == 10) && !isSL) continue;
+            if (slOnly(e) && !isSL) continue;
             int x = cellX(e.slot), y = cellY(e.slot);
             boolean hovered = (e.slot == hoverSlot) || (e.slot == openSubSlot);
             gui.fill(x, y, x + CELL, y + CELL, hovered ? COLOR_CELL_HOVER : COLOR_CELL);
@@ -462,16 +497,18 @@ public class MarkerPanelOverlay {
 
     private static int colOf(int slot) {
         switch (slot) {
-            case 10: return 0;
-            case 7:  return 1;
-            case 1:  return 2;
-            case 2:  return 3;
-            case 3:  return 4;
-            case 4:  return 5;
-            case 5:  return 6;
-            case 6:  return 7;
-            case 9:  return 8;
-            default: return 2;   // слот [8] — над [1]
+            case 13: return 0;
+            case 12: return 1;
+            case 10: return 2;
+            case 7:  return 3;
+            case 1:  return 4;
+            case 2:  return 5;
+            case 3:  return 6;
+            case 4:  return 7;
+            case 5:  return 8;
+            case 6:  return 9;
+            case 9:  return 10;
+            default: return 4;   // слоты [8] и [11] стоят над [1]
         }
     }
 
@@ -480,7 +517,9 @@ public class MarkerPanelOverlay {
     }
 
     private int cellY(int slot) {
-        return slot == 8 ? panelY + PAD : panelY + PAD + CELL + GAP;
+        if (slot == 11) return panelY + PAD;                       // верхний ряд
+        if (slot == 8)  return panelY + PAD + CELL + GAP;          // средний ряд
+        return panelY + PAD + 2 * (CELL + GAP);                    // основной ряд
     }
 
     private boolean inCell(Entry e, int mx, int my) {
@@ -527,7 +566,7 @@ public class MarkerPanelOverlay {
         hoverItem = -1;
 
         for (Entry e : PANEL) {
-            if ((e.slot == 1 || e.slot == 9 || e.slot == 10) && !isSL) continue;
+            if (slOnly(e) && !isSL) continue;
             if (inCell(e, mx, my)) {
                 hoverSlot = e.slot;
                 break;
@@ -580,7 +619,7 @@ public class MarkerPanelOverlay {
             PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(targetX, targetZ, e.mapType));
         } else {
             // Ромб (6) и метки отряда (0..3): существующие числовые типы
-            PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(targetX, targetZ, e.squadType));
+            PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(targetX, targetZ, e.squadType, e.squadGroup));
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {

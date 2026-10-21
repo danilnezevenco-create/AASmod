@@ -334,6 +334,7 @@ public class StatisticsScreen extends Screen {
                 int nameX = drawPingBars(gui, x + 6, y + 2, stat != null ? stat.ping : -1);
 
                 int nameColor = isLeaderRow ? 0xFFFFD700 : 0xFFFFFFFF;
+                if (stat != null && stat.ping < 0) nameColor = 0xFFAAAAAA;
                 drawNameTruncated(gui, (isLeaderRow ? "SL " : "   ") + member, nameX, y + 2, nameColor, nameMaxRight(x, width, hasStats));
 
                 if (stat != null) {
@@ -356,7 +357,7 @@ public class StatisticsScreen extends Screen {
                 boolean hasStats = !p.isHidden();
                 drawRowBackground(gui, x, y, width, ROW_HEIGHT, noSquadRow, p.name.equals(myName), isRowHovered(x, y, width), teamKey, !hasStats);
                 int nameX = drawPingBars(gui, x + 6, y + 2, p.ping);
-                drawNameTruncated(gui, p.name, nameX, y + 2, 0xFFFFFFFF, nameMaxRight(x, width, hasStats));
+                drawNameTruncated(gui, p.name, nameX, y + 2, p.ping < 0 ? 0xFFAAAAAA : 0xFFFFFFFF, nameMaxRight(x, width, hasStats));
                 drawStats(gui, x + width, y + 2, p);
                 y += ROW_HEIGHT;
                 noSquadRow++;
@@ -449,7 +450,7 @@ public class StatisticsScreen extends Screen {
 
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(r, g, b, a);
-        gui.blit(CIRCLE_BADGE, x, y, 0, 0, size, size, size, size);
+        com.example.aas.client.BadgeCircle.blit(gui, x, y, size);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
         if (label != null && !label.isEmpty()) {

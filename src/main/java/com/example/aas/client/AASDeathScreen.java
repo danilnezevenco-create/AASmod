@@ -4,6 +4,7 @@ import com.example.aas.client.gui.AASMapRenderer;
 import com.example.aas.client.gui.MarkerPanelOverlay;
 import com.example.aas.client.gui.VehicleListPanel;
 import com.example.aas.network.*;
+import com.example.aas.client.gui.RankPopup;
 import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.sound.ModSounds;
 import com.example.aas.world.AASWorldData;
@@ -14,6 +15,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.DeathScreen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -80,6 +82,9 @@ public class AASDeathScreen extends DeathScreen {
         this.deathTimestamp = ClientData.globalDeathTimestamp;
         this.respawnTimeTotal = ClientData.RESPAWN_TIME > 0 ? ClientData.RESPAWN_TIME : 10;
 
+        // Карта подсвечивает (другая иконка + мигающая обводка) только те точки, на которых сейчас можно заспавниться
+        this.mapRenderer.spawnAvailability = id -> checkSpawnValidity(id) == SpawnValidity.VALID;
+
         String myName = Minecraft.getInstance().getUser().getName();
         for (AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.members.contains(myName)) {
@@ -98,7 +103,7 @@ public class AASDeathScreen extends DeathScreen {
         mapRenderer.init(mapX, 0, mapSize);
 
         this.applyCmdButton = this.addRenderableWidget(new SquadButton(10, 10, SIDEBAR_WIDTH - 20, 20,
-                Component.literal("APPLY FOR CMD"), b -> {
+                Component.translatable("aas.gui.squad.apply_cmd"), b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
             b.visible = false;
         }));
@@ -110,13 +115,13 @@ public class AASDeathScreen extends DeathScreen {
         this.nameInput.setMaxLength(12);
         this.nameInput.setVisible(!isInSquad);
 
-        this.createButton = this.addRenderableWidget(new SquadButton(10, this.height - 65, SIDEBAR_WIDTH - 20, 20, Component.literal("Create Squad"), b -> {
+        this.createButton = this.addRenderableWidget(new SquadButton(10, this.height - 65, SIDEBAR_WIDTH - 20, 20, Component.translatable("aas.gui.squad.create"), b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue()));
             this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(com.example.aas.sound.ModSounds.SQUAD_JOIN.get(), 1.0F));
         }));
         this.createButton.visible = !isInSquad;
 
-        this.deployButton = this.addRenderableWidget(new DeployButton(10, this.height - 35, 100, 25, Component.literal("DEPLOY"), b -> tryDeploy()));
+        this.deployButton = this.addRenderableWidget(new DeployButton(10, this.height - 35, 100, 25, Component.translatable("aas.gui.death.deploy"), b -> tryDeploy()));
 
         int mapOriginX = this.width - this.height;
         int chatX = SIDEBAR_WIDTH + 10;
@@ -134,16 +139,16 @@ public class AASDeathScreen extends DeathScreen {
         chatInput.setMaxLength(100);
         this.addRenderableWidget(chatInput);
 
-        this.addRenderableWidget(new SquadButton(this.width - 45, 5, 40, 20, Component.literal("Quit"), b -> {
+        this.addRenderableWidget(new SquadButton(this.width - 45, 5, 40, 20, Component.translatable("aas.gui.death.quit"), b -> {
             if (this.minecraft.level != null) this.minecraft.level.disconnect();
             this.minecraft.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
         }));
     }
     private Component getChatModeText() {
         switch (chatMode) {
-            case 0: return Component.literal("ALL").withStyle(ChatFormatting.LIGHT_PURPLE);
-            case 2: return Component.literal("SQUAD").withStyle(ChatFormatting.GREEN);
-            default: return Component.literal("TEAM").withStyle(ChatFormatting.BLUE);
+            case 0: return Component.translatable("aas.gui.chat.all").withStyle(ChatFormatting.LIGHT_PURPLE);
+            case 2: return Component.translatable("aas.gui.chat.squad").withStyle(ChatFormatting.GREEN);
+            default: return Component.translatable("aas.gui.chat.team").withStyle(ChatFormatting.BLUE);
         }
     }
     @Override
@@ -238,6 +243,7 @@ public class AASDeathScreen extends DeathScreen {
 
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
+        RankPopup.beginFrame(this);
         // 1. ФОН ЭКРАНА
         gui.fill(0, 0, this.width, this.height, 0xFF000000);
         mapRenderer.render(gui, mx, my, pt);
@@ -260,23 +266,23 @@ public class AASDeathScreen extends DeathScreen {
         // Обновление состояния кнопки DEPLOY
         if (secondsLeft > 0) {
             deployButton.active = false;
-            deployButton.setMessage(Component.literal("WAIT " + secondsLeft + "s"));
+            deployButton.setMessage(Component.translatable("aas.gui.death.wait", secondsLeft));
         } else {
             if (selectedSpawnType.isEmpty()) {
                 deployButton.active = false;
-                deployButton.setMessage(Component.literal("DEPLOY"));
+                deployButton.setMessage(Component.translatable("aas.gui.death.deploy"));
             } else if (isSelectedBlocked) {
                 deployButton.active = false;
-                deployButton.setMessage(Component.literal("BLOCKED").withStyle(ChatFormatting.RED));
+                deployButton.setMessage(Component.translatable("aas.gui.death.blocked").withStyle(ChatFormatting.RED));
             } else if (isSelectedNoMaterials) {
                 deployButton.active = false;
-                deployButton.setMessage(Component.literal("NO MATERIALS").withStyle(ChatFormatting.RED));
+                deployButton.setMessage(Component.translatable("aas.gui.death.no_materials").withStyle(ChatFormatting.RED));
             } else if (!isSelectedValid) {
                 deployButton.active = false;
-                deployButton.setMessage(Component.literal("DESTROYED").withStyle(ChatFormatting.RED));
+                deployButton.setMessage(Component.translatable("aas.gui.death.destroyed").withStyle(ChatFormatting.RED));
             } else {
                 deployButton.active = true;
-                deployButton.setMessage(Component.literal("DEPLOY"));
+                deployButton.setMessage(Component.translatable("aas.gui.death.deploy"));
             }
         }
 
@@ -303,6 +309,13 @@ public class AASDeathScreen extends DeathScreen {
 
         markerPanel.render(gui, mx, my);
         vehiclePanel.render(gui, mx, my);
+        RankPopup.render(gui, this.font, this.width, this.height);
+
+        // свой индикатор голоса: правее кнопки возрождения (кнопка: x=10, w=100, y=height-35, h=25).
+        // Рисуется после виджетов и на высоком слое (z=600), поэтому ничего его не перекрывает.
+        // maxWidth: не залезать на кнопку переключения чата (она начинается с SIDEBAR_WIDTH + 10)
+        int ownX = 10 + 100 + 6;
+        OwnVoiceIndicator.render(gui, this.font, ownX, this.height - 35 + 8, SIDEBAR_WIDTH + 10 - 4 - ownX);
 
         // 9. ЭФФЕКТ ЗАТУХАНИЯ (Fade in)
         if (ClientData.deathFadeStartTime != 0) {
@@ -373,36 +386,109 @@ public class AASDeathScreen extends DeathScreen {
         }
         return SpawnValidity.INVALID;
     }
+    // Раскладка строки говорящего (как в AASOverlay): [кит] [микрофон] [ник]
+    private static final int KIT_SIZE = 9;
+    private static final int KIT_X    = 3;
+    private static final int VOICE_X  = KIT_X + KIT_SIZE + 2;
+    private static final int NAME_X   = VOICE_X + 8 + 3;
+
+    private static final int BADGE_SIZE = 10;   // кружок с номером отряда целиком внутри плашки (12 px высотой)
+
+    // есть ли среди говорящих (кроме меня) кто-то в локальном/командирском канале с известным номером отряда
+    private boolean anyBadgeSpeaker(long now) {
+        for (var m : java.util.List.of(ClientData.COMMAND_SPEAKERS, ClientData.LOCAL_SPEAKERS)) {
+            for (var e : m.entrySet()) {
+                if (OwnVoiceIndicator.isSelf(e.getKey()) || now - e.getValue() >= 500) continue;
+                if (OwnVoiceIndicator.squadNumberOf(e.getKey()) != null) return true;
+            }
+        }
+        return false;
+    }
 
     private void renderVoiceActivity(GuiGraphics gui) {
         long now = System.currentTimeMillis();
         int x = 5;
         int y = (this.height / 2) - 40;
+        // место под кружок резервируем у всех строк, если он есть хотя бы у одной (чтобы ники были ровно)
+        int badgeW = anyBadgeSpeaker(now) ? BADGE_SIZE + 3 : 0;
 
         for (var entry : ClientData.RADIO_SPEAKERS.entrySet()) {
+            if (OwnVoiceIndicator.isSelf(entry.getKey())) continue;
             if (now - entry.getValue() < 500) {
-                renderSpeakerRow(gui, x, y, entry.getKey(), 0xFFFFFF00, RADIO_ICON);
+                renderRadioRow(gui, x, y, entry.getKey(), 0xFFFFFF00);
+                y += 14;
+            }
+        }
+
+        for (var entry : ClientData.COMMAND_SPEAKERS.entrySet()) {
+            if (OwnVoiceIndicator.isSelf(entry.getKey())) continue;
+            if (now - entry.getValue() < 500) {
+                renderSpeakerRow(gui, x, y, entry.getKey(), "\u2605 " + entry.getKey(), OwnVoiceIndicator.commandColor(entry.getKey()), true, badgeW);
                 y += 14;
             }
         }
 
         for (var entry : ClientData.SQUAD_SPEAKERS.entrySet()) {
+            if (OwnVoiceIndicator.isSelf(entry.getKey())) continue;
             if (now - entry.getValue() < 500) {
-                renderSpeakerRow(gui, x, y, entry.getKey(), 0xFF55FF55, VOICE_ICON);
+                renderSpeakerRow(gui, x, y, entry.getKey(), entry.getKey(), 0xFF55FF55, false, badgeW);
+                y += 14;
+            }
+        }
+
+        for (var entry : ClientData.LOCAL_SPEAKERS.entrySet()) {
+            if (OwnVoiceIndicator.isSelf(entry.getKey())) continue;
+            if (now - entry.getValue() < 500) {
+                renderSpeakerRow(gui, x, y, entry.getKey(), entry.getKey(), 0xFF55AAFF, true, badgeW);
                 y += 14;
             }
         }
     }
 
-    private void renderSpeakerRow(GuiGraphics gui, int x, int y, String name, int color, ResourceLocation icon) {
+    // Строка говорящего в голосовом канале: кит + иконка микрофона по громкости + ник.
+    // name - чистый ник (для кита и громкости), label - что рисуем (у командирского с "★ ").
+    private void renderSpeakerRow(GuiGraphics gui, int x, int y, String name, String label, int color,
+                                  boolean badge, int badgeW) {
+        int bgWidth = badgeW + NAME_X + font.width(label) + 6;
+        gui.fill(x, y - 2, x + bgWidth, y + 10, 0x80000000);
+        RenderSystem.enableBlend();
+
+        // 0) кружок с номером отряда говорящего (локальный / командирский), цвет канала
+        if (badge && badgeW > 0) {
+            String num = OwnVoiceIndicator.squadNumberOf(name);
+            if (num != null) BadgeCircle.draw(gui, this.font, x + 2, y - 1, BADGE_SIZE, color, num);
+        }
+
+        // 1) иконка кита (если назначен), цветом канала
+        String kitName = ClientData.playerKits.getOrDefault(name, "Unassigned");
+        if (kitName != null && !kitName.isEmpty() && !kitName.equalsIgnoreCase("Unassigned")) {
+            ResourceLocation kitIcon = new ResourceLocation("aas",
+                    "textures/gui/kits/" + kitName.toLowerCase().replace(" ", "_") + ".png");
+            KitIconStyle.apply(color, 1.0f);
+            gui.blit(kitIcon, x + badgeW + KIT_X, y, KIT_SIZE, KIT_SIZE, 0f, 0f, 10, 10, 10, 10);
+            KitIconStyle.reset();
+        }
+
+        // 2) иконка микрофона: картинка зависит от громкости
+        RenderSystem.setShaderColor(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f, (color & 0xFF) / 255f, 1f);
+        gui.blit(VoiceIcons.forPlayer(name), x + badgeW + VOICE_X, y, 0, 0, 8, 8, 8, 8);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+
+        // 3) ник
+        gui.drawString(font, label, x + badgeW + NAME_X, y, color, false);
+    }
+
+    // Строка рации: как раньше (иконка рации + ник, без кита и уровня).
+    private void renderRadioRow(GuiGraphics gui, int x, int y, String name, int color) {
         int tw = font.width(name) + 15;
         gui.fill(x, y - 2, x + tw + 4, y + 10, 0x80000000);
         RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(((color >> 16) & 0xFF)/255f, ((color >> 8) & 0xFF)/255f, (color & 0xFF)/255f, 1f);
-        gui.blit(icon, x + 3, y, 0, 0, 8, 8, 8, 8);
+        RenderSystem.setShaderColor(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f, (color & 0xFF) / 255f, 1f);
+        gui.blit(RADIO_ICON, x + 3, y, 0, 0, 8, 8, 8, 8);
         RenderSystem.setShaderColor(1, 1, 1, 1);
         gui.drawString(font, name, x + 14, y, color, false);
     }
+
     private String getSpawnPointUnderMouse(double mouseX, double mouseY) {
         Minecraft mc = Minecraft.getInstance();
         String myName = mc.player.getScoreboardName();
@@ -472,17 +558,17 @@ public class AASDeathScreen extends DeathScreen {
         int startX = SIDEBAR_WIDTH + 10;
         int startY = 55;
 
-        gui.drawString(font, "SELECT SPAWN POINT:", startX, startY - 15, 0xFFAA00);
+        gui.drawString(font, I18n.get("aas.gui.death.select_spawn"), startX, startY - 15, 0xFFAA00);
 
-        drawSpawnOption(gui, startX, startY, 110, 24, "MAIN BASE", "MAIN", mx, my, true, false);
+        drawSpawnOption(gui, startX, startY, 110, 24, I18n.get("aas.gui.death.main_base"), "MAIN", mx, my, true, false);
 
         startY += 30;
         boolean rallyExists = hasRally();
         boolean rallyBlocked = isMyRallyBlocked();
-        drawSpawnOption(gui, startX, startY, 110, 24, "SQUAD RALLY", "RALLY", mx, my, rallyExists && !rallyBlocked, rallyExists && rallyBlocked);
+        drawSpawnOption(gui, startX, startY, 110, 24, I18n.get("aas.gui.death.squad_rally"), "RALLY", mx, my, rallyExists && !rallyBlocked, rallyExists && rallyBlocked);
 
         startY += 40;
-        gui.drawString(font, "AVAILABLE HUBS:", startX, startY - 12, 0xAAAAAA);
+        gui.drawString(font, I18n.get("aas.gui.death.available_hubs"), startX, startY - 12, 0xAAAAAA);
 
         Team team = this.minecraft.player.getTeam();
         if (team != null) {
@@ -497,7 +583,7 @@ public class AASDeathScreen extends DeathScreen {
                     boolean canAfford = !ClientData.serverHubSpawnCosts || hub.materials >= ClientData.serverHubSpawnCostAmount;
                     boolean active = !hubBlocked && canAfford;
 
-                    drawSpawnOption(gui, startX, startY, 110, 20, "HUBS " + hubIdx, id, mx, my, active, hubBlocked);
+                    drawSpawnOption(gui, startX, startY, 110, 20, I18n.get("aas.gui.death.hub_n", hubIdx), id, mx, my, active, hubBlocked);
                     startY += 24;
                     hubIdx++;
                 }
@@ -512,11 +598,22 @@ public class AASDeathScreen extends DeathScreen {
         int color = isBlocked ? 0xFFFF5555 : (active ? (selected ? 0xFF55FF55 : (hovered ? 0xFFFFFFFF : 0xBBBBBB)) : 0x555555);
         int bg = isBlocked ? 0x60FF0000 : (selected ? 0x4455FF55 : (active ? 0x22FFFFFF : 0x11000000));
 
-        String finalLabel = isBlocked ? label + " BLOCKED" : label;
+        String finalLabel = isBlocked ? I18n.get("aas.gui.death.option_blocked", label) : label;
 
         gui.fill(x, y, x + w, y + h, bg);
         gui.renderOutline(x, y, w, h, color);
-        gui.drawCenteredString(font, finalLabel, x + w / 2, y + (h - 8) / 2, color);
+        int maxTextW = w - 4;
+        int textW = font.width(finalLabel);
+        if (textW > maxTextW) {
+            float sc = (float) maxTextW / textW;
+            gui.pose().pushPose();
+            gui.pose().translate(x + w / 2f, y + h / 2f, 0);
+            gui.pose().scale(sc, sc, 1f);
+            gui.drawCenteredString(font, finalLabel, 0, -4, color);
+            gui.pose().popPose();
+        } else {
+            gui.drawCenteredString(font, finalLabel, x + w / 2, y + (h - 8) / 2, color);
+        }
     }
 
     // ===================== МЕЛКИЕ ОТРЯДЫ =====================
@@ -592,7 +689,7 @@ public class AASDeathScreen extends DeathScreen {
 
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(r, g, b, a);
-        gui.blit(CIRCLE_BADGE, x, y, 0, 0, size, size, size, size);
+        BadgeCircle.blit(gui, x, y, size);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
         if (label != null && !label.isEmpty()) {
@@ -618,7 +715,7 @@ public class AASDeathScreen extends DeathScreen {
             boolean isExpanded = expandedSquads.contains(squad.id);
 
             boolean isCMD = (squad.id == teamCMDId && teamCMDId != -1);
-            String prefix = isCMD ? "[CMD] " : "";
+            String prefix = isCMD ? I18n.get("aas.gui.squad.cmd_tag") + " " : "";
             int squadNameColor = isCMD ? 0xFF55FF55 : 0xFFFFD700;
 
             int badgeColor;
@@ -644,11 +741,11 @@ public class AASDeathScreen extends DeathScreen {
             boolean clickable = true;
 
             if (isMySquad) {
-                actionText = "LEAVE"; actionColor = 0xFFFF5555;
+                actionText = I18n.get("aas.gui.squad.leave"); actionColor = 0xFFFF5555;
             } else if (!amIInSquad) {
-                if (squad.isLocked) { actionText = "LOCKED"; actionColor = 0xFFFFAA00; clickable = false; }
-                else if (squad.members.size() >= 9) { actionText = "FULL"; actionColor = 0xFF888888; clickable = false; }
-                else { actionText = "JOIN"; actionColor = 0xFF55FF55; }
+                if (squad.isLocked) { actionText = I18n.get("aas.gui.squad.locked"); actionColor = 0xFFFFAA00; clickable = false; }
+                else if (squad.members.size() >= 9) { actionText = I18n.get("aas.gui.squad.full"); actionColor = 0xFF888888; clickable = false; }
+                else { actionText = I18n.get("aas.gui.squad.join"); actionColor = 0xFF55FF55; }
             }
 
             int actionX = 0;
@@ -752,13 +849,15 @@ public class AASDeathScreen extends DeathScreen {
                         xOffset += 12;
                     } else if (!kName.equals("Unassigned") && !kName.isEmpty()) {
                         ResourceLocation kitIcon = new ResourceLocation("aas", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
-                        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+                        KitIconStyle.apply(KitIconStyle.DEFAULT_COLOR, 1.0f);
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
+                        KitIconStyle.reset();
                         xOffset += 12;
 
                         int rankLvl = KitRankIcons.levelOf(member);
                         if (rankLvl > 0) {
                             KitRankIcons.draw(gui, rankLvl, xOffset, currentY);
+                            RankPopup.registerIcon(gui, member, xOffset, currentY, 10, mouseX, mouseY);
                             xOffset += KitRankIcons.ROW_ADVANCE;
                         }
                     }
@@ -805,11 +904,11 @@ public class AASDeathScreen extends DeathScreen {
             boolean isExpanded = expandedSquads.contains(squad.id);
 
             String actionText = "";
-            if (isMySquad) actionText = "LEAVE";
+            if (isMySquad) actionText = I18n.get("aas.gui.squad.leave");
             else if (!amIInSquad) {
-                if (squad.isLocked) actionText = "LOCKED";
-                else if (squad.members.size() >= 9) actionText = "FULL";
-                else actionText = "JOIN";
+                if (squad.isLocked) actionText = I18n.get("aas.gui.squad.locked");
+                else if (squad.members.size() >= 9) actionText = I18n.get("aas.gui.squad.full");
+                else actionText = I18n.get("aas.gui.squad.join");
             }
 
             int actionWidth = actionText.isEmpty() ? 0 : this.font.width(actionText);
@@ -920,6 +1019,7 @@ public class AASDeathScreen extends DeathScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
+        if (RankPopup.mouseClicked(mx, my, btn)) return true;
         if (vehiclePanel.mouseClicked(mx, my, btn)) return true;
         if (markerPanel.mouseClicked(mx, my, btn)) return true;
 
@@ -1026,11 +1126,11 @@ public class AASDeathScreen extends DeathScreen {
                     String actionText = "";
                     boolean clickable = true;
                     if (isMySquad) {
-                        actionText = "LEAVE";
+                        actionText = I18n.get("aas.gui.squad.leave");
                     } else if (!amIInSquad) {
-                        if (squad.isLocked) { actionText = "LOCKED"; clickable = false; }
-                        else if (squad.members.size() >= 9) { actionText = "FULL"; clickable = false; }
-                        else { actionText = "JOIN"; }
+                        if (squad.isLocked) { actionText = I18n.get("aas.gui.squad.locked"); clickable = false; }
+                        else if (squad.members.size() >= 9) { actionText = I18n.get("aas.gui.squad.full"); clickable = false; }
+                        else { actionText = I18n.get("aas.gui.squad.join"); }
                     }
 
                     int actionWidth = actionText.isEmpty() ? 0 : this.font.width(actionText);

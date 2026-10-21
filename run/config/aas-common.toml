@@ -90,6 +90,8 @@
 	requireSpecialistToDrive = false
 	#Force auto-balance. Player cannot join a team if it has more players than the other.
 	autoBalanceTeams = false
+	#Show kit ranks (level icon) between the kit icon and the player name
+	showKitRanks = false
 	#Preparation time for defenders in Invasion mode (minutes)
 	#Range: 1 ~ 30
 	invasionPrepTimeMinutes = 5
@@ -99,8 +101,6 @@
 	requireRiflemanForAmmoBag = true
 	#If true, chat messages about a destroyed/dismantled HUB, Rally Point or Vehicle are only sent to the team that owns/lost it - the opposing team will no longer see these messages. Players who are not on the BLUE or RED team (spectators, no team, etc.) still see both teams' messages. If false (default), everyone sees every destruction message like before.
 	separateTeamDestructionMessages = false
-	#Show kit ranks (level icon) between the kit icon and the player name
-	showKitRanks = true
 
 ["Balance Settings"]
 	#Range: 0 ~ 10000
@@ -117,6 +117,9 @@
 	hubBuildRadius = 50
 	#Range: 5 ~ 200
 	crateBuildRadius = 50
+	#Local voice chat (V) range in blocks
+	#Range: 5 ~ 128
+	voiceLocalRange = 50
 	#Range: 1 ~ 20
 	hubBlockEnemyCount = 3
 	#Range: 1 ~ 20

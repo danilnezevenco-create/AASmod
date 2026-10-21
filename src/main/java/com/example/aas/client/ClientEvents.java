@@ -93,12 +93,11 @@ public class ClientEvents {
     private static int reviveResendCooldown = 0;   // тики до повторного START, если сервер не подтвердил
     private static final int REVIVE_RESEND_TICKS = 10;
     private static final double REVIVE_RANGE = 3.0;
-    // Р¦РµР»СЊ, РЅР° РєРѕС‚РѕСЂСѓСЋ РёРіСЂРѕРє СЃРµР№С‡Р°СЃ РЅР°РІРѕРґРёС‚СЃСЏ Рё РјРѕР¶РµС‚ РїРѕРґРЅСЏС‚СЊ (РґР»СЏ РІРёР·СѓР°Р»СЊРЅРѕР№ РїРѕРґСЃРєР°Р·РєРё "F")
+    // Цель, на которую игрок сейчас наводится и может поднять (для визуальной подсказки "F")
     private static Entity currentRevivePromptTarget = null;
-    // РњРёРЅРёРјР°Р»СЊРЅС‹Р№ РєРѕСЃРёРЅСѓСЃ СѓРіР»Р° РјРµР¶РґСѓ РЅР°РїСЂР°РІР»РµРЅРёРµРј РІР·РіР»СЏРґР° Рё РЅР°РїСЂР°РІР»РµРЅРёРµРј РЅР° С†РµР»СЊ,
-    // С‡С‚РѕР±С‹ СЃС‡РёС‚Р°С‚СЊ, С‡С‚Рѕ РёРіСЂРѕРє "РЅР°РІРµР» РїСЂРёС†РµР» РЅР° СЂР°РЅРµРЅРѕРіРѕ" (~28В°)
+    // Минимальный косинус угла между направлением взгляда и направлением на цель,
+    // чтобы считать, что игрок "навёл прицел на раненого" (~28°)
     private static final double REVIVE_AIM_DOT_THRESHOLD = 0.88;
-    // РџРѕР»СЏ РґР»СЏ РѕС‚СЃР»РµР¶РёРІР°РЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РєР»Р°РІРёС€ СЂР°С†РёРё
     // ==== Подсказки для новичков (команда -> отряд -> снаряжение) ====
     private static boolean teamHintShown = false;
     private static boolean squadHintShown = false;
@@ -129,7 +128,7 @@ public class ClientEvents {
         ClientData.DOWNED_PLAYERS.clear();
     }
 
-    // РћР‘РЄР•Р”РРќР•РќРќР«Р™ РњР•РўРћР” РўРРљРђ
+    // ОБЪЕДИНЁННЫЙ МЕТОД ТИКА
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -137,10 +136,10 @@ public class ClientEvents {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        // Р¤РРљРЎ: РўР°Р№РјРµСЂ СЃР±СЂР°СЃС‹РІР°РµС‚СЃСЏ РўРћР›Р¬РљРћ РµСЃР»Рё РёРіСЂРѕРє Р¶РёРІ, РЅРµ РІ РЅРѕРєР°СѓС‚Рµ Р Сѓ РЅРµРіРѕ РЅРµС‚ РѕС‚РєСЂС‹С‚РѕРіРѕ СЌРєСЂР°РЅР° СЃРјРµСЂС‚Рё
+        // ФИКС: таймер сбрасывается ТОЛЬКО если игрок жив, не в нокауте И у него нет открытого экрана смерти
         if (mc.player.isAlive() && !mc.player.getPersistentData().getBoolean("AAS_IsDowned") && !(mc.screen instanceof AASDeathScreen)) {
             if (ClientData.globalDeathTimestamp != 0) {
-                // Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР°: РЅРµ СЃР±СЂР°СЃС‹РІР°РµРј, РµСЃР»Рё РјС‹ РїСЂРѕСЃС‚Рѕ РїРµСЂРµС…РѕРґРёРј РјРµР¶РґСѓ РјРµРЅСЋС€РєР°РјРё AAS
+                // Дополнительная проверка: не сбрасываем, если мы просто переходим между менюшками AAS
                 if (!(mc.screen instanceof com.example.aas.client.gui.PlayerKitSelectScreen)) {
                     ClientData.globalDeathTimestamp = 0;
                     ClientData.deathFadePlayed = false;
@@ -166,17 +165,17 @@ public class ClientEvents {
         }
 
         if (ClientData.voteActive && ClientData.voteTimer > 0) {
-            // РљР°Р¶РґС‹Рµ 20 С‚РёРєРѕРІ (1 СЃРµРєСѓРЅРґР°) СѓРјРµРЅСЊС€Р°РµРј РІРёР·СѓР°Р»СЊРЅС‹Р№ С‚Р°Р№РјРµСЂ
+            // Каждые 20 тиков (1 секунда) уменьшаем визуальный таймер
             if (mc.level.getGameTime() % 20 == 0) {
                 ClientData.voteTimer--;
             }
         }
 
-        // 1. РћС‚РґР°С‡Р° (Recoil)
+        // 1. Отдача (Recoil)
         RecoilHandler.clientTick();
 
 
-        // 3. Р›РћР“РРљРђ РЎРўР Р•Р›Р¬Р‘Р« РР— РўР•РҐРќРРљР
+        // 3. ЛОГИКА СТРЕЛЬБЫ ИЗ ТЕХНИКИ
         Entity vehicle = mc.player.getVehicle();
         if (vehicle instanceof M2BrowningEntity || vehicle instanceof AGS30Entity) {
             long windowId = mc.getWindow().getWindow();
@@ -187,7 +186,7 @@ public class ClientEvents {
                 while (mc.options.keyAttack.consumeClick()) { }
             }
         }
-        // Р”РѕР±Р°РІР»СЏРµРј РїСЂРѕРІРµСЂРєСѓ mc.player.isAlive()
+        // Добавляем проверку mc.player.isAlive()
         if (mc.player.getPersistentData().getBoolean("AAS_IsDowned") && mc.player.isAlive()) {
             mc.player.setDeltaMovement(0, mc.player.getDeltaMovement().y, 0);
 
@@ -202,7 +201,7 @@ public class ClientEvents {
         }
         handleReviveHold(mc);
 
-        // РћР±РЅРѕРІР»СЏРµРј С†РµР»СЊ РґР»СЏ РІРёР·СѓР°Р»СЊРЅРѕР№ РїРѕРґСЃРєР°Р·РєРё "Р·Р°Р¶РјРёС‚Рµ F" (РЅР°РІРѕРґРєР° + РЅСѓР¶РЅС‹Р№ РїСЂРµРґРјРµС‚ РІ СЂСѓРєРµ)
+        // Обновляем цель для визуальной подсказки "зажмите F" (наводка + нужный предмет в руке)
         Entity lockedTarget = (revivingHeld && ClientData.reviveProgressOther >= 0f)
                 ? mc.level.getEntity(reviveTargetId) : null;
         currentRevivePromptTarget = lockedTarget != null ? lockedTarget : findRevivePromptTarget(mc);
@@ -225,7 +224,7 @@ public class ClientEvents {
             if (event.getInput().forwardImpulse > 0) {
                 event.getInput().forwardImpulse = 0f;
             }
-            // РџСЂРё Р¶РµР»Р°РЅРёРё РјРѕР¶РЅРѕ РѕРіСЂР°РЅРёС‡РёС‚СЊ Рё СЂС‹РІРєРё РІ СЃС‚РѕСЂРѕРЅС‹:
+            // При желании можно ограничить и рывки в стороны:
             // event.getInput().leftImpulse *= 0.5f;
         }
     }
@@ -233,12 +232,10 @@ public class ClientEvents {
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         Minecraft mc = Minecraft.getInstance();
-        // Р•СЃР»Рё РєР°СЂС‚Р° РѕС‚РєСЂС‹С‚Р° (РЅР° TAB)
         if (ClientData.isMapOpen && mc.screen == null) {
             double delta = event.getScrollDelta();
             if (delta != 0) {
-                // Р’С‹Р·С‹РІР°РµРј С‚РѕС‚ Р¶Рµ СЃР°РјС‹Р№ Р±РµР·РѕРїР°СЃРЅС‹Р№ Р·СѓРј
-                ClientData.zoomMap(delta);
+                ClientData.zoomMiniMap(delta);   // было: ClientData.zoomMap(delta);
                 event.setCanceled(true);
             }
         }
@@ -250,7 +247,7 @@ public class ClientEvents {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        // РњР°СЂРєРµСЂ "Р·Р°Р¶РјРёС‚Рµ F" СЂРёСЃСѓРµРј РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ РЅР°Р»РёС‡РёСЏ РѕС‚СЂСЏРґР° (РїРѕСЌС‚РѕРјСѓ РґРѕ РІС‹С…РѕРґР° РЅРёР¶Рµ)
+        // Маркер "зажмите F" рисуем независимо от наличия отряда (поэтому до выхода ниже)
         if (currentRevivePromptTarget != null && currentRevivePromptTarget.isAlive()) {
             renderRevivePrompt(event.getPoseStack(), event.getCamera().getPosition(), currentRevivePromptTarget, mc, event.getPartialTick());
         }
@@ -267,7 +264,7 @@ public class ClientEvents {
 
         if (mySquad == null) return;
 
-        // РћРїСЂРµРґРµР»СЏРµРј СЂРѕР»СЊ РёРіСЂРѕРєР°
+        // Определяем роль игрока
         boolean isSL = mySquad.leader.equals(myName);
         boolean isBravo = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
         boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
@@ -277,12 +274,12 @@ public class ClientEvents {
         long gameTime = mc.level.getGameTime();
         float blinkAlpha = 0.45f + (float)Math.sin(gameTime * 0.4f) * 0.25f;
 
-        // --- 1. РџРРќР“Р (Р“Р›РђР—Рђ) ---
-        // РџРёРЅРі Р»РёРґРµСЂР° РІРёРґСЏС‚ Р’РЎР• РІ РѕС‚СЂСЏРґРµ
+        // --- 1. ПИНГИ (ГЛАЗА) ---
+        // Пинг лидера видят ВСЕ в отряде
         if (mySquad.pingPos != null && gameTime < mySquad.pingExpiry) {
             render3DMarker(poseStack, cameraPos, mySquad.pingPos, PING_TEXTURE, mc, blinkAlpha, 0.5);
         }
-        // РџРёРЅРіРё Bravo/Charlie С‚РµРїРµСЂСЊ РІРёРґРёС‚ РІРµСЃСЊ РѕС‚СЂСЏРґ, Р° РЅРµ С‚РѕР»СЊРєРѕ РЎР› Рё СѓС‡Р°СЃС‚РЅРёРєРѕРІ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРіРѕ С„Р°РµСЂС‚РёРјР°
+        // Пинги Bravo/Charlie теперь видит весь отряд, а не только СЛ и участников соответствующего фаертима
         if (mySquad.bravoPingPos != null && gameTime < mySquad.bravoPingExpiry) {
             render3DMarker(poseStack, cameraPos, mySquad.bravoPingPos, PING_TEX_BRAVO, mc, blinkAlpha, 0.5);
         }
@@ -290,44 +287,29 @@ public class ClientEvents {
             render3DMarker(poseStack, cameraPos, mySquad.charliePingPos, PING_TEX_CHARLIE, mc, blinkAlpha, 0.5);
         }
 
-        // --- 2. РњР•РўРљР Р”Р’РР–Р•РќРРЇ (MOVE - РўРРџ 0) ---
-        // РњС‹ СЂРёСЃСѓРµРј С„РёР·РёС‡РµСЃРєСѓСЋ РјРµС‚РєСѓ РІ РјРёСЂРµ РўРћР›Р¬РљРћ РµСЃР»Рё РµС‘ С‚РёРї == 0 (Move)
+        // --- 2. Метки SL / Bravo FTL / Charlie FTL (Move / Attack / Defend / Build) ---
+        // В мире рисуем ТОЛЬКО метки, поставленные в мире (пинг / колесо): isPhysical == true.
+        // Метки, поставленные через карту (isPhysical == false), остаются только на карте и компасе.
+        renderWorldSquadMarker(poseStack, cameraPos, mySquad.marker, 0, gameTime, mc);
+        renderWorldSquadMarker(poseStack, cameraPos, mySquad.bravoMarker, 1, gameTime, mc);
+        renderWorldSquadMarker(poseStack, cameraPos, mySquad.charlieMarker, 2, gameTime, mc);
+    }
 
-        // РњРµС‚РєР° Р»РёРґРµСЂР° (РІРёРґСЏС‚ РІСЃРµ)
-        if (mySquad.marker != null && mySquad.marker.type == 0 && gameTime < mySquad.marker.expiryTick) {
-            BlockPos mPos = new BlockPos(mySquad.marker.x, mySquad.marker.y, mySquad.marker.z);
-            render3DMarker(poseStack, cameraPos, mPos, MOVE_TEXTURE, mc, 1.0f, 0.5);
-        }
+    /** group: 0 = SL, 1 = Bravo, 2 = Charlie. */
+    private static void renderWorldSquadMarker(PoseStack poseStack, Vec3 cameraPos,
+                                               com.example.aas.world.AASWorldData.SquadMarker m,
+                                               int group, long gameTime, Minecraft mc) {
+        if (m == null || !m.isPhysical || gameTime >= m.expiryTick) return;
 
-        // РњРµС‚РєР° Bravo (SL + Bravo)
-        if (mySquad.bravoMarker != null && mySquad.bravoMarker.type == 0 && gameTime < mySquad.bravoMarker.expiryTick) {
-            BlockPos mPos = new BlockPos(mySquad.bravoMarker.x, mySquad.bravoMarker.y, mySquad.bravoMarker.z);
-            render3DMarker(poseStack, cameraPos, mPos, MOVE_TEX_BRAVO, mc, 1.0f, 0.5);
+        ResourceLocation tex;
+        if (m.type == 0) {
+            tex = group == 1 ? MOVE_TEX_BRAVO : group == 2 ? MOVE_TEX_CHARLIE : MOVE_TEXTURE;
+        } else {
+            tex = radialMarkerTexture(m.type, group);
         }
+        if (tex == null) return;
 
-        // РњРµС‚РєР° Charlie (SL + Charlie)
-        if (mySquad.charlieMarker != null && mySquad.charlieMarker.type == 0 && gameTime < mySquad.charlieMarker.expiryTick) {
-            BlockPos mPos = new BlockPos(mySquad.charlieMarker.x, mySquad.charlieMarker.y, mySquad.charlieMarker.z);
-            render3DMarker(poseStack, cameraPos, mPos, MOVE_TEX_CHARLIE, mc, 1.0f, 0.5);
-        }
-        // --- Attack / Defend / Build для лидера отряда ---
-        if (mySquad.marker != null && gameTime < mySquad.marker.expiryTick) {
-            BlockPos mPos = new BlockPos(mySquad.marker.x, mySquad.marker.y, mySquad.marker.z);
-            ResourceLocation tex = radialMarkerTexture(mySquad.marker.type, 0);
-            if (tex != null) render3DMarker(poseStack, cameraPos, mPos, tex, mc, 1.0f, 0.5);
-        }
-        // --- Attack / Defend / Build для Bravo FTL ---
-        if (mySquad.bravoMarker != null && gameTime < mySquad.bravoMarker.expiryTick) {
-            BlockPos mPos = new BlockPos(mySquad.bravoMarker.x, mySquad.bravoMarker.y, mySquad.bravoMarker.z);
-            ResourceLocation tex = radialMarkerTexture(mySquad.bravoMarker.type, 1);
-            if (tex != null) render3DMarker(poseStack, cameraPos, mPos, tex, mc, 1.0f, 0.5);
-        }
-        // --- Attack / Defend / Build для Charlie FTL ---
-        if (mySquad.charlieMarker != null && gameTime < mySquad.charlieMarker.expiryTick) {
-            BlockPos mPos = new BlockPos(mySquad.charlieMarker.x, mySquad.charlieMarker.y, mySquad.charlieMarker.z);
-            ResourceLocation tex = radialMarkerTexture(mySquad.charlieMarker.type, 2);
-            if (tex != null) render3DMarker(poseStack, cameraPos, mPos, tex, mc, 1.0f, 0.5);
-        }
+        render3DMarker(poseStack, cameraPos, new BlockPos(m.x, m.y, m.z), tex, mc, 1.0f, 0.5);
     }
 
     /** type: 1-Attack, 2-Defend, 3-Build. squadGroup: 0-SL, 1-Bravo, 2-Charlie. */
@@ -354,7 +336,7 @@ public class ClientEvents {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        // Р•СЃР»Рё РїСЂРёС†РµР» (Crosshair) РіРѕС‚РѕРІРёС‚СЃСЏ Рє СЂРµРЅРґРµСЂСѓ
+        // Если прицел (Crosshair) готовится к рендеру
         if (event.getOverlay() == net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.type()) {
             boolean usingBinoculars = mc.player.isUsingItem() && mc.player.getUseItem().getItem() == ModItems.BINOCULARS.get();
             Entity vehicle = mc.player.getVehicle();
@@ -366,8 +348,8 @@ public class ClientEvents {
             }
         }
 
-        // РќРћР’РћР•: СЃРєСЂС‹РІР°РµРј РІР°РЅРёР»СЊРЅС‹Р№ СЃРїРёСЃРѕРє РёРіСЂРѕРєРѕРІ (TAB) РїРѕРєР° РјР°С‚С‡ РёРґС‘С‚,
-        // С‚.Рє. TAB Р·Р°РЅСЏС‚ РїРѕРґ РѕС‚РєСЂС‹С‚РёРµ РєР°СЂС‚С‹
+        // НОВОЕ: скрываем ванильный список игроков (TAB) пока матч идёт,
+        // т.к. TAB занят под открытие карты
         if (event.getOverlay() == net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.PLAYER_LIST.type()) {
             boolean isCreativeOrSpectator = mc.player.isCreative() || mc.player.isSpectator();
 
@@ -380,7 +362,7 @@ public class ClientEvents {
         String myName = mc.player.getScoreboardName();
         boolean canPing = false;
 
-        // РџСЂРѕРІРµСЂСЏРµРј СЂРѕР»СЊ: С‚РѕР»СЊРєРѕ SL РёР»Рё FTL РјРѕРіСѓС‚ СЃС‚Р°РІРёС‚СЊ РјРµС‚РєСѓ
+        // Проверяем роль: только SL или FTL могут ставить метку
         for (com.example.aas.world.AASWorldData.Squad s : ClientData.clientSquads) {
             if (s.leader.equals(myName) || s.bravoLeader.equals(myName) || s.charlieLeader.equals(myName)) {
                 canPing = true;
@@ -392,9 +374,9 @@ public class ClientEvents {
             boolean isShift = net.minecraft.client.gui.screens.Screen.hasShiftDown();
             PacketHandler.INSTANCE.sendToServer(new PacketPlacePing(isShift));
             mc.player.playSound(ModSounds.MAP_MARKER_PLACE.get(), 1.0f, 1.0f);
-            return true; // РјРµС‚РєСѓ СЂРµР°Р»СЊРЅРѕ РїРѕСЃС‚Р°РІРёР»Рё
+            return true; // метку реально поставили
         }
-        return false; // РЅРµ Р±С‹Р»Рѕ РїСЂР°РІ вЂ” pick-block РЅРµ С‚СЂРѕРіР°РµРј
+        return false; // не было прав — pick-block не трогаем
     }
     /**
      * Нажатие клавиши/кнопки установки метки.
@@ -434,9 +416,10 @@ public class ClientEvents {
         }
     }
     /**
-     * РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РѕС‚СЂРёСЃРѕРІРєРё 3D РјР°СЂРєРµСЂР°
+     * Универсальный вспомогательный метод для отрисовки 3D маркера
      */
-    private static void render3DMarker(PoseStack poseStack, Vec3 cameraPos, BlockPos pos, ResourceLocation texture, Minecraft mc, float alpha, double heightOffset) {
+    private static void render3DMarker(PoseStack poseStack, Vec3 cameraPos, BlockPos pos,
+                                       ResourceLocation texture, Minecraft mc, float alpha, double heightOffset) {
         poseStack.pushPose();
 
         double renderX = pos.getX() + 0.5 - cameraPos.x;
@@ -449,71 +432,34 @@ public class ClientEvents {
         float scale = 0.025f;
         double distSq = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         if (distSq > 100) {
-            scale *= (float)(Math.sqrt(distSq) / 10.0);
+            scale *= (float) (Math.sqrt(distSq) / 10.0);
         }
         scale = Math.min(scale, 0.25f);
         poseStack.scale(-scale, -scale, scale);
 
         Matrix4f matrix = poseStack.last().pose();
 
-        // Р РµРЅРґРµСЂРёРј С‡РµСЂРµР· Tesselator РЅР°РїСЂСЏРјСѓСЋ вЂ” disableDepthTest СЂР°Р±РѕС‚Р°РµС‚ Р·РґРµСЃСЊ
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
-
-        // --- Идёт подъём: вместо буквы F рисуем иконку с кольцом ---
-        float revProgress = ClientData.reviveProgressOther;
-        if (revProgress >= 0f) {
-            com.example.aas.client.gui.ReviveIconRenderer.draw(
-                    matrix, REVIVE_MARKER_ICON, 0f, 0f, 20f, 12.5f, 15.5f, revProgress);
-            RenderSystem.enableDepthTest();
-            poseStack.popPose();
-            return;
-        }
-
-        // --- Обычная подсказка: чёрная заливка + белая обводка + буква + текст ---
-        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.setShaderTexture(0, texture);
+        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder buf = tesselator.getBuilder();
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
-        float half = 13f;
-        float t = 2.5f; // толщина обводки
-
-        // 1. Чёрный полупрозрачный фон
-        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        quad(buf, matrix, -half, -half, half, half, 0, 0, 0, 140);
+        int a = Mth.clamp((int) (alpha * 255f), 0, 255);
+        float h = 8f; // половина размера иконки (16x16 в юнитах метки)
+        buf.vertex(matrix, -h, -h, 0).uv(0f, 0f).color(255, 255, 255, a).endVertex();
+        buf.vertex(matrix, -h,  h, 0).uv(0f, 1f).color(255, 255, 255, a).endVertex();
+        buf.vertex(matrix,  h,  h, 0).uv(1f, 1f).color(255, 255, 255, a).endVertex();
+        buf.vertex(matrix,  h, -h, 0).uv(1f, 0f).color(255, 255, 255, a).endVertex();
         tesselator.end();
-
-        // 2. Белая обводка поверх фона
-        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        quad(buf, matrix, -half, -half, half, -half + t, 255, 255, 255, 255);   // верх
-        quad(buf, matrix, -half, half - t, half, half, 255, 255, 255, 255);     // низ
-        quad(buf, matrix, -half, -half, -half + t, half, 255, 255, 255, 255);   // лево
-        quad(buf, matrix, half - t, -half, half, half, 255, 255, 255, 255);     // право
-        tesselator.end();
-
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-
-        // 3. Буква и подпись (видны сквозь стены)
-        Font font = mc.font;
-        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
-
-        String letter = getReviveKeyLabel();
-        float lw = font.width(letter);
-        font.drawInBatch(letter, -lw / 2f, -4f, 0xFFFFFFFF, false,
-                matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
-
-        poseStack.pushPose();
-        poseStack.translate(half + 6f, -4f, 0f);
-        Matrix4f textMatrix = poseStack.last().pose();
-        font.drawInBatch(I18n.get("aas.hud.revive_prompt"), 0, 0, 0xFFFFFFFF, false,
-                textMatrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
-        poseStack.popPose();
-
-        buffer.endBatch();
 
         RenderSystem.enableDepthTest();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         poseStack.popPose();
     }
 
@@ -564,13 +510,13 @@ public class ClientEvents {
     public static void onComputeFov(ComputeFovModifierEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            // Р—СѓРј РґР»СЏ Р±РёРЅРѕРєР»СЏ
+            // Зум для бинокля
             ItemStack activeStack = mc.player.getUseItem();
             if (activeStack.getItem() == ModItems.BINOCULARS.get()) {
                 event.setNewFovModifier(event.getFovModifier() * (1.0f / 8.0f));
             }
 
-            // Р’Р°С€Р° СЃСѓС‰РµСЃС‚РІСѓСЋС‰Р°СЏ Р»РѕРіРёРєР° РґР»СЏ С‚РµС…РЅРёРєРё...
+            // Ваша существующая логика для техники...
             Entity vehicle = mc.player.getVehicle();
             if (vehicle instanceof M2BrowningEntity m2 && m2.isAiming()) {
                 event.setNewFovModifier(event.getFovModifier() * (1.0f / 1.5f));
@@ -592,22 +538,21 @@ public class ClientEvents {
         boolean isUsingBinoculars = mc.player.isUsingItem() && mc.player.getUseItem().getItem() == ModItems.BINOCULARS.get();
 
         if (isUsingBinoculars && !wasUsingBinoculars) {
-            System.out.println("DEBUG: Loading Binocular Shader"); // РўР•РЎРў
+            System.out.println("DEBUG: Loading Binocular Shader"); // ТЕСТ
             mc.tell(() -> mc.gameRenderer.loadEffect(BINOCULAR_SHADER));
             wasUsingBinoculars = true;
         } else if (!isUsingBinoculars && wasUsingBinoculars) {
-            System.out.println("DEBUG: Shutting down Shader"); // РўР•РЎРў
+            System.out.println("DEBUG: Shutting down Shader"); // ТЕСТ
             mc.tell(() -> mc.gameRenderer.shutdownEffect());
             wasUsingBinoculars = false;
         }
     }
 
 
-    // Р’ С„Р°Р№Р»Рµ ClientEvents.java РЅР°Р№РґРёС‚Рµ РјРµС‚РѕРґ onOpenGui
     @SubscribeEvent
     public static void onOpenGui(ScreenEvent.Opening event) {
         if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof AASDeathScreen)) {
-            // Р•СЃР»Рё РёРіСЂРѕРє СѓРјРµСЂ, РЅРѕ С‚Р°Р№РјРµСЂ СѓР¶Рµ Р·Р°РїСѓС‰РµРЅ (Р±С‹Р» РІ РЅРѕРєР°СѓС‚Рµ), РќР• РџР•Р Р•Р—РђРџРРЎР«Р’РђР•Рњ
+            // Если игрок умер, но таймер уже запущен (был в нокауте), НЕ ПЕРЕЗАПИСЫВАЕМ
             if (ClientData.globalDeathTimestamp == 0) {
                 ClientData.globalDeathTimestamp = System.currentTimeMillis();
             }
@@ -648,16 +593,16 @@ public class ClientEvents {
         if (event.getKey() == GLFW.GLFW_KEY_PAGE_DOWN && event.getAction() == GLFW.GLFW_PRESS) {
             PacketHandler.INSTANCE.sendToServer(new PacketConfirmArtStrike(false));
         }
-        // --- Р›РћР“РРљРђ Р“РћР›РћРЎРћР’РђРќРРЇ Р—Рђ CMD (F7/F8) ---
+        // --- ЛОГИКА ГОЛОСОВАНИЯ ЗА CMD (F7/F8) ---
         String myTeam = mc.player.getTeam() != null ? mc.player.getTeam().getName().toUpperCase() : "NEUTRAL";
         boolean isBlue = myTeam.equals("BLUE");
 
-        // РџСЂРѕРІРµСЂСЏРµРј СЃС‚Р°С‚СѓСЃ РіРѕР»РѕСЃРѕРІР°РЅРёСЏ РёРјРµРЅРЅРѕ РґР»СЏ РЎР’РћР•Р™ РєРѕРјР°РЅРґС‹
+        // Проверяем статус голосования именно для СВОЕЙ команды
         boolean myTeamCmdActive = isBlue ? ClientData.blueCmdVoteActive : ClientData.redCmdVoteActive;
         String myCandidateName = isBlue ? ClientData.blueCmdCandidateName : ClientData.redCmdCandidateName;
 
         if (myTeamCmdActive && mc.screen == null) {
-            // РљР°РЅРґРёРґР°С‚ РЅРµ РјРѕР¶РµС‚ РіРѕР»РѕСЃРѕРІР°С‚СЊ Р·Р° СЃР°РјРѕРіРѕ СЃРµР±СЏ
+            // Кандидат не может голосовать за самого себя
             boolean isCandidate = mc.player.getScoreboardName().equals(myCandidateName);
 
             if (!isCandidate) {
@@ -682,29 +627,29 @@ public class ClientEvents {
             }
             return;
         }
-        // 1. Р›РћР“РРљРђ Р“РћР›РћРЎРћР’РђРќРРЇ (F1/F2)
+        // 1. ЛОГИКА ГОЛОСОВАНИЯ (F9/F10)
         if (ClientData.voteActive && mc.screen == null && event.getAction() == GLFW.GLFW_PRESS) {
             if (event.getKey() == GLFW.GLFW_KEY_F9) {
                 PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(true));
-                // event.setCanceled(true); // РЈР”РђР›Р•РќРћ, С‚Р°Рє РєР°Рє РІС‹Р·С‹РІР°РµС‚ РєСЂР°С€
+                // event.setCanceled(true); // УДАЛЕНО, так как вызывает краш
                 return;
             } else if (event.getKey() == GLFW.GLFW_KEY_F10) {
                 PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(false));
-                // event.setCanceled(true); // РЈР”РђР›Р•РќРћ, С‚Р°Рє РєР°Рє РІС‹Р·С‹РІР°РµС‚ РєСЂР°С€
+                // event.setCanceled(true); // УДАЛЕНО, так как вызывает краш
                 return;
             }
         }
 
-        // 2. РЎР‘Р РћРЎ РЇР©РРљРђ (X)
+        // 2. СБРОС ЯЩИКА (X)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.DROP_SUPPLY_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.player.getVehicle() != null) {
                 PacketHandler.INSTANCE.sendToServer(new PacketDropCrate());
             }
         }
 
-        // 3. РњР•РќР® РћРўР РЇР”РћР’ (K)
+        // 3. МЕНЮ ОТРЯДОВ (K)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(event.getKey(), event.getScanCode())) {
-            // Р РђР—Р Р•РЁРђР•Рњ РѕС‚РєСЂС‹С‚РёРµ, РµСЃР»Рё СЌРєСЂР°РЅ РїСѓСЃС‚РѕР№ РР›Р РµСЃР»Рё РѕС‚РєСЂС‹С‚ СЌРєСЂР°РЅ РЅРѕРєР°
+            // РАЗРЕШАЕМ открытие, если экран пустой ИЛИ если открыт экран нока
             if (mc.screen == null || mc.screen instanceof DownedScreen) {
                 String teamName = (mc.player.getTeam() != null) ? mc.player.getTeam().getName() : "";
                 boolean isValidTeam = teamName.equalsIgnoreCase("Blue") || teamName.equalsIgnoreCase("Red");
@@ -717,7 +662,7 @@ public class ClientEvents {
             }
         }
 
-        // 4. РљРђР РўРђ (TAB)
+        // 4. КАРТА (TAB)
         if (ModKeyBindings.SHOW_MAP_KEY.matches(event.getKey(), event.getScanCode())) {
             if (event.getAction() == GLFW.GLFW_PRESS) {
                 ClientData.isMapOpen = true;
@@ -732,7 +677,7 @@ public class ClientEvents {
                 return;
             }
         }
-        // 5. РЎРўРђРўРРЎРўРРљРђ (Caps Lock, РїРµСЂРµР±РёРЅРґРёС‚СЃСЏ РІ РЅР°СЃС‚СЂРѕР№РєР°С… СѓРїСЂР°РІР»РµРЅРёСЏ)
+        // 5. СТАТИСТИКА (Caps Lock, перебиндится в настройках управления)
         if (event.getAction() == GLFW.GLFW_PRESS && ModKeyBindings.OPEN_STATS_KEY.matches(event.getKey(), event.getScanCode())) {
             if (mc.screen == null) {
                 if (ClientData.lastVictory != null) {
@@ -744,7 +689,7 @@ public class ClientEvents {
             } else if (mc.screen instanceof com.example.aas.client.gui.VictoryScreen) {
                 mc.setScreen(null);
             } else if (mc.screen instanceof com.example.aas.client.gui.StatisticsScreen) {
-                mc.setScreen(null); // РїРѕРІС‚РѕСЂРЅРѕРµ РЅР°Р¶Р°С‚РёРµ Р·Р°РєСЂС‹РІР°РµС‚ СЌРєСЂР°РЅ
+                mc.setScreen(null); // повторное нажатие закрывает экран
             }
         }
     }
@@ -767,7 +712,7 @@ public class ClientEvents {
         }
     }
     private static float downedCameraProgress = 0f;
-    private static float initialPitchOnFall = 0f; // Р¤РёРєСЃРёСЂСѓРµРј РІР·РіР»СЏРґ РІ РјРѕРјРµРЅС‚ СѓРґР°СЂР°
+    private static float initialPitchOnFall = 0f; // Фиксируем взгляд в момент удара
     private static boolean wasDownedLastFrame = false;
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -777,13 +722,13 @@ public class ClientEvents {
 
         boolean isDowned = mc.player.getPersistentData().getBoolean("AAS_IsDowned") && mc.player.isAlive();
 
-        // 1. Р›РѕРіРёРєР° РІС…РѕРґР° РІ СЃРѕСЃС‚РѕСЏРЅРёРµ (С„РёРєСЃР°С†РёСЏ РЅР°С‡Р°Р»СЊРЅРѕР№ С‚РѕС‡РєРё)
+        // 1. Логика входа в состояние (фиксация начальной точки)
         if (isDowned) {
             if (!wasDownedLastFrame) {
-                initialPitchOnFall = event.getPitch(); // Р—Р°РїРѕРјРёРЅР°РµРј РєСѓРґР° СЃРјРѕС‚СЂРµР»Рё
+                initialPitchOnFall = event.getPitch(); // Запоминаем, куда смотрели
                 wasDownedLastFrame = true;
             }
-            if (downedCameraProgress < 1.0f) downedCameraProgress += 0.07f; // РЎРєРѕСЂРѕСЃС‚СЊ "РїР°РґРµРЅРёСЏ"
+            if (downedCameraProgress < 1.0f) downedCameraProgress += 0.07f; // Скорость "падения"
         } else {
             wasDownedLastFrame = false;
             if (downedCameraProgress > 0.0f) downedCameraProgress -= 0.05f;
@@ -792,31 +737,31 @@ public class ClientEvents {
         if (downedCameraProgress > 0) {
             float p = downedCameraProgress;
 
-            // 2. Р­Р¤Р¤Р•РљРў "Р РЈРҐРќРЈР’РЁР•Р“Рћ РўР•Р›Рђ"
-            // РЎРЅР°С‡Р°Р»Р° (РїРµСЂРІС‹Рµ 30% РїР°РґРµРЅРёСЏ) РїРµСЂСЃРѕРЅР°Р¶ РЅРµРјРЅРѕРіРѕ "РєР»СЋРµС‚" РІРЅРёР· (stumble)
+            // 2. ЭФФЕКТ "РУХНУВШЕГО ТЕЛА"
+            // Сначала (первые 30% падения) персонаж немного "клюёт" вниз (stumble)
             float stumble = 0;
             if (p < 0.4f) {
                 stumble = Mth.sin(p * (float)Math.PI * 2.5f) * 12f;
             }
 
-            // РћСЃРЅРѕРІРЅРѕР№ РїРµСЂРµС…РѕРґ Рє -60 РіСЂР°РґСѓСЃР°Рј
+            // Основной переход к -60 градусам
             float targetPitch = -60.0f;
             float smoothPitch = Mth.lerp(p, initialPitchOnFall, targetPitch) + stumble;
             event.setPitch(smoothPitch);
 
-            // 3. РќРђРљР›РћРќ Р“РћР›РћР’Р« (Roll)
-            // РџСЂРё РїР°РґРµРЅРёРё РіРѕР»РѕРІР° Р·Р°РІР°Р»РёРІР°РµС‚СЃСЏ РЅР° Р±РѕРє РЅР° 35 РіСЂР°РґСѓСЃРѕРІ
+            // 3. НАКЛОН ГОЛОВЫ (Roll)
+            // При падении голова заваливается на бок на 35 градусов
             event.setRoll(p * 35f);
 
-            // 4. Р”РРќРђРњРР§Р•РЎРљРђРЇ РўР РЇРЎРљРђ
-            // Р’ РјРѕРјРµРЅС‚ "РїСЂРёР·РµРјР»РµРЅРёСЏ" (РєРѕРіРґР° p > 0.8) РґРѕР±Р°РІР»СЏРµРј Р»РµРіРєРёР№ СѓРґР°СЂ
+            // 4. ДИНАМИЧЕСКАЯ ТРЯСКА
+            // В момент "приземления" (когда p > 0.8) добавляем лёгкий удар
             if (isDowned && p > 0.8f) {
                 float force = (p - 0.8f) * 10f;
                 event.setYaw(event.getYaw() + (mc.level.random.nextFloat() - 0.5f) * force);
                 event.setPitch(event.getPitch() + (mc.level.random.nextFloat() - 0.5f) * force);
             }
 
-            // 5. РРњРРўРђР¦РРЇ Р”Р«РҐРђРќРРЇ (РєРѕРіРґР° СѓР¶Рµ Р»РµР¶РёС‚)
+            // 5. ИМИТАЦИЯ ДЫХАНИЯ (когда уже лежит)
             if (p >= 1.0f && isDowned) {
                 float breathing = Mth.sin(mc.level.getGameTime() * 0.06f) * 1.5f;
                 event.setPitch(targetPitch + breathing);
@@ -868,11 +813,11 @@ public class ClientEvents {
 
         for (Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(REVIVE_RANGE))) {
             if (!(e instanceof Player p) || p == mc.player) continue;
-            // Р’РђР–РќРћ: persistentData("AAS_IsDowned") РЅР° РєР»РёРµРЅС‚Рµ РїСЂРѕСЃС‚Р°РІР»СЏРµС‚СЃСЏ РўРћР›Р¬РљРћ РґР»СЏ
-            // Р›РћРљРђР›Р¬РќРћР“Рћ РёРіСЂРѕРєР° (СЃРј. ClientHooks.handleDownedState). Р”Р»СЏ Р’РЎР•РҐ РѕСЃС‚Р°Р»СЊРЅС‹С…
-            // РёРіСЂРѕРєРѕРІ СЃС‚Р°С‚СѓСЃ "РІ РЅРѕРєРµ" СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ С‡РµСЂРµР· ClientData.DOWNED_PLAYERS,
-            // РїРѕСЌС‚РѕРјСѓ РїСЂРѕРІРµСЂРєР° РЅР° persistentData Р·РґРµСЃСЊ РІСЃРµРіРґР° РІРѕР·РІСЂР°С‰Р°Р»Р° false РґР»СЏ СЃРѕСЋР·РЅРёРєРѕРІ
-            // Рё F РЅРёРєРѕРіРґР° РЅРµ РЅР°С…РѕРґРёР» С†РµР»СЊ РґР»СЏ РїРѕРґСЉС‘РјР°.
+            // ВАЖНО: persistentData("AAS_IsDowned") на клиенте проставляется ТОЛЬКО для
+            // ЛОКАЛЬНОГО игрока (см. ClientHooks.handleDownedState). Для ВСЕХ остальных
+            // игроков статус "в ноке" синхронизируется только через ClientData.DOWNED_PLAYERS,
+            // поэтому проверка на persistentData здесь всегда возвращала false для союзников
+            // и F никогда не находил цель для подъёма.
             if (!ClientData.DOWNED_PLAYERS.contains(p.getId())) continue;
 
             double d = mc.player.distanceToSqr(p);
@@ -885,12 +830,12 @@ public class ClientEvents {
     }
 
     /**
-     * РС‰РµС‚ СЂР°РЅРµРЅРѕРіРѕ СЃРѕСЋР·РЅРёРєР°, РЅР° РєРѕС‚РѕСЂРѕРіРѕ РёРіСЂРѕРє СЃРµР№С‡Р°СЃ РЅР°РІС‘Р» РІР·РіР»СЏРґ, РґРµСЂР¶Р° РІ СЂСѓРєРµ
-     * РїСЂР°РІРёР»СЊРЅС‹Р№ РїСЂРµРґРјРµС‚ РґР»СЏ РїРѕРґСЉС‘РјР° (AASConfig.REVIVE_ITEM). РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РўРћР›Р¬РљРћ РґР»СЏ
-     * РІРёР·СѓР°Р»СЊРЅРѕР№ РїРѕРґСЃРєР°Р·РєРё вЂ” СЃР°Рј РїРѕРґСЉС‘Рј РїРѕ-РїСЂРµР¶РЅРµРјСѓ СЂР°Р±РѕС‚Р°РµС‚ С‡РµСЂРµР· findNearestDownedAlly
-     * (РїРѕ Р±Р»РёР¶Р°Р№С€РµРјСѓ РІ СЂР°РґРёСѓСЃРµ), С‡С‚РѕР±С‹ РЅРµ Р»РѕРјР°С‚СЊ РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РїРѕРґРЅСЏС‚СЊ РёРіСЂРѕРєР°,
-     * Р»РµР¶Р°С‰РµРіРѕ РїРѕС‡С‚Рё РІРїР»РѕС‚РЅСѓСЋ (Сѓ РЅРёС… РѕС‡РµРЅСЊ РЅРёР·РєРёР№ С…РёС‚Р±РѕРєСЃ РІ РїРѕР·Рµ SWIMMING, Рё СѓР·РєРёР№
-     * СЂРµР№РєР°СЃС‚ РїРѕ РЅРµРјСѓ С‡Р°СЃС‚Рѕ РїСЂРѕРјР°С…РёРІР°РµС‚СЃСЏ).
+     * Ищет раненого союзника, на которого игрок сейчас навёл взгляд, держа в руке
+     * правильный предмет для подъёма (AASConfig.REVIVE_ITEM). Используется ТОЛЬКО для
+     * визуальной подсказки — сам подъём по-прежнему работает через findNearestDownedAlly
+     * (по ближайшему в радиусе), чтобы не ломать возможность поднять игрока,
+     * лежащего почти вплотную (у них очень низкий хитбокс в позе SWIMMING, и узкий
+     * рейкаст по нему часто промахивается).
      */
     private static Entity findRevivePromptTarget(Minecraft mc) {
         if (mc.player == null || mc.level == null) return null;
@@ -909,8 +854,8 @@ public class ClientEvents {
 
         for (Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(REVIVE_RANGE))) {
             if (!(e instanceof Player p) || p == mc.player) continue;
-            // РЎРј. РєРѕРјРјРµРЅС‚Р°СЂРёР№ РІ findNearestDownedAlly вЂ” РґР»СЏ С‡СѓР¶РёС… РёРіСЂРѕРєРѕРІ РЅСѓР¶РЅРѕ РїСЂРѕРІРµСЂСЏС‚СЊ
-            // РёРјРµРЅРЅРѕ ClientData.DOWNED_PLAYERS, Р° РЅРµ РёС… persistentData.
+            // См. комментарий в findNearestDownedAlly — для чужих игроков нужно проверять
+            // именно ClientData.DOWNED_PLAYERS, а не их persistentData.
             if (!ClientData.DOWNED_PLAYERS.contains(p.getId())) continue;
             if (mc.player.distanceTo(p) > REVIVE_RANGE) continue;
 
@@ -925,8 +870,8 @@ public class ClientEvents {
     }
 
     /**
-     * РРЅРѕС‡РЅС‹Р№ 3D-РјР°СЂРєРµСЂ РЅР°Рґ СЂР°РЅРµРЅС‹Рј: С‡С‘СЂРЅС‹Р№ РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅС‹Р№ РєРІР°РґСЂР°С‚ СЃ Р±РµР»РѕР№ РѕР±РІРѕРґРєРѕР№,
-     * Р±СѓРєРІР° "F" РІ С†РµРЅС‚СЂРµ Рё РїРѕРґРїРёСЃСЊ СЃРїСЂР°РІР°.
+     * Иконный 3D-маркер над раненым: чёрный полупрозрачный квадрат с белой обводкой,
+     * буква "F" в центре и подпись справа.
      */
     private static void renderRevivePrompt(PoseStack poseStack, Vec3 cameraPos, Entity target, Minecraft mc, float partialTick) {
         poseStack.pushPose();
@@ -942,7 +887,7 @@ public class ClientEvents {
 
         poseStack.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
 
-        // Р Р°Р·РјРµСЂ РјР°СЂРєРµСЂР° СѓРјРµРЅСЊС€РµРЅ РІ 4 СЂР°Р·Р° РїРѕ СЃСЂР°РІРЅРµРЅРёСЋ СЃ РёСЃС…РѕРґРЅС‹Рј (0.025f -> 0.00625f)
+        // Размер маркера уменьшен в 4 раза по сравнению с исходным (0.025f -> 0.00625f)
         float scale = 0.00625f;
         double dist = mc.player.distanceTo(target);
         scale *= (float) Math.max(1.0, dist / 2.5);
@@ -1005,11 +950,11 @@ public class ClientEvents {
     }
 
     /**
-     * Р’РѕР·РІСЂР°С‰Р°РµС‚ РѕС‚РѕР±СЂР°Р¶Р°РµРјРѕРµ РёРјСЏ С‚РµРєСѓС‰РµР№ РєР»Р°РІРёС€Рё РїРѕРґСЉС‘РјР° (ModKeyBindings.REVIVE_KEY).
-     * Р”Р»СЏ Р±СѓРєРІ Рё С†РёС„СЂ (A-Z, 0-9) РІСЃРµРіРґР° РІРѕР·РІСЂР°С‰Р°РµС‚ Р»Р°С‚РёРЅСЃРєРёР№ СЃРёРјРІРѕР» РЅР°РїСЂСЏРјСѓСЋ РёР·
-     * GLFW-РєРѕРґР° РєР»Р°РІРёС€Рё (РѕРЅ СЂР°РІРµРЅ ASCII-РєРѕРґСѓ), С‡С‚РѕР±С‹ Р±СѓРєРІР° РЅРµ РїРµСЂРµРІРѕРґРёР»Р°СЃСЊ/РЅРµ
-     * Р·Р°РІРёСЃРµР»Р° РѕС‚ СЏР·С‹РєР° РёРіСЂС‹. Р”Р»СЏ РѕСЃС‚Р°Р»СЊРЅС‹С… РєР»Р°РІРёС€ (Shift, РїСЂРѕР±РµР», РєРЅРѕРїРєРё РјС‹С€Рё Рё С‚.Рґ.)
-     * РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РІР°РЅРёР»СЊРЅРѕРµ РѕС‚РѕР±СЂР°Р¶Р°РµРјРѕРµ РёРјСЏ РєР»Р°РІРёС€Рё.
+     * Возвращает отображаемое имя текущей клавиши подъёма (ModKeyBindings.REVIVE_KEY).
+     * Для букв и цифр (A-Z, 0-9) всегда возвращает латинский символ напрямую из
+     * GLFW-кода клавиши (он равен ASCII-коду), чтобы буква не переводилась/не
+     * зависела от языка игры. Для остальных клавиш (Shift, пробел, кнопки мыши и т.д.)
+     * используется ванильное отображаемое имя клавиши.
      */
     private static String getReviveKeyLabel() {
         InputConstants.Key key = ModKeyBindings.REVIVE_KEY.getKey();
@@ -1017,14 +962,14 @@ public class ClientEvents {
         if (key.getType() == InputConstants.Type.KEYSYM) {
             int v = key.getValue();
             if (v >= GLFW.GLFW_KEY_A && v <= GLFW.GLFW_KEY_Z) {
-                return String.valueOf((char) v); // GLFW_KEY_A..Z СЃРѕРІРїР°РґР°СЋС‚ СЃ ASCII 'A'..'Z'
+                return String.valueOf((char) v); // GLFW_KEY_A..Z совпадают с ASCII 'A'..'Z'
             }
             if (v >= GLFW.GLFW_KEY_0 && v <= GLFW.GLFW_KEY_9) {
-                return String.valueOf((char) v); // GLFW_KEY_0..9 СЃРѕРІРїР°РґР°СЋС‚ СЃ ASCII '0'..'9'
+                return String.valueOf((char) v); // GLFW_KEY_0..9 совпадают с ASCII '0'..'9'
             }
         }
 
-        // РЅРµ-Р±СѓРєРІРµРЅРЅР°СЏ РєР»Р°РІРёС€Р° (Shift, РїСЂРѕР±РµР», РєРЅРѕРїРєР° РјС‹С€Рё Рё С‚.Рґ.) вЂ” РѕР±С‹С‡РЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ
+        // не-буквенная клавиша (Shift, пробел, кнопка мыши и т.д.) — обычное отображение
         return key.getDisplayName().getString();
     }
 

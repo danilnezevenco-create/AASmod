@@ -375,7 +375,9 @@ public class GameLogicEvents {
                         dimPlayers.add(p);
                     }
                 }
-                statsCache.put(level, buildStatsInfo(dimPlayers, data));
+                List<PlayerStatInfo> levelStats = buildStatsInfo(dimPlayers, data);
+                levelStats.addAll(OfflineStats.buildInfos(server, level.dimension().location().toString(), data)); // вышедшие игроки
+                statsCache.put(level, levelStats);
             }
 
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
@@ -1489,6 +1491,9 @@ public class GameLogicEvents {
         }
         return false;
     }
+    // Лечение в зоне лобби: за тик добавляется столько HP, что хватает на мгновенное полное лечение
+    private static final float LOBBY_HEAL_PER_TICK = 100.0f;
+
     private static void handleLobbyZone(ServerLevel level, AASWorldData data) {
         if (data.lobbyZones.isEmpty() || data.lobbyCenter == null) return;
 
@@ -1505,7 +1510,14 @@ public class GameLogicEvents {
                 }
             }
 
-            if (!insideAnyZone) {
+            if (insideAnyZone) {
+                // Сильное лечение: живой и не раненый (раненых поднимает механика реанимации)
+                if (player.isAlive() && !player.getPersistentData().getBoolean("AAS_IsDowned")) {
+                    if (player.getHealth() < player.getMaxHealth()) player.heal(LOBBY_HEAL_PER_TICK);
+                    if (player.isOnFire()) player.clearFire();
+                    if (player.getFoodData().getFoodLevel() < 20) player.getFoodData().setFoodLevel(20);
+                }
+            } else {
                 player.teleportTo(center.getX() + 0.5, center.getY(), center.getZ() + 0.5);
                 player.displayClientMessage(Component.translatable("aas.msg.lobby_zone_return").withStyle(ChatFormatting.YELLOW), true);
             }
@@ -1551,7 +1563,7 @@ public class GameLogicEvents {
         if (!event.getEntity().level().isClientSide) {
             ServerPlayer player = (ServerPlayer) event.getEntity();
             PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                    new PacketSyncServerConfig(AASConfig.AUTO_BALANCE_TEAMS.get(), AASConfig.REVIVE_ITEM.get()));
+                    PacketSyncServerConfig.fromConfig());
             ServerLevel level = player.serverLevel();
             AASWorldData data = AASWorldData.get(level);
             sendSyncPacket(level, data);

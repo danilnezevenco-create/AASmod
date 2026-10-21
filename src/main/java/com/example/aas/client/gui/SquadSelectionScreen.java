@@ -12,6 +12,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
@@ -19,6 +20,8 @@ import org.lwjgl.glfw.GLFW;
 import net.minecraft.core.BlockPos;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.example.aas.client.KitIconStyle;
+import com.example.aas.client.OwnVoiceIndicator;
 
 public class SquadSelectionScreen extends Screen {
     private SquadButton applyCmdButton;
@@ -86,7 +89,7 @@ public class SquadSelectionScreen extends Screen {
         }
 
         int teamCMDId_init = myTeam.contains("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
-        this.applyCmdButton = new SquadButton(10, 10, SIDEBAR_WIDTH - 20, 20, Component.literal("APPLY FOR CMD"), b -> {
+        this.applyCmdButton = new SquadButton(10, 10, SIDEBAR_WIDTH - 20, 20, Component.translatable("aas.gui.squad.apply_cmd"), b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
             b.visible = false;
         });
@@ -98,7 +101,7 @@ public class SquadSelectionScreen extends Screen {
         nameInput.setVisible(!isInSquad);
         this.addRenderableWidget(nameInput);
 
-        createButton = this.addRenderableWidget(new SquadButton(10, this.height - 30, SIDEBAR_WIDTH - 20, 20, Component.literal("Create Squad"), button -> {
+        createButton = this.addRenderableWidget(new SquadButton(10, this.height - 30, SIDEBAR_WIDTH - 20, 20, Component.translatable("aas.gui.squad.create"), button -> {
             PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue()));
             this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(com.example.aas.sound.ModSounds.SQUAD_JOIN.get(), 1.0F));
         }));
@@ -130,9 +133,9 @@ public class SquadSelectionScreen extends Screen {
 
     private Component getChatModeText() {
         switch (chatMode) {
-            case 0: return Component.literal("ALL").withStyle(ChatFormatting.LIGHT_PURPLE);
-            case 1: return Component.literal("TEAM").withStyle(ChatFormatting.BLUE);
-            case 2: return Component.literal("SQUAD").withStyle(ChatFormatting.GREEN);
+            case 0: return Component.translatable("aas.gui.chat.all").withStyle(ChatFormatting.LIGHT_PURPLE);
+            case 1: return Component.translatable("aas.gui.chat.team").withStyle(ChatFormatting.BLUE);
+            case 2: return Component.translatable("aas.gui.chat.squad").withStyle(ChatFormatting.GREEN);
             default: return Component.literal("???");
         }
     }
@@ -247,6 +250,7 @@ public class SquadSelectionScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+        RankPopup.beginFrame(this);
         boolean isDowned = this.minecraft.player != null && this.minecraft.player.getPersistentData().getBoolean("AAS_IsDowned");
 
         // 1. Р В¤Р С•Р Р… (Р ВµРЎРѓР В»Р С‘ Р Р† Р Р…Р С•Р С”Р Вµ - Р С”РЎР‚Р В°РЎРѓР Р…РЎвЂ№Р в„–, Р ВµРЎРѓР В»Р С‘ Р Р…Р ВµРЎвЂљ - Р С•Р В±РЎвЂ№РЎвЂЎР Р…РЎвЂ№Р в„–)
@@ -284,6 +288,13 @@ public class SquadSelectionScreen extends Screen {
 
         markerPanel.render(gui, mouseX, mouseY);
         vehiclePanel.render(gui, mouseX, mouseY);
+        RankPopup.render(gui, this.font, this.width, this.height);
+
+        // кто говорит (другие игроки): поверх меню, на высоком слое (z=600). Только рисуется, клики проходят насквозь
+        OwnVoiceIndicator.renderOthers(gui, this.font, 5, this.height / 2 - 40);
+
+        // свой индикатор голоса: у самого левого края, последним и на высоком слое (z=600)
+        OwnVoiceIndicator.render(gui, this.font, 5, this.height - 70, SIDEBAR_WIDTH - 10);
     }
 
     private void renderDownedTimerHUD(GuiGraphics gui) {
@@ -295,7 +306,7 @@ public class SquadSelectionScreen extends Screen {
         long remaining = maxSeconds - elapsedSeconds;
         if (remaining < 0) remaining = 0;
 
-        String text = "BLEEDING OUT: " + remaining + "s";
+        String text = I18n.get("aas.gui.squad.bleeding_out", remaining);
         int tw = this.font.width(text);
         int cx = this.width / 2;
 
@@ -324,6 +335,7 @@ public class SquadSelectionScreen extends Screen {
     // PATH: src\main\java\com\example\aas\client\gui\SquadSelectionScreen.java
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (RankPopup.mouseClicked(mouseX, mouseY, button)) return true;
         if (vehiclePanel.mouseClicked(mouseX, mouseY, button)) return true;
         if (markerPanel.mouseClicked(mouseX, mouseY, button)) return true;   // <-- ВСТАВИТЬ ЭТУ СТРОКУ
 
@@ -569,11 +581,11 @@ public class SquadSelectionScreen extends Screen {
 
             // 1. Р В Р В°РЎРѓРЎРѓРЎвЂЎР С‘РЎвЂљРЎвЂ№Р Р†Р В°Р ВµР С РЎв‚¬Р С‘РЎР‚Р С‘Р Р…РЎС“ РЎвЂљР ВµР С”РЎРѓРЎвЂљР В° Р Т‘Р ВµР в„–РЎРѓРЎвЂљР Р†Р С‘РЎРЏ (JOIN/LEAVE), Р С”Р В°Р С” Р Р† РЎР‚Р ВµР Р…Р Т‘Р ВµРЎР‚Р Вµ
             String actionText = "";
-            if (isMySquad) actionText = "LEAVE";
+            if (isMySquad) actionText = I18n.get("aas.gui.squad.leave");
             else if (!amIInSquad) {
-                if (squad.isLocked) actionText = "LOCKED";
-                else if (squad.members.size() >= 9) actionText = "FULL";
-                else actionText = "JOIN";
+                if (squad.isLocked) actionText = I18n.get("aas.gui.squad.locked");
+                else if (squad.members.size() >= 9) actionText = I18n.get("aas.gui.squad.full");
+                else actionText = I18n.get("aas.gui.squad.join");
             }
 
             int actionWidth = actionText.isEmpty() ? 0 : this.font.width(actionText);
@@ -681,7 +693,7 @@ public class SquadSelectionScreen extends Screen {
     private void handleMapRightClick(double mouseX, double mouseY) {
         // Р ВР вЂ”Р СљР вЂўР СњР вЂўР СњР С›: Р ВРЎРѓР С—Р С•Р В»РЎРЉР В·РЎС“Р ВµР С Р Р…Р С•Р Р†РЎвЂ№Р в„– Р СР ВµРЎвЂљР С•Р Т‘ Р С—РЎР‚Р С•Р Р†Р ВµРЎР‚Р С”Р С‘
         if (!isSquadLeaderOrFTL(this.minecraft.player)) {
-            this.minecraft.player.displayClientMessage(Component.literal("Only SL and FTLs can place markers!").withStyle(ChatFormatting.RED), true);
+            this.minecraft.player.displayClientMessage(Component.translatable("aas.msg.sl_ftl_only").withStyle(ChatFormatting.RED), true);
             return;
         }
 
@@ -754,7 +766,7 @@ public class SquadSelectionScreen extends Screen {
 
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(r, g, b, a);
-        gui.blit(CIRCLE_BADGE, x, y, 0, 0, size, size, size, size);
+        com.example.aas.client.BadgeCircle.blit(gui, x, y, size);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
         if (label != null && !label.isEmpty()) {
@@ -801,7 +813,7 @@ public class SquadSelectionScreen extends Screen {
 
             // Р вЂєР С›Р вЂњР ВР С™Р С’ CMD
             boolean isCMD = (squad.id == teamCMDId && teamCMDId != -1);
-            String prefix = isCMD ? "[CMD] " : "";
+            String prefix = isCMD ? I18n.get("aas.gui.squad.cmd_tag") + " " : "";
             int squadNameColor = isCMD ? 0xFF55FF55 : 0xFFFFD700;
 
             // Р В¦Р Р†Р ВµРЎвЂљР Р…Р С•Р в„– Р С”РЎР‚РЎС“Р В¶Р С•Р С” РЎРѓ Р Р…Р С•Р СР ВµРЎР‚Р С•Р С Р С•РЎвЂљРЎР‚РЎРЏР Т‘Р В°:
@@ -832,11 +844,11 @@ public class SquadSelectionScreen extends Screen {
             boolean clickable = true;
 
             if (isMySquad) {
-                actionText = "LEAVE"; actionColor = 0xFFFF5555;
+                actionText = I18n.get("aas.gui.squad.leave"); actionColor = 0xFFFF5555;
             } else if (!amIInSquad) { // Р СћР ВµР С—Р ВµРЎР‚РЎРЉ amIInSquad Р Р†Р С‘Р Т‘Р ВµР Р…!
-                if (squad.isLocked) { actionText = "LOCKED"; actionColor = 0xFFFFAA00; clickable = false; }
-                else if (squad.members.size() >= 9) { actionText = "FULL"; actionColor = 0xFF888888; clickable = false; }
-                else { actionText = "JOIN"; actionColor = 0xFF55FF55; }
+                if (squad.isLocked) { actionText = I18n.get("aas.gui.squad.locked"); actionColor = 0xFFFFAA00; clickable = false; }
+                else if (squad.members.size() >= 9) { actionText = I18n.get("aas.gui.squad.full"); actionColor = 0xFF888888; clickable = false; }
+                else { actionText = I18n.get("aas.gui.squad.join"); actionColor = 0xFF55FF55; }
             }
 
             int actionX = 0;
@@ -946,13 +958,15 @@ public class SquadSelectionScreen extends Screen {
                         xOffset += 12;
                     } else if (!kName.equals("Unassigned") && !kName.isEmpty()) {
                         ResourceLocation kitIcon = new ResourceLocation("aas", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
-                        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+                        KitIconStyle.apply(KitIconStyle.DEFAULT_COLOR, 1.0f);
                         gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
+                        KitIconStyle.reset();
                         xOffset += 12;
 
                         int rankLvl = KitRankIcons.levelOf(member);
                         if (rankLvl > 0) {
                             KitRankIcons.draw(gui, rankLvl, xOffset, currentY);
+                            RankPopup.registerIcon(gui, member, xOffset, currentY, 10, mouseX, mouseY);
                             xOffset += KitRankIcons.ROW_ADVANCE;
                         }
                     }

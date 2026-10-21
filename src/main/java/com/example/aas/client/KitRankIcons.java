@@ -2,6 +2,7 @@ package com.example.aas.client;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+import com.example.aas.network.KitRankProgress;
 
 /**
  * Клиентский помощник для иконок рангов китов (1..20).
@@ -43,7 +44,11 @@ public final class KitRankIcons {
         if (level < 1 || level > MAX_LEVEL) return;
         gui.blit(ICONS[level], x, y, size, size, 0f, 0f, TEX_SIZE, TEX_SIZE, TEX_SIZE, TEX_SIZE);
     }
-
+    /** Прогресс ранга игрока или null, если данных нет. */
+    public static KitRankProgress progressOf(String playerName) {
+        if (!ClientData.serverShowKitRanks) return null;
+        return ClientData.playerKitRankProgress.get(playerName);
+    }
     private KitRankIcons() {
     }
 }

@@ -314,7 +314,7 @@ public class ClientPlacementHandler {
 
         String currentDimension = mc.level.dimension().location().toString();
 
-        int hubRadius = AASConfig.HUB_BUILD_RADIUS.get();
+        int hubRadius = ClientData.hubBuildRadius();
         double maxDistSqHub = hubRadius * hubRadius;
 
         int crateRadius = AASConfig.CRATE_BUILD_RADIUS.get();
@@ -404,7 +404,7 @@ public class ClientPlacementHandler {
 
         int hubRadius = AASConfig.HUB_BUILD_RADIUS.get();
         double maxDistSqHub = (double) hubRadius * hubRadius;
-        int crateRadius = AASConfig.CRATE_BUILD_RADIUS.get();
+        int crateRadius = ClientData.crateBuildRadius();
         double maxDistSqCrate = (double) crateRadius * crateRadius;
 
         int totalMaterials = 0;
@@ -482,7 +482,7 @@ public class ClientPlacementHandler {
         String currentDimension = mc.level.dimension().location().toString();
 
         // 1. Р”РёСЃС‚Р°РЅС†РёСЏ РґРѕ СЃРІРѕРµРіРѕ HUB'Р° вЂ” РґРµР№СЃС‚РІСѓРµС‚ РІСЃРµРіРґР°, РґР°Р¶Рµ РІ РєСЂРёР°С‚РёРІРµ (РєР°Рє РЅР° СЃРµСЂРІРµСЂРµ).
-        int minDist = AASConfig.MIN_HUB_DISTANCE.get();
+        int minDist = ClientData.minHubDistance();
         double minDistSq = (double) minDist * minDist;
         if (ClientData.clientHubs != null) {
             for (com.example.aas.world.AASWorldData.HubInfo hubInfo : ClientData.clientHubs) {

@@ -1,5 +1,7 @@
 package com.example.aas.client.gui;
 
+import com.example.aas.client.KitIconStyle;
+
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketOpenPlayerKitMenu;
 import com.example.aas.network.PacketSelectKit;
@@ -388,7 +390,7 @@ public class PlayerKitSelectScreen extends Screen {
                 int iconX = x + (BUTTON_WIDTH / 2) - 12 - 5; // -5, т.к. кнопка теперь уже на 20px, центруем по тайлу
                 int iconY = y - 26;
 
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, kit.available ? 1.0f : 0.4f);
+                KitIconStyle.apply(KitIconStyle.DEFAULT_COLOR, kit.available ? 1.0f : 0.4f);
                 gui.blit(iconLoc, iconX, iconY, 0, 0, 24, 24, 24, 24);
             }
         }

@@ -289,7 +289,9 @@ public class SupplyCrateEntity extends Entity {
         ServerLevel currentLevel = (ServerLevel) this.level();
         AASWorldData data = AASWorldData.get(currentLevel);
         BlockPos myPos = this.blockPosition();
-        double searchRadiusSq = 7500.0;
+        // Радиус пополнения хаба = радиус строительства вокруг ящика (серверный конфиг crateBuildRadius)
+        double crateRadius = com.example.aas.config.AASConfig.CRATE_BUILD_RADIUS.get();
+        double searchRadiusSq = crateRadius * crateRadius;
         String currentDim = currentLevel.dimension().location().toString();
 
         for (AASWorldData.HubInfo hubInfo : data.hubs) {
@@ -298,7 +300,8 @@ public class SupplyCrateEntity extends Entity {
             if (!hubInfo.constructed) continue;
             BlockPos hubPos = hubInfo.pos;
 
-            if (hubPos.distSqr(myPos) <= searchRadiusSq) {
+            // та же метрика, что и при проверке строительства (расстояние от ящика до центра блока хаба)
+            if (this.distanceToSqr(hubPos.getX() + 0.5, hubPos.getY() + 0.5, hubPos.getZ() + 0.5) <= searchRadiusSq) {
                 if (currentLevel.isLoaded(hubPos)) {
                     BlockEntity be = currentLevel.getBlockEntity(hubPos);
 

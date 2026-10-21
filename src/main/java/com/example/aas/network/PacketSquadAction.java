@@ -13,6 +13,7 @@ import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
 import com.example.aas.util.SquadPlaytimeHelper;
 import java.util.ArrayList;
+import com.example.aas.events.FireteamNotifier;
 
 import java.util.function.Supplier;
 
@@ -212,10 +213,14 @@ public class PacketSquadAction {
                 if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.bravoLeader.equals(pName))) {
                     String target = msg.stringData;
                     if (mySquad.members.contains(target) && !mySquad.leader.equals(target) && !mySquad.charlieLeader.equals(target)) {
+                        String oldLeader = mySquad.bravoLeader;
                         mySquad.removeFromFireteams(target);
                         mySquad.bravoLeader = target;
                         if (!mySquad.bravoMembers.contains(target)) mySquad.bravoMembers.add(target);
                         player.sendSystemMessage(Component.translatable("aas.msg.ftl_assigned", target, "Bravo").withStyle(ChatFormatting.GOLD));
+                        if (!target.equals(oldLeader)) {
+                            FireteamNotifier.onLeaderAssigned(player.server, mySquad, target, oldLeader, true);
+                        }
                     }
                 }
             }
@@ -225,10 +230,14 @@ public class PacketSquadAction {
                 if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.charlieLeader.equals(pName))) {
                     String target = msg.stringData;
                     if (mySquad.members.contains(target) && !mySquad.leader.equals(target) && !mySquad.bravoLeader.equals(target)) {
+                        String oldLeader = mySquad.charlieLeader;
                         mySquad.removeFromFireteams(target);
                         mySquad.charlieLeader = target;
                         if (!mySquad.charlieMembers.contains(target)) mySquad.charlieMembers.add(target);
                         player.sendSystemMessage(Component.translatable("aas.msg.ftl_assigned", target, "Charlie").withStyle(ChatFormatting.GOLD));
+                        if (!target.equals(oldLeader)) {
+                            FireteamNotifier.onLeaderAssigned(player.server, mySquad, target, oldLeader, false);
+                        }
                     }
                 }
             }
@@ -238,8 +247,12 @@ public class PacketSquadAction {
                 if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.bravoLeader.equals(pName))) {
                     String target = msg.stringData;
                     if (mySquad.members.contains(target) && !mySquad.leader.equals(target)) {
+                        boolean alreadyIn = mySquad.bravoMembers.contains(target);
                         mySquad.removeFromFireteams(target);
                         mySquad.bravoMembers.add(target);
+                        if (!alreadyIn) {
+                            FireteamNotifier.onAdded(player.server, mySquad, target, true);
+                        }
                     }
                 }
             }
@@ -249,8 +262,12 @@ public class PacketSquadAction {
                 if (mySquad != null && (mySquad.leader.equals(pName) || mySquad.charlieLeader.equals(pName))) {
                     String target = msg.stringData;
                     if (mySquad.members.contains(target) && !mySquad.leader.equals(target)) {
+                        boolean alreadyIn = mySquad.charlieMembers.contains(target);
                         mySquad.removeFromFireteams(target);
                         mySquad.charlieMembers.add(target);
+                        if (!alreadyIn) {
+                            FireteamNotifier.onAdded(player.server, mySquad, target, false);
+                        }
                     }
                 }
             }

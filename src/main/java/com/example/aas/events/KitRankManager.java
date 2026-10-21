@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken;
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import com.example.aas.network.KitRankProgress;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -38,18 +39,18 @@ import java.util.UUID;
 
 /**
  * Ранги китов.
- *
+ * <p>
  * - Время игры на ките (AAS_CurrentKit, НЕ AAS_PendingKit) копится в секундах; 600 сек (10 мин) = 1 очко.
  * - Данные привязаны к НИКУ игрока и хранятся в aas_kit_ranks.json в корне игры/сервера
- *   (рядом с папками mods, config и т.д.).
+ * (рядом с папками mods, config и т.д.).
  * - Хранится не только очки, но и остаток секунд до следующего очка, чтобы время не сгорало.
  * - Накопление идёт всегда; конфиг showKitRanks управляет только показом на клиенте.
- *
+ * <p>
  * Формат файла:
  * {
- *   "Nick": {
- *     "Medic": { "level": 3, "points": 7, "seconds": 120 }
- *   }
+ * "Nick": {
+ * "Medic": { "level": 3, "points": 7, "seconds": 120 }
+ * }
  * }
  */
 @Mod.EventBusSubscriber(modid = "aas")
@@ -58,7 +59,9 @@ public final class KitRankManager {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public static final int MAX_LEVEL = 20;
-    /** 10 минут игры = 1 очко. */
+    /**
+     * 10 минут игры = 1 очко.
+     */
     public static final int SECONDS_PER_POINT = 10 * 60;
 
     private static final String FILE_NAME = "aas_kit_ranks.json";
@@ -82,11 +85,13 @@ public final class KitRankManager {
 
     // что последний раз отправили клиентам
     private static Boolean lastSentShow = null;
-    private static Map<String, Integer> lastSentRanks = null;
+    private static Map<String, KitRankProgress> lastSentRanks = null;   // было Map<String, Integer>
 
     // ================== ПРАВИЛА УРОВНЕЙ ==================
 
-    /** Сколько очков нужно, чтобы с уровня {@code level} перейти на {@code level + 1}. */
+    /**
+     * Сколько очков нужно, чтобы с уровня {@code level} перейти на {@code level + 1}.
+     */
     public static int costToNext(int level) {
         if (level <= 4) return 3;
         if (level <= 10) return 6;
@@ -95,7 +100,9 @@ public final class KitRankManager {
         return 12; // 17-20
     }
 
-    /** Уровень (1..20) по суммарному количеству очков. Все стартуют с 1 уровня. */
+    /**
+     * Уровень (1..20) по суммарному количеству очков. Все стартуют с 1 уровня.
+     */
     public static int levelForPoints(int points) {
         int level = 1;
         int rem = Math.max(0, points);
@@ -110,10 +117,29 @@ public final class KitRankManager {
 
     // ================== ПУБЛИЧНЫЙ API ==================
 
-    /** Уровень игрока на ките. Если записи ещё нет — 1. */
+    /**
+     * Уровень игрока на ките. Если записи ещё нет — 1.
+     */
     public static int getLevel(String nick, String kit) {
         Entry e = getEntry(nick, kit);
         return e == null ? 1 : e.level;
+    }
+
+    /**
+     * Уровень + очки внутри уровня + стоимость следующего уровня (0 = максимум).
+     */
+    public static KitRankProgress progressFor(String nick, String kit) {
+        Entry e = getEntry(nick, kit);
+        int rem = e == null ? 0 : Math.max(0, e.points);
+        int level = 1;
+        while (level < MAX_LEVEL) {
+            int cost = costToNext(level);
+            if (rem < cost) break;
+            rem -= cost;
+            level++;
+        }
+        int cost = level >= MAX_LEVEL ? 0 : costToNext(level);
+        return new KitRankProgress(level, rem, cost);
     }
 
     public static Entry getEntry(String nick, String kit) {
@@ -121,7 +147,9 @@ public final class KitRankManager {
         return kits == null ? null : kits.get(kit);
     }
 
-    /** Задел на будущее: начислить очки киту напрямую (не временем). */
+    /**
+     * Задел на будущее: начислить очки киту напрямую (не временем).
+     */
     public static void addPoints(String nick, String kit, int points) {
         if (points <= 0 || !isRankedKit(kit)) return;
         Entry e = entry(nick, kit);
@@ -220,21 +248,23 @@ public final class KitRankManager {
 
     // ================== СИНХРОНИЗАЦИЯ С КЛИЕНТАМИ ==================
 
-    /** ник -> уровень на текущем ките, только для игроков онлайн с назначенным китом. */
-    private static Map<String, Integer> buildRanks(MinecraftServer server) {
-        Map<String, Integer> ranks = new HashMap<>();
+    /**
+     * ник -> уровень на текущем ките, только для игроков онлайн с назначенным китом.
+     */
+    private static Map<String, KitRankProgress> buildRanks(MinecraftServer server) {
+        Map<String, KitRankProgress> ranks = new HashMap<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             String kit = p.getPersistentData().getString("AAS_CurrentKit");
             if (!isRankedKit(kit)) continue;
             String nick = p.getGameProfile().getName();
-            ranks.put(nick, getLevel(nick, kit));
+            ranks.put(nick, progressFor(nick, kit));
         }
         return ranks;
     }
 
     private static void syncToClientsIfChanged(MinecraftServer server) {
         boolean show = AASConfig.SHOW_KIT_RANKS.get();
-        Map<String, Integer> ranks = show ? buildRanks(server) : new HashMap<>();
+        Map<String, KitRankProgress> ranks = show ? buildRanks(server) : new HashMap<>();
 
         if (lastSentShow != null && lastSentShow == show && ranks.equals(lastSentRanks)) return;
 
@@ -257,7 +287,8 @@ public final class KitRankManager {
         if (!Files.exists(file)) return;
 
         try (Reader r = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-            Type type = new TypeToken<Map<String, Map<String, Entry>>>() {}.getType();
+            Type type = new TypeToken<Map<String, Map<String, Entry>>>() {
+            }.getType();
             Map<String, Map<String, Entry>> loaded = GSON.fromJson(r, type);
             if (loaded == null) return;
 

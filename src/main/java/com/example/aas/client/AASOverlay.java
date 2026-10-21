@@ -67,6 +67,23 @@ public class AASOverlay {
     private static final ResourceLocation ICON_ROTATE = new ResourceLocation("aas", "textures/gui/icon_rotate.png");
     private static final ResourceLocation ICON_CONFIRM = new ResourceLocation("aas", "textures/gui/icon_confirm.png");
 
+    /**
+     * Пока открыт AASChatScreen, SquadPanelOverlay отменяет CHAT_PANEL, а значит Post-событие выше
+     * не приходит и список говорящих пропадал. Рисуем его здесь, поверх экрана чата.
+     */
+    @SubscribeEvent
+    public static void onChatScreenRender(net.minecraftforge.client.event.ScreenEvent.Render.Post event) {
+        if (!(event.getScreen() instanceof com.example.aas.client.gui.AASChatScreen)) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        GuiGraphics gui = event.getGuiGraphics();
+        int width = mc.getWindow().getGuiScaledWidth();
+        int height = mc.getWindow().getGuiScaledHeight();
+        renderRadioSpeakers(gui, mc, height);
+        renderVoiceSpeakers(gui, mc, height);
+        OwnVoiceIndicator.renderHud(gui, mc, width, height);
+    }
+
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
         // МЕНЯЕМ HOTBAR НА CHAT_PANEL: Чат никогда не скрывается модами на технику!
@@ -129,6 +146,7 @@ public class AASOverlay {
         }
         renderRadioSpeakers(gui, mc, height);
         renderVoiceSpeakers(gui, mc, height);
+        com.example.aas.client.OwnVoiceIndicator.renderHud(gui, mc, width, height);
         if (ClientData.isMapOpen || ClientData.mapTransition > 0) {
             renderSideMap(gui, mc, width, height, event.getPartialTick());
         }
@@ -913,7 +931,6 @@ public class AASOverlay {
             }
         }
     }
-    private static final ResourceLocation VOICE_ICON_TEX = new ResourceLocation("aas", "textures/gui/voice_icon.png");
     private static final ResourceLocation VOICE_ICON_RADIO_TEX = new ResourceLocation("aas", "textures/gui/voice_icon_radio.png");
 
     // === Рация — ВСЕГДА сверху, фиксированная базовая позиция ===
@@ -931,6 +948,7 @@ public class AASOverlay {
                 com.example.aas.client.ClientData.RADIO_SPEAKERS.remove(entry.getKey());
                 continue;
             }
+            if (com.example.aas.client.OwnVoiceIndicator.isSelf(entry.getKey())) continue;   // свой ник не показываем
 
             String speakerName = entry.getKey();
             int color = 0xFFFFFF00; // желтый
@@ -954,45 +972,93 @@ public class AASOverlay {
         gui.pose().popPose();
     }
 
-    // === Отряд — ВСЕГДА под рацией, зависит ТОЛЬКО от RADIO_SPEAKERS.size() ===
+    // Порядок в строке: [иконка кита] [иконка голоса] [ник]
+    // Каналы: командирский (*) — золотой ник со звёздочкой, отряд (B) — зелёный, локальный (V) — синий.
     private static void renderVoiceSpeakers(GuiGraphics gui, Minecraft mc, int height) {
-        if (com.example.aas.client.ClientData.SQUAD_SPEAKERS.isEmpty()) return;
+        long now = System.currentTimeMillis();
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();   // {имя, цвет, префикс, кружок}
+        // 4-й элемент: рисовать ли кружок с номером отряда (только локальный и командирский каналы)
+        collectSpeakers(rows, com.example.aas.client.ClientData.COMMAND_SPEAKERS, now, 0xFFFFAA00, "\u2605 ", true, true);
+        collectSpeakers(rows, com.example.aas.client.ClientData.SQUAD_SPEAKERS, now, 0xFF55FF55, "", false, false);
+        collectSpeakers(rows, com.example.aas.client.ClientData.LOCAL_SPEAKERS, now, 0xFF55AAFF, "", true, false);
+        if (rows.isEmpty()) return;
+
+        // место под кружок резервируем у всех строк, если он есть хотя бы у одной (чтобы ники были ровно)
+        boolean anyBadge = false;
+        for (Object[] row : rows) {
+            if ((Boolean) row[3] && OwnVoiceIndicator.squadNumberOf((String) row[0]) != null) { anyBadge = true; break; }
+        }
+        final int BADGE_SIZE = 10;                 // кружок целиком внутри плашки (плашка 12 px высотой)
+        final int BADGE_W = anyBadge ? BADGE_SIZE + 3 : 0;
+
         gui.pose().pushPose();
         gui.pose().translate(0, 0, 600);
 
-        long now = System.currentTimeMillis();
-        int radioLines = com.example.aas.client.ClientData.RADIO_SPEAKERS.size();
+        int radioLines = com.example.aas.client.OwnVoiceIndicator.countOthers(com.example.aas.client.ClientData.RADIO_SPEAKERS);
         int yOffset = (height / 2) - 40 + (radioLines * 14); // Сдвиг вниз на строки рации
         int xOffset = 5;
 
-        for (var entry : new java.util.ArrayList<>(com.example.aas.client.ClientData.SQUAD_SPEAKERS.entrySet())) {
-            if (now - entry.getValue() > 300) {
-                com.example.aas.client.ClientData.SQUAD_SPEAKERS.remove(entry.getKey());
-                continue;
-            }
+        final int KIT_SIZE = 9;
+        final int KIT_X = 3 + BADGE_W;        // отступ иконки кита от левого края плашки (после кружка)
+        final int VOICE_X = KIT_X + KIT_SIZE + 2; // иконка голоса сразу после кита
+        final int NAME_X = VOICE_X + 8 + 3;   // ник после иконки голоса
 
-            String speakerName = entry.getKey();
-            int color = 0xFF55FF55; // Зелёный
+        for (Object[] row : rows) {
+            String speakerName = (String) row[0];
+            int color = (Integer) row[1];
+            String label = (String) row[2] + speakerName;
 
-            int textWidth = mc.font.width(speakerName) + 15;
-            gui.fill(xOffset, yOffset - 2, xOffset + 5 + textWidth, yOffset + 10, 0x80000000);
+            // Плашка под всю строку: кит + голос + ник
+            int bgWidth = NAME_X + mc.font.width(label) + 6;
+            gui.fill(xOffset, yOffset - 2, xOffset + bgWidth, yOffset + 10, 0x80000000);
 
             RenderSystem.enableBlend();
+
+            // 0) Кружок с номером отряда говорящего (локальный / командирский каналы), окрашен в цвет канала
+            if (anyBadge && (Boolean) row[3]) {
+                String num = OwnVoiceIndicator.squadNumberOf(speakerName);
+                if (num != null) BadgeCircle.draw(gui, mc.font, xOffset + 2, yOffset - 1, BADGE_SIZE, color, num);
+            }
+
+            // 1) Иконка кита (если кит назначен; место резервируем всегда, чтобы ники были ровно)
+            String kitName = com.example.aas.client.ClientData.playerKits.getOrDefault(speakerName, "Unassigned");
+            boolean hasKit = kitName != null && !kitName.isEmpty() && !kitName.equalsIgnoreCase("Unassigned");
+            if (hasKit) {
+                ResourceLocation kitIcon = new ResourceLocation("aas",
+                        "textures/gui/kits/" + kitName.toLowerCase().replace(" ", "_") + ".png");
+                KitIconStyle.apply(color, 1.0f);   // иконка кита — в цвет канала, в котором говорит игрок
+                gui.blit(kitIcon, xOffset + KIT_X, yOffset, KIT_SIZE, KIT_SIZE, 0f, 0f, 10, 10, 10, 10);
+                KitIconStyle.reset();
+            }
+
+            // 2) Иконка голосового чата
             float r = ((color >> 16) & 0xFF) / 255f;
             float g = ((color >> 8) & 0xFF) / 255f;
             float b = (color & 0xFF) / 255f;
-
             RenderSystem.setShaderColor(r, g, b, 1.0f);
-            gui.blit(VOICE_ICON_TEX, xOffset + 3, yOffset, 0, 0, 8, 8, 8, 8);
+            gui.blit(com.example.aas.client.VoiceIcons.forPlayer(speakerName), xOffset + VOICE_X, yOffset, 0, 0, 8, 8, 8, 8);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-            gui.drawString(mc.font, speakerName, xOffset + 14, yOffset, color, false);
+            // 3) Ник игрока (у командирского канала — со звёздочкой)
+            gui.drawString(mc.font, label, xOffset + NAME_X, yOffset, color, false);
 
             yOffset += 14;
         }
         gui.pose().popPose();
     }
-    // PATH: src\main\java\com\example\aas\client\AASOverlay.java
+
+    // Убирает протухших говорящих (> 300 мс) и добавляет живых в список строк.
+    private static void collectSpeakers(java.util.List<Object[]> rows, java.util.Map<String, Long> speakers,
+                                        long now, int color, String prefix, boolean badge, boolean command) {
+        for (var entry : new java.util.ArrayList<>(speakers.entrySet())) {
+            if (now - entry.getValue() > 300) {
+                speakers.remove(entry.getKey());
+                continue;
+            }
+            if (OwnVoiceIndicator.isSelf(entry.getKey())) continue;   // свой ник не показываем
+            rows.add(new Object[]{entry.getKey(), command ? OwnVoiceIndicator.commandColor(entry.getKey()) : color, prefix, badge});
+        }
+    }
     private static void renderHubMaterials(GuiGraphics gui, Minecraft mc, int width, int height) {
         if (mc.hitResult == null) return;
 
@@ -1565,7 +1631,10 @@ public class AASOverlay {
     }
     // Находим метод renderSideMap в AASOverlay.java и заменяем его полностью
     private static void renderSideMap(GuiGraphics gui, Minecraft mc, int screenWidth, int screenHeight, float partialTick) {
-        if (HUD_SIDE_MAP == null) HUD_SIDE_MAP = new AASMapRenderer();
+        if (HUD_SIDE_MAP == null) {
+            HUD_SIDE_MAP = new AASMapRenderer();
+            HUD_SIDE_MAP.setFollowMode(true);
+        }
 
         float speed = 0.12f;
         float target = ClientData.isMapOpen ? 1.0f : 0.0f;

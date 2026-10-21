@@ -12,7 +12,11 @@ import java.util.function.Supplier;
 
 public class PacketSquadMarker {
     private final int x, z, type;
-    private final int endX, endZ;   // конец стрелки (только для type == 7)
+    private final int endX, endZ;
+    // Для какой группы ставит метку SL: 0 = отряд, 1 = Bravo, 2 = Charlie.
+    // Учитывается только для типов 0..3 (Move/Attack/Defend/Build) и только если отправитель — SL.
+    public static final int GROUP_SQUAD = 0, GROUP_BRAVO = 1, GROUP_CHARLIE = 2;
+    private final int group;   // конец стрелки (только для type == 7)
 
     // Старый конструктор: обычные метки и ромбики
     public PacketSquadMarker(int x, int z, int type) {
@@ -21,18 +25,29 @@ public class PacketSquadMarker {
 
     // Новый конструктор: стрелка отряда (type == 7)
     public PacketSquadMarker(int x, int z, int type, int endX, int endZ) {
+        this(x, z, type, endX, endZ, GROUP_SQUAD);
+    }
+
+    // SL ставит обычную метку (0..3) от имени группы: 0 = отряд, 1 = Bravo, 2 = Charlie
+    public PacketSquadMarker(int x, int z, int type, int group) {
+        this(x, z, type, 0, 0, group);
+    }
+
+    private PacketSquadMarker(int x, int z, int type, int endX, int endZ, int group) {
         this.x = x; this.z = z; this.type = type;
         this.endX = endX; this.endZ = endZ;
+        this.group = group;
     }
 
     public static void encode(PacketSquadMarker msg, FriendlyByteBuf buf) {
         buf.writeInt(msg.x); buf.writeInt(msg.z); buf.writeInt(msg.type);
         buf.writeInt(msg.endX); buf.writeInt(msg.endZ);
+        buf.writeInt(msg.group);
     }
 
     public static PacketSquadMarker decode(FriendlyByteBuf buf) {
         return new PacketSquadMarker(buf.readInt(), buf.readInt(), buf.readInt(),
-                buf.readInt(), buf.readInt());
+                buf.readInt(), buf.readInt(), buf.readInt());
     }
 
     // Добавляет стрелку отряда в список (FIFO, как у ромбиков)
@@ -79,7 +94,18 @@ public class PacketSquadMarker {
                         }
                         // Обычные метки (Move, Attack, Defend, Build)
                         else {
-                            s.marker = new AASWorldData.SquadMarker(msg.x, 64, msg.z, msg.type, expiry, false);
+                            if (msg.type < 0 || msg.type > 3) return;
+                            AASWorldData.SquadMarker m =
+                                    new AASWorldData.SquadMarker(msg.x, 64, msg.z, msg.type, expiry, false);
+                            // SL ставит метку вместо фаертима: перезаписывает его метку
+                            // (у каждого фаертима она одна), иконки Bravo/Charlie подхватятся сами.
+                            if (msg.group == GROUP_BRAVO) {
+                                s.bravoMarker = m;
+                            } else if (msg.group == GROUP_CHARLIE) {
+                                s.charlieMarker = m;
+                            } else {
+                                s.marker = m;
+                            }
                         }
                     }
 

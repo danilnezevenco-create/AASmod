@@ -67,7 +67,7 @@ public class AASConfig {
     public static final ForgeConfigSpec.IntValue SUPPLY_TRUCK_CRATES;
     public static final ForgeConfigSpec.IntValue SUPPLY_CRATE_MATERIALS;
     public static final ForgeConfigSpec.BooleanValue SHOW_KIT_RANKS;
-
+    public static final ForgeConfigSpec.IntValue VOICE_LOCAL_RANGE;
     // РРјРµРЅР° РєРѕРјР°РЅРґ
     public static final ForgeConfigSpec.ConfigValue<String> BLUE_TEAM_CUSTOM_NAME;
     public static final ForgeConfigSpec.ConfigValue<String> RED_TEAM_CUSTOM_NAME;
@@ -159,6 +159,7 @@ public class AASConfig {
         HUB_SOUND_RADIUS = BUILDER.defineInRange("hubSoundRadius", 15, 1, 128);
         HUB_BUILD_RADIUS = BUILDER.defineInRange("hubBuildRadius", 50, 10, 200);
         CRATE_BUILD_RADIUS = BUILDER.defineInRange("crateBuildRadius", 50, 5, 200);
+        VOICE_LOCAL_RANGE = BUILDER.comment("Local voice chat (V) range in blocks").defineInRange("voiceLocalRange", 50, 5, 128);
         HUB_BLOCK_ENEMY_COUNT = BUILDER.defineInRange("hubBlockEnemyCount", 3, 1, 20);
         RALLY_BLOCK_ENEMY_COUNT = BUILDER.defineInRange("rallyBlockEnemyCount", 1, 1, 20);
         SUPPLY_TRUCK_CRATES = BUILDER.comment("Max supply crates in a truck").defineInRange("supplyTruckCrates", 2, 1, 20);

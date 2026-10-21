@@ -75,6 +75,30 @@ public class ModKeyBindings {
             "key.categories.aas"
     );
 
+    // === ГОЛОСОВЫЕ КАНАЛЫ (удержание). Можно перебиндить в Управление -> AAS ===
+    // UNIVERSAL: работают и в игре, и на карте, и на экране смерти.
+    public static final KeyMapping VOICE_LOCAL_KEY = new KeyMapping(
+            "key.aas.voice_local",
+            KeyConflictContext.UNIVERSAL,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_V,
+            "key.categories.aas"
+    );
+    public static final KeyMapping VOICE_SQUAD_KEY = new KeyMapping(
+            "key.aas.voice_squad",
+            KeyConflictContext.UNIVERSAL,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_B,
+            "key.categories.aas"
+    );
+    public static final KeyMapping VOICE_COMMAND_KEY = new KeyMapping(
+            "key.aas.voice_command",
+            KeyConflictContext.UNIVERSAL,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_KP_MULTIPLY,   // * на цифровой клавиатуре
+            "key.categories.aas"
+    );
+
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(DROP_SUPPLY_KEY);
@@ -85,5 +109,8 @@ public class ModKeyBindings {
         event.register(OPEN_STATS_KEY);
         event.register(TOGGLE_SQUAD_PANEL_KEY);
         event.register(REVIVE_KEY);
+        event.register(VOICE_LOCAL_KEY);
+        event.register(VOICE_SQUAD_KEY);
+        event.register(VOICE_COMMAND_KEY);
     }
 }
