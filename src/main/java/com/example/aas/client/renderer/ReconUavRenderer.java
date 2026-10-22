@@ -14,6 +14,11 @@ public class ReconUavRenderer extends GeoEntityRenderer<ReconUavEntity> {
         this.shadowRadius = 0f;
     }
 
+    /** No name plate above the UAV (the entity also returns an empty display name as a second guard). */
+    protected void renderNameTag(ReconUavEntity e, net.minecraft.network.chat.Component name,
+                                 com.mojang.blaze3d.vertex.PoseStack pose,
+                                 net.minecraft.client.renderer.MultiBufferSource buffers, int light) { }
+
     /** The camera sits inside the UAV while looking through it: do not draw our own model around the lens. */
     @Override
     public boolean shouldRender(ReconUavEntity e, Frustum frustum, double camX, double camY, double camZ) {

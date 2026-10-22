@@ -36,6 +36,8 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> KIT_SELECT = registerSoundEvent("kit_select");
     public static final RegistryObject<SoundEvent> SQUAD_JOIN = registerSoundEvent("squad_join");
     public static final RegistryObject<SoundEvent> SQUAD_LEAVE = registerSoundEvent("squad_leave");
+    /** Looping UAV flight sound: put assets/aas/sounds/uav_flight.ogg (mono ogg) */
+    public static final RegistryObject<SoundEvent> UAV_FLIGHT = registerSoundEvent("uav_flight");
     // В файле ModSounds.java добавьте:
     public static final Map<String, List<RegistryObject<SoundEvent>>> FACTION_SCREAMS = new HashMap<>();
 

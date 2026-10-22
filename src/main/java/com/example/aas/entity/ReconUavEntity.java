@@ -4,8 +4,8 @@ import com.example.aas.uav.UavFlight;
 import com.example.aas.uav.UavManager;
 import com.example.aas.uav.UavState;
 import net.minecraft.core.NonNullList;
+import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
@@ -18,7 +18,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.fml.DistExecutor;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -37,6 +39,7 @@ public class ReconUavEntity extends LivingEntity implements GeoEntity {
     private double cx, cz, radius, altY, theta0, omega;
     private long startTick;
     private boolean configured = false;
+    private boolean flightSoundStarted = false; // client only
 
     public ReconUavEntity(EntityType<? extends ReconUavEntity> type, Level level) {
         super(type, level);
@@ -68,7 +71,18 @@ public class ReconUavEntity extends LivingEntity implements GeoEntity {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide || !configured) return;
+        // never show the red hurt flash (renderer tints the model while hurtTime > 0)
+        this.hurtTime = 0;
+        this.hurtDuration = 0;
+        this.deathTime = 0;
+        if (level().isClientSide) {
+            if (!flightSoundStarted) {
+                flightSoundStarted = true;
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> com.example.aas.client.uav.UavFlightSound.start(this));
+            }
+            return;
+        }
+        if (!configured) return;
         double t = level().getGameTime() - startTick;
         Vec3 p = UavFlight.position(cx, cz, radius, altY, theta0, omega, t);
         float yaw = UavFlight.yaw(theta0, omega, t);
@@ -90,6 +104,8 @@ public class ReconUavEntity extends LivingEntity implements GeoEntity {
     @Override public boolean canBeCollidedWith() { return false; }
     @Override public boolean isPickable() { return true; }
     @Override public boolean shouldShowName() { return false; }
+    /** Empty display name: no name plate above the UAV, whatever the renderer does. */
+    @Override public Component getDisplayName() { return Component.empty(); }
     @Override public boolean isAffectedByPotions() { return false; }
 
     /** Visible from far away. */
@@ -118,7 +134,16 @@ public class ReconUavEntity extends LivingEntity implements GeoEntity {
         this.discard();
     }
 
-    @Override protected SoundEvent getHurtSound(DamageSource s) { return SoundEvents.IRON_GOLEM_HURT; }
+    /** No hurt sound at all (null = vanilla plays nothing, both server side and in the client's entity event 2). */
+    @Override protected SoundEvent getHurtSound(DamageSource s) { return null; }
+    @Override protected void playHurtSound(DamageSource s) { }
+
+    /** Ignore the vanilla "hurt" entity events (red flash, hurt animation, hurt sound). */
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == 2 || id == 33 || id == 36 || id == 37 || id == 44 || id == 57) return;
+        super.handleEntityEvent(id);
+    }
     @Override protected SoundEvent getDeathSound() { return null; }
 
     // ---------- equipment boilerplate ----------

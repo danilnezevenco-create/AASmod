@@ -154,6 +154,7 @@ public class UavViewClient {
         if (mc.player == null) { exitSilently(); return; }
         if (UavClientState.isDowned(mc)) { exit(UavExitReason.DOWNED); return; }
         drainBlockedKeys(mc);
+        debugLog(mc);
     }
 
     private static void drainBlockedKeys(Minecraft mc) {
@@ -245,5 +246,22 @@ public class UavViewClient {
         viewing = false;
         zoomStage = 0;
         anchor = null;
+    }
+    private static int dbgTick = 0;
+
+    private static void debugLog(Minecraft mc) {
+        if (++dbgTick % 100 != 0 || anchor == null || mc.level == null) return;
+        int cx = Mth.floor(anchor.getX()) >> 4, cz = Mth.floor(anchor.getZ()) >> 4;
+        int loaded = 0, total = 0;
+        for (int dx = -8; dx <= 8; dx++) {
+            for (int dz = -8; dz <= 8; dz++) {
+                total++;
+                if (mc.level.getChunk(cx + dx, cz + dz, net.minecraft.world.level.chunk.ChunkStatus.FULL, false) != null) loaded++;
+            }
+        }
+        com.mojang.logging.LogUtils.getLogger().info(
+                "[AAS-client] cam=({},{},{}) camChunk=({},{}) loaded8={}/{} renderDist={} stats={}",
+                (int) anchor.getX(), (int) anchor.getY(), (int) anchor.getZ(), cx, cz, loaded, total,
+                mc.options.getEffectiveRenderDistance(), mc.levelRenderer.getChunkStatistics());
     }
 }

@@ -162,8 +162,8 @@
 	#FOV (degrees) for the 3 zoom stages of the UAV camera, from weakest to strongest zoom
 	uavZoomFov = [45.0, 25.0, 10.0]
 	#Max camera deviation from the vertical while looking through the UAV (degrees)
-	#Range: 1 ~ 80
-	uavMaxTilt = 30
+	#Range: 1 ~ 120
+	uavMaxTilt = 60
 
 ["Faction Settings"]
 	blueTeamCustomName = "BLUEFOR"

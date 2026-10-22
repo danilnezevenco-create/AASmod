@@ -64,7 +64,7 @@ public class UavViewOverlay {
             }
         }
 
-        // vignette
+        // vignette (same look as before; top/bottom rings no longer lose their alpha at the very edge)
         int steps = 36;
         for (int i = 0; i < steps; i++) {
             int a = (int) (((steps - i) / (float) steps) * ((steps - i) / (float) steps) * 150);
@@ -72,8 +72,8 @@ public class UavViewOverlay {
             int sx = i * (w / 2 / steps + 1), sy = i * (h / 2 / steps + 1);
             g.fill(sx, 0, sx + (w / 2 / steps + 1), h, c);
             g.fill(w - sx - (w / 2 / steps + 1), 0, w - sx, h, c);
-            g.fill(0, sy, w, sy + (h / 2 / steps + 1), c & 0x7FFFFFFF);
-            g.fill(0, h - sy - (h / 2 / steps + 1), w, h - sy, c & 0x7FFFFFFF);
+            g.fill(0, sy, w, sy + (h / 2 / steps + 1), c);
+            g.fill(0, h - sy - (h / 2 / steps + 1), w, h - sy, c);
         }
 
         // crosshair (placeholder texture)

@@ -198,7 +198,7 @@ public class AASConfig {
         UAV_ZOOM_FOV = BUILDER.comment("FOV (degrees) for the 3 zoom stages of the UAV camera, from weakest to strongest zoom")
                 .defineList("uavZoomFov", java.util.Arrays.<Number>asList(45.0, 25.0, 10.0), o -> o instanceof Number);
         UAV_MAX_TILT = BUILDER.comment("Max camera deviation from the vertical while looking through the UAV (degrees)")
-                .defineInRange("uavMaxTilt", 30, 1, 80);
+                .defineInRange("uavMaxTilt", 50, 1, 120);
         BUILDER.pop();
 
         BUILDER.push("Faction Settings");

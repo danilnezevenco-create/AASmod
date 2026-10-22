@@ -5,6 +5,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "aas.refmap.json",
   "mixins": [
+    "ChunkMapUavMixin",
+    "TrackedEntityUavMixin"
   ],
   "client": [
     "PlayerSkinMixin",

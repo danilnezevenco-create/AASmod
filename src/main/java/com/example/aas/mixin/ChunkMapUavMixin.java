@@ -23,6 +23,7 @@ public abstract class ChunkMapUavMixin {
     @Redirect(method = "move", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerPlayer;getBlockX()I"), require = 0)
     private int aas$blockX(ServerPlayer p) {
         Vec3 v = UavViewManager.viewPos(p);
+        if (v != null) UavViewManager.mixinActive = true; // proves the mixin is applied
         return v != null ? Mth.floor(v.x) : p.getBlockX();
     }
 

@@ -1,4 +1,13 @@
 {
+  "uav_flight": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "aas:uav_flight",
+        "stream": false
+      }
+    ]
+  },
   "rally_idle": {
     "category": "block",
     "sounds": [
