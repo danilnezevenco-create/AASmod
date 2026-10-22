@@ -1,6 +1,10 @@
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientData;
+import com.example.aas.client.uav.UavMapButtons;
+import com.example.aas.client.uav.UavMapSelection;
+import com.example.aas.client.gui.*;
+import com.example.aas.client.gui.AASMapRenderer;
 import com.example.aas.network.*;
 import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.world.AASWorldData;
@@ -67,6 +71,8 @@ public class SquadSelectionScreen extends Screen {
     private final AASMapRenderer mapRenderer = new AASMapRenderer();
     private final MarkerPanelOverlay markerPanel = new MarkerPanelOverlay();
     private final VehicleListPanel vehiclePanel = new VehicleListPanel();
+    private final UavMapSelection uavSelection = new UavMapSelection();
+    private final UavMapButtons uavButtons = new UavMapButtons();
     public SquadSelectionScreen() {
         super(Component.literal("Squad Selection"));
     }
@@ -197,6 +203,11 @@ public class SquadSelectionScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // UAV zone selection: Esc leaves the mode without closing the screen
+        if (uavSelection.isActive() && keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            uavSelection.cancel();
+            return true;
+        }
         if (vehiclePanel.handleEscapePressed(keyCode)) return true;
         if (markerPanel.handleEscapePressed(keyCode)) return true;   // <-- ВСТАВИТЬ ЭТУ СТРОКУ
 
@@ -269,6 +280,12 @@ public class SquadSelectionScreen extends Screen {
 
         renderSquadList(gui, mouseX, mouseY);
         mapRenderer.render(gui, mouseX, mouseY, partialTick);
+        {
+            double uavPanX = mapRenderer.getCenterX(this.minecraft.player), uavPanZ = mapRenderer.getCenterZ(this.minecraft.player);
+            double uavBpp = mapRenderer.getBlocksPerPixel();
+            uavSelection.render(gui, this.font, mouseX, mouseY, mapX, mapY, mapSize, uavPanX, uavPanZ, uavBpp);
+            uavButtons.render(gui, mouseX, mouseY, mapX, mapY, mapSize, uavPanX, uavPanZ, uavBpp, uavSelection);
+        }
         renderChatHistory(gui, mapY, mapSize);
         renderTopBar(gui);
 
@@ -289,6 +306,7 @@ public class SquadSelectionScreen extends Screen {
         markerPanel.render(gui, mouseX, mouseY);
         vehiclePanel.render(gui, mouseX, mouseY);
         RankPopup.render(gui, this.font, this.width, this.height);
+        uavButtons.renderTooltip(gui, this.font, mouseX, mouseY);
 
         // кто говорит (другие игроки): поверх меню, на высоком слое (z=600). Только рисуется, клики проходят насквозь
         OwnVoiceIndicator.renderOthers(gui, this.font, 5, this.height / 2 - 40);
@@ -335,9 +353,16 @@ public class SquadSelectionScreen extends Screen {
     // PATH: src\main\java\com\example\aas\client\gui\SquadSelectionScreen.java
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // UAV zone selection takes RMB BEFORE the marker menu (handleMapRightClick) sees it
+        if (button == 1 && uavSelection.isActive()) {
+            if (uavSelection.onRightClick(mouseX, mouseY, mapX, mapY, mapSize,
+                    mapRenderer.getCenterX(this.minecraft.player), mapRenderer.getCenterZ(this.minecraft.player),
+                    mapRenderer.getBlocksPerPixel())) return true;
+        }
         if (RankPopup.mouseClicked(mouseX, mouseY, button)) return true;
         if (vehiclePanel.mouseClicked(mouseX, mouseY, button)) return true;
-        if (markerPanel.mouseClicked(mouseX, mouseY, button)) return true;   // <-- ВСТАВИТЬ ЭТУ СТРОКУ
+        if (markerPanel.mouseClicked(mouseX, mouseY, button)) return true;
+        if (uavButtons.mouseClicked(mouseX, mouseY, button, uavSelection)) return true;   // <-- ВСТАВИТЬ ЭТУ СТРОКУ
 
         // --- Меню удаления метки на карте ...
         if (mapRenderer.isMarkerDeleteMenuOpen()) {

@@ -41,6 +41,11 @@ public class AASWorldData extends SavedData {
     public Map<UUID, Boolean> redCmdVotes = new HashMap<>();
     public long blueArtStrikeCD = 0;
     public long redArtStrikeCD = 0;
+    // --- Recon UAV: cooldown end (game time, saved) and the active UAV (runtime only, the entity is not saved) ---
+    public long blueUavCooldownEnd = 0;
+    public long redUavCooldownEnd = 0;
+    public com.example.aas.uav.UavState blueUav = null;
+    public com.example.aas.uav.UavState redUav = null;
     public String shapeType = "CUBE"; // CUBE Р С‘Р В»Р С‘ CYLINDER
     public int lockDurationMinutes = 0; // Р СњР В° РЎРѓР С”Р С•Р В»РЎРЉР С”Р С• Р СР С‘Р Р…РЎС“РЎвЂљ Р В±Р В»Р С•Р С”Р С‘РЎР‚РЎС“Р ВµРЎвЂљРЎРѓРЎРЏ РЎвЂљР С•РЎвЂЎР С”Р В°
     public long lockedUntilTick = 0; // Р вЂњР ВµР в„–Р С-РЎвЂљР С‘Р С”, Р Т‘Р С• Р С”Р С•РЎвЂљР С•РЎР‚Р С•Р С–Р С• РЎвЂљР С•РЎвЂЎР С”Р В° Р В·Р В°Р С”РЎР‚РЎвЂ№РЎвЂљР В° Р Т‘Р В»РЎРЏ Р Р†РЎР‚Р В°Р С–Р В°
@@ -111,6 +116,8 @@ public class AASWorldData extends SavedData {
         tag.putString("CurrentMapImage", currentMapImage);
         tag.putLong("BlueArtCD", blueArtStrikeCD);
         tag.putLong("RedArtCD", redArtStrikeCD);
+        tag.putLong("BlueUavCD", blueUavCooldownEnd);
+        tag.putLong("RedUavCD", redUavCooldownEnd);
         tag.putInt("MaxBlueHubs", maxBlueHubs);
         tag.putInt("MaxRedHubs", maxRedHubs);
         // --- Р РЋР С›Р ТђР В Р С’Р СњР вЂўР СњР ВР вЂў Р РЋР СћР С’Р СћР Р€Р РЋР С’ Р С™Р С›Р СљР С’Р СњР вЂќР ВР В Р С›Р вЂ™ ---
@@ -262,6 +269,8 @@ public class AASWorldData extends SavedData {
         data.currentMapImage = tag.contains("CurrentMapImage") ? tag.getString("CurrentMapImage") : "map1";
         data.blueArtStrikeCD = tag.getLong("BlueArtCD");
         data.redArtStrikeCD = tag.getLong("RedArtCD");
+        data.blueUavCooldownEnd = tag.getLong("BlueUavCD");
+        data.redUavCooldownEnd = tag.getLong("RedUavCD");
         data.maxBlueHubs = tag.contains("MaxBlueHubs") ? tag.getInt("MaxBlueHubs") : 8;
         data.maxRedHubs = tag.contains("MaxRedHubs") ? tag.getInt("MaxRedHubs") : 8;
         data.blueCMDId = tag.getInt("BlueCMDId");

@@ -674,6 +674,7 @@ public class GameLogicEvents {
                     data.countdownActive = false;
                     sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
                     data.isGameStarted = true;
+                    com.example.aas.uav.UavManager.onMatchStart(level, data);
                     if (data.gameMode.equalsIgnoreCase("INVASION")) {
                         // Р В Р в‚¬Р РЋР С“Р РЋРІР‚С™Р В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р вЂ Р В Р’В»Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р’ВµР В РЎВ Р РЋРІР‚С™Р В Р’В°Р В РІвЂћвЂ“Р В РЎВР В Р’ВµР РЋР вЂљ Р В РЎвЂ”Р В РЎвЂўР В РўвЂР В РЎвЂ“Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂўР В Р вЂ Р В РЎвЂќР В РЎвЂ (Р В РЎВР В РЎвЂР В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋРІР‚в„– * 60 Р РЋР С“Р В Р’ВµР В РЎвЂќ * 20 Р РЋРІР‚С™Р В РЎвЂР В РЎвЂќР В РЎвЂўР В Р вЂ )
                         data.invasionPrepTicks = AASConfig.INVASION_PREP_TIME_MINUTES.get() * 1200;
@@ -2062,6 +2063,7 @@ public class GameLogicEvents {
 
     private static void executeVictory(ServerLevel level, AASWorldData data, boolean blueWon) {
         data.isGameStarted = false;
+        com.example.aas.uav.UavManager.onMatchEnd(level, data);
         data.setDirty();
 
         // 1. Р В РЎвЂєР В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В Р’ВµР В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В Р’В±Р В Р’ВµР В РўвЂР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР РЏ

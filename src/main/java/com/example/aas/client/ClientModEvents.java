@@ -24,6 +24,7 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.M2_BROWNING.get(), M2BrowningRenderer::new);
         event.registerEntityRenderer(ModEntities.M2_BULLET.get(), M2BulletRenderer::new);
         event.registerEntityRenderer(ModEntities.AGS_30.get(), AGS30Renderer::new);
+        event.registerEntityRenderer(ModEntities.RECON_UAV.get(), ReconUavRenderer::new);
         event.registerBlockEntityRenderer(ModBlocks.VEHICLE_SPAWNER_BE.get(), VehicleSpawnerRenderer::new);
         event.registerEntityRenderer(ModEntities.AGS_30_GRENADE.get(), (context) -> new ThrownItemRenderer<>(context, 0.5F, true));
 

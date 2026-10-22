@@ -58,6 +58,18 @@ public class ModEntities {
                             .setShouldReceiveVelocityUpdates(true)
                             .build(new ResourceLocation("aas", "supply_crate").toString()));
 
+    // Разведывательный БПЛА
+    public static final RegistryObject<EntityType<ReconUavEntity>> RECON_UAV =
+            ENTITY_TYPES.register("recon_uav",
+                    () -> EntityType.Builder.<ReconUavEntity>of(ReconUavEntity::new, MobCategory.MISC)
+                            .sized(3.5f, 1.0f)
+                            .clientTrackingRange(64)
+                            .updateInterval(2)
+                            .setShouldReceiveVelocityUpdates(false)
+                            .fireImmune()
+                            .noSave()
+                            .build(new ResourceLocation("aas", "recon_uav").toString()));
+
     public static void register(IEventBus eventBus) {
         ENTITY_TYPES.register(eventBus);
     }

@@ -137,6 +137,34 @@
 	#Range: 5 ~ 100
 	artStrikeRadius = 20
 
+["UAV Settings"]
+	#Recon UAV cooldown in seconds (starts at match start, after the UAV is shot down or expires)
+	#Range: 0 ~ 36000
+	uavCooldownSeconds = 1
+	#Min radius of the UAV flight zone (blocks)
+	#Range: 10 ~ 4000
+	uavMinRadius = 200
+	#Max radius of the UAV flight zone (blocks)
+	#Range: 10 ~ 4000
+	uavMaxRadius = 500
+	#UAV lifetime in seconds
+	#Range: 10 ~ 3600
+	uavDurationSeconds = 300
+	#UAV altitude above the average terrain height inside the zone (blocks)
+	#Range: 20 ~ 600
+	uavAltitude = 200
+	#UAV health (iron golem = 100)
+	#Range: 1 ~ 100000
+	uavHealth = 100
+	#UAV flight speed in blocks per tick (1.0 = 20 blocks/s)
+	#Range: 0.1 ~ 5.0
+	uavSpeed = 1.0
+	#FOV (degrees) for the 3 zoom stages of the UAV camera, from weakest to strongest zoom
+	uavZoomFov = [45.0, 25.0, 10.0]
+	#Max camera deviation from the vertical while looking through the UAV (degrees)
+	#Range: 1 ~ 80
+	uavMaxTilt = 30
+
 ["Faction Settings"]
 	blueTeamCustomName = "BLUEFOR"
 	redTeamCustomName = "REDFOR"

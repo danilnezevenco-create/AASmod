@@ -3,12 +3,24 @@
     "com/example/aas/mixin/PlayerModelMixin": {
       "setModelProperties": "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;m_117818_(Lnet/minecraft/client/player/AbstractClientPlayer;)V"
     },
+    "com/example/aas/mixin/ChunkMapUavMixin": {
+      "Lnet/minecraft/server/level/ServerPlayer;getBlockZ()I": "Lnet/minecraft/server/level/ServerPlayer;m_146907_()I",
+      "move": "Lnet/minecraft/server/level/ChunkMap;m_140184_(Lnet/minecraft/server/level/ServerPlayer;)V",
+      "Lnet/minecraft/server/level/ServerPlayer;getBlockX()I": "Lnet/minecraft/server/level/ServerPlayer;m_146903_()I",
+      "Lnet/minecraft/core/SectionPos;of(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;": "Lnet/minecraft/core/SectionPos;m_235861_(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;",
+      "updatePlayerPos": "Lnet/minecraft/server/level/ChunkMap;m_140373_(Lnet/minecraft/server/level/ServerPlayer;)Lnet/minecraft/core/SectionPos;"
+    },
     "com/example/aas/mixin/MouseSensitivityMixin": {
       "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;": "Lnet/minecraft/client/OptionInstance;m_231551_()Ljava/lang/Object;",
       "turnPlayer": "Lnet/minecraft/client/MouseHandler;m_91523_()V"
     },
     "com/example/aas/mixin/FirstPersonArmFixMixin": {
       "renderArmWithItem": "Lnet/minecraft/client/renderer/ItemInHandRenderer;m_109371_(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+    },
+    "com/example/aas/mixin/TrackedEntityUavMixin": {
+      "Lnet/minecraft/server/level/ServerPlayer;position()Lnet/minecraft/world/phys/Vec3;": "Lnet/minecraft/server/level/ServerPlayer;m_20182_()Lnet/minecraft/world/phys/Vec3;",
+      "updatePlayer": "Lnet/minecraft/server/level/ChunkMap$TrackedEntity;m_140497_(Lnet/minecraft/server/level/ServerPlayer;)V",
+      "net.minecraft.server.level.ChunkMap$TrackedEntity": "net/minecraft/server/level/ChunkMap$TrackedEntity"
     },
     "com/example/aas/mixin/ChatPanelMixin": {
       "render": "Lnet/minecraft/client/gui/components/ChatComponent;m_280165_(Lnet/minecraft/client/gui/GuiGraphics;III)V",
@@ -23,12 +35,24 @@
       "com/example/aas/mixin/PlayerModelMixin": {
         "setModelProperties": "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;m_117818_(Lnet/minecraft/client/player/AbstractClientPlayer;)V"
       },
+      "com/example/aas/mixin/ChunkMapUavMixin": {
+        "Lnet/minecraft/server/level/ServerPlayer;getBlockZ()I": "Lnet/minecraft/server/level/ServerPlayer;m_146907_()I",
+        "move": "Lnet/minecraft/server/level/ChunkMap;m_140184_(Lnet/minecraft/server/level/ServerPlayer;)V",
+        "Lnet/minecraft/server/level/ServerPlayer;getBlockX()I": "Lnet/minecraft/server/level/ServerPlayer;m_146903_()I",
+        "Lnet/minecraft/core/SectionPos;of(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;": "Lnet/minecraft/core/SectionPos;m_235861_(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;",
+        "updatePlayerPos": "Lnet/minecraft/server/level/ChunkMap;m_140373_(Lnet/minecraft/server/level/ServerPlayer;)Lnet/minecraft/core/SectionPos;"
+      },
       "com/example/aas/mixin/MouseSensitivityMixin": {
         "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;": "Lnet/minecraft/client/OptionInstance;m_231551_()Ljava/lang/Object;",
         "turnPlayer": "Lnet/minecraft/client/MouseHandler;m_91523_()V"
       },
       "com/example/aas/mixin/FirstPersonArmFixMixin": {
         "renderArmWithItem": "Lnet/minecraft/client/renderer/ItemInHandRenderer;m_109371_(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+      },
+      "com/example/aas/mixin/TrackedEntityUavMixin": {
+        "Lnet/minecraft/server/level/ServerPlayer;position()Lnet/minecraft/world/phys/Vec3;": "Lnet/minecraft/server/level/ServerPlayer;m_20182_()Lnet/minecraft/world/phys/Vec3;",
+        "updatePlayer": "Lnet/minecraft/server/level/ChunkMap$TrackedEntity;m_140497_(Lnet/minecraft/server/level/ServerPlayer;)V",
+        "net.minecraft.server.level.ChunkMap$TrackedEntity": "net/minecraft/server/level/ChunkMap$TrackedEntity"
       },
       "com/example/aas/mixin/ChatPanelMixin": {
         "render": "Lnet/minecraft/client/gui/components/ChatComponent;m_280165_(Lnet/minecraft/client/gui/GuiGraphics;III)V",

@@ -2,6 +2,7 @@
 package com.example.aas.client.gui;
 
 import com.example.aas.client.ClientData;
+import com.example.aas.client.gui.MapGrid;
 import com.example.aas.network.MapPlayerInfo;
 import com.example.aas.network.PacketDeleteMarker;
 import com.example.aas.network.PacketHandler;
@@ -199,6 +200,7 @@ public class AASMapRenderer implements AutoCloseable {
         renderOverlays(gui, mc, cx, cz, currentScale);
         renderMainBases(gui, mc, cx, cz, currentScale);
         renderArtilleryZones(gui, cx, cz, currentScale);
+        com.example.aas.client.uav.UavZoneRenderer.renderZone(gui, mapX, mapY, mapSize, cx, cz, currentScale);
         renderStructures(gui, mc, cx, cz, currentScale);
         renderVehicles(gui, mc, cx, cz, currentScale);
         renderAllPlayers(gui, mc, localPlayer, cx, cz, currentScale);

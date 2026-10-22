@@ -422,6 +422,7 @@ public class ModCommands {
             com.example.aas.events.OfflineStats.resetAll();
         } else {
             data.isGameStarted = false;
+            com.example.aas.uav.UavManager.onMatchEnd(level, data);
             GameLogicEvents.cancelCountdown(level);
             data.setDirty();
             syncDataToAll(level, data);

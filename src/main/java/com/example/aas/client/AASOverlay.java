@@ -1,6 +1,7 @@
 package com.example.aas.client;
 
 import com.example.aas.block.*;
+import com.example.aas.client.OwnVoiceIndicator;
 import com.example.aas.config.AASConfig;
 import com.example.aas.entity.AGS30Entity;
 import com.example.aas.entity.M2BrowningEntity;
@@ -97,12 +98,13 @@ public class AASOverlay {
         int height = mc.getWindow().getGuiScaledHeight();
 
         // 1. Тикеты
+        if (com.example.aas.client.uav.UavViewClient.isViewing()) return; // UAV camera: usual HUD hidden
         renderTickets(gui, mc, width);
         renderVotePanel(gui, mc, height);
 
         // 2. Логика захвата точек
-        if (ClientData.allCapturePoints != null) {
-            for (AASWorldData.CapturePoint cp : ClientData.allCapturePoints) {
+        if (com.example.aas.client.ClientData.allCapturePoints != null) {
+            for (AASWorldData.CapturePoint cp : com.example.aas.client.ClientData.allCapturePoints) {
                 if (cp.intersectsAny(mc.player.getBoundingBox())) {
                     renderCapturePoint(gui, mc, width, height);
                     break;
@@ -146,16 +148,16 @@ public class AASOverlay {
         }
         renderRadioSpeakers(gui, mc, height);
         renderVoiceSpeakers(gui, mc, height);
-        com.example.aas.client.OwnVoiceIndicator.renderHud(gui, mc, width, height);
-        if (ClientData.isMapOpen || ClientData.mapTransition > 0) {
+        OwnVoiceIndicator.renderHud(gui, mc, width, height);
+        if (com.example.aas.client.ClientData.isMapOpen || com.example.aas.client.ClientData.mapTransition > 0) {
             renderSideMap(gui, mc, width, height, event.getPartialTick());
         }
-        if (ClientData.isGameStarted && ClientData.invasionPrepTicks > 0 && ClientData.gameMode.equalsIgnoreCase("INVASION")) {
+        if (com.example.aas.client.ClientData.isGameStarted && com.example.aas.client.ClientData.invasionPrepTicks > 0 && com.example.aas.client.ClientData.gameMode.equalsIgnoreCase("INVASION")) {
             renderPrepTimer(gui, mc, width);
         }
     }
     private static void renderPrepTimer(GuiGraphics gui, Minecraft mc, int screenWidth) {
-        int ticks = ClientData.invasionPrepTicks;
+        int ticks = com.example.aas.client.ClientData.invasionPrepTicks;
         int totalSeconds = ticks / 20;
         int mins = totalSeconds / 60;
         int secs = totalSeconds % 60;
@@ -199,16 +201,16 @@ public class AASOverlay {
 
     private static void renderSquadLeaderPlaytime(GuiGraphics gui, Minecraft mc, int screenWidth) {
         if (mc.options.hideGui) return;
-        if (!ClientData.showSquadLeaderPlaytime || ClientData.squadLeaderPlaytimeHours < 0) return;
+        if (!com.example.aas.client.ClientData.showSquadLeaderPlaytime || com.example.aas.client.ClientData.squadLeaderPlaytimeHours < 0) return;
 
-        long elapsed = System.currentTimeMillis() - ClientData.squadLeaderPlaytimeShownAt;
+        long elapsed = System.currentTimeMillis() - com.example.aas.client.ClientData.squadLeaderPlaytimeShownAt;
         if (elapsed > SQUAD_LEADER_PLAYTIME_DURATION_MS) {
-            ClientData.showSquadLeaderPlaytime = false;
+            com.example.aas.client.ClientData.showSquadLeaderPlaytime = false;
             return;
         }
 
         String text = I18n.get("aas.hud.squad_leader_playtime",
-                ClientData.squadLeaderPlaytimeName, ClientData.squadLeaderPlaytimeHours);
+                com.example.aas.client.ClientData.squadLeaderPlaytimeName, com.example.aas.client.ClientData.squadLeaderPlaytimeHours);
 
         int paddingX = 6;
         int paddingY = 4;
@@ -316,7 +318,7 @@ public class AASOverlay {
     private static void renderSquadMarkersOnCompass(GuiGraphics gui, Minecraft mc, float playerYaw, float centerX, float y, float pixelsPerDegree, float widthInPixels, float visibleRange) {
         String myName = mc.player.getScoreboardName();
         AASWorldData.Squad mySquad = null;
-        for (AASWorldData.Squad s : ClientData.clientSquads) {
+        for (AASWorldData.Squad s : com.example.aas.client.ClientData.clientSquads) {
             if (s.members.contains(myName)) { mySquad = s; break; }
         }
         if (mySquad == null) return;
@@ -380,7 +382,7 @@ public class AASOverlay {
     private static void renderMarkersOnCompass(GuiGraphics gui, Minecraft mc, float playerYaw, float centerX, float y, float pixelsPerDegree, float widthInPixels, float visibleRange) {
         String myTeam = (mc.player.getTeam() != null) ? mc.player.getTeam().getName().toUpperCase() : "NEUTRAL";
 
-        for (AASWorldData.MapMarker m : ClientData.activeMarkers) {
+        for (AASWorldData.MapMarker m : com.example.aas.client.ClientData.activeMarkers) {
             if (m.type.startsWith("Arrow:")) continue;   // стрелки на компасе не показываем
             if (!m.team.equalsIgnoreCase(myTeam) && !mc.player.isCreative()) continue;
 
@@ -416,7 +418,7 @@ public class AASOverlay {
     }
 
     private static void renderDownedOnCompass(GuiGraphics gui, Minecraft mc, float playerYaw, float centerX, float y, float pixelsPerDegree, float widthInPixels, float visibleRange) {
-        if (ClientData.mapPlayers == null) return;
+        if (com.example.aas.client.ClientData.mapPlayers == null) return;
 
         String myName = mc.player.getScoreboardName();
         // Определяем нашу команду
@@ -425,7 +427,7 @@ public class AASOverlay {
             myTeam = mc.player.getTeam().getName().toUpperCase();
         }
 
-        for (com.example.aas.network.MapPlayerInfo info : ClientData.mapPlayers.values()) {
+        for (com.example.aas.network.MapPlayerInfo info : com.example.aas.client.ClientData.mapPlayers.values()) {
             // 1. Пропускаем себя
             if (info.name.equals(myName)) continue;
 
@@ -469,7 +471,7 @@ public class AASOverlay {
         String myName = mc.player.getScoreboardName();
         AASWorldData.Squad mySquad = null;
 
-        for (AASWorldData.Squad s : ClientData.clientSquads) {
+        for (AASWorldData.Squad s : com.example.aas.client.ClientData.clientSquads) {
             if (s.members.contains(myName)) {
                 mySquad = s;
                 break;
@@ -497,11 +499,11 @@ public class AASOverlay {
     }
 
     // Вспомогательный метод для уменьшения дублирования кода
-    private static void drawCompassPing(GuiGraphics gui, Minecraft mc, float playerYaw, float centerX, float y, float pixelsPerDegree, float widthInPixels, float visibleRange, net.minecraft.core.BlockPos pingPos, ResourceLocation icon) {
+    private static void drawCompassPing(GuiGraphics gui, Minecraft mc, float playerYaw, float centerX, float y, float pixelsPerDegree, float widthInPixels, float visibleRange, BlockPos pingPos, ResourceLocation icon) {
         double dx = pingPos.getX() + 0.5 - mc.player.getX();
         double dz = pingPos.getZ() + 0.5 - mc.player.getZ();
         float angle = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90;
-        float diff = net.minecraft.util.Mth.wrapDegrees(angle - playerYaw);
+        float diff = Mth.wrapDegrees(angle - playerYaw);
 
         if (Math.abs(diff) < visibleRange / 2f + 5) {
             float xPos = centerX + diff * pixelsPerDegree;
@@ -575,14 +577,14 @@ public class AASOverlay {
 
         // 1. Выбираем данные в зависимости от команды игрока
         boolean isBlue = myTeam.equals("BLUE");
-        boolean active = isBlue ? ClientData.blueCmdVoteActive : ClientData.redCmdVoteActive;
+        boolean active = isBlue ? com.example.aas.client.ClientData.blueCmdVoteActive : com.example.aas.client.ClientData.redCmdVoteActive;
         if (!active) return;
 
-        String candidateName = isBlue ? ClientData.blueCmdCandidateName : ClientData.redCmdCandidateName;
-        Map<UUID, Boolean> currentVotes = isBlue ? ClientData.blueCmdVotes : ClientData.redCmdVotes;
+        String candidateName = isBlue ? com.example.aas.client.ClientData.blueCmdCandidateName : com.example.aas.client.ClientData.redCmdCandidateName;
+        Map<UUID, Boolean> currentVotes = isBlue ? com.example.aas.client.ClientData.blueCmdVotes : com.example.aas.client.ClientData.redCmdVotes;
 
         // 2. Фильтруем список: только лидеры моей команды (кроме кандидата)
-        var slPlayers = ClientData.mapPlayers.values().stream()
+        var slPlayers = com.example.aas.client.ClientData.mapPlayers.values().stream()
                 .filter(info -> info.team.equalsIgnoreCase(myTeam))
                 .filter(info -> info.isLeader && !info.name.equals(candidateName))
                 .toList();
@@ -646,9 +648,9 @@ public class AASOverlay {
         if (myTeam.equals("NEUTRAL")) return;
 
         // 2. Получаем данные о запросе
-        int timer = myTeam.equals("BLUE") ? ClientData.blueArtTimer : ClientData.redArtTimer;
-        String requester = myTeam.equals("BLUE") ? ClientData.blueArtReqName : ClientData.redArtReqName;
-        BlockPos pos = myTeam.equals("BLUE") ? ClientData.blueArtPos : ClientData.redArtPos;
+        int timer = myTeam.equals("BLUE") ? com.example.aas.client.ClientData.blueArtTimer : com.example.aas.client.ClientData.redArtTimer;
+        String requester = myTeam.equals("BLUE") ? com.example.aas.client.ClientData.blueArtReqName : com.example.aas.client.ClientData.redArtReqName;
+        BlockPos pos = myTeam.equals("BLUE") ? com.example.aas.client.ClientData.blueArtPos : com.example.aas.client.ClientData.redArtPos;
 
         // Если запроса нет или время вышло — выходим
         if (timer <= 0 || requester.isEmpty() || pos == null) return;
@@ -854,7 +856,7 @@ public class AASOverlay {
 
     private static void renderPlacementHints(GuiGraphics gui, Minecraft mc, int width, int height) {
         // Проверяем, находится ли игрок в режиме "постановки" чертежа
-        if (!com.example.aas.client.ClientPlacementHandler.isPlacing()) return;
+        if (!ClientPlacementHandler.isPlacing()) return;
 
         // Настройки плашки
         int uiWidth = 140;
@@ -906,7 +908,7 @@ public class AASOverlay {
 
         for (Integer id : ClientData.DOWNED_PLAYERS) {
             Entity entity = mc.level.getEntity(id);
-            if (entity instanceof net.minecraft.world.entity.player.Player downed && downed != mc.player) {
+            if (entity instanceof Player downed && downed != mc.player) {
                 // Проверка на союзника
                 if (mc.player.getTeam() != null && downed.getTeam() != null && mc.player.getTeam().isAlliedTo(downed.getTeam())) {
 
@@ -948,7 +950,7 @@ public class AASOverlay {
                 com.example.aas.client.ClientData.RADIO_SPEAKERS.remove(entry.getKey());
                 continue;
             }
-            if (com.example.aas.client.OwnVoiceIndicator.isSelf(entry.getKey())) continue;   // свой ник не показываем
+            if (OwnVoiceIndicator.isSelf(entry.getKey())) continue;   // свой ник не показываем
 
             String speakerName = entry.getKey();
             int color = 0xFFFFFF00; // желтый
@@ -994,7 +996,7 @@ public class AASOverlay {
         gui.pose().pushPose();
         gui.pose().translate(0, 0, 600);
 
-        int radioLines = com.example.aas.client.OwnVoiceIndicator.countOthers(com.example.aas.client.ClientData.RADIO_SPEAKERS);
+        int radioLines = OwnVoiceIndicator.countOthers(com.example.aas.client.ClientData.RADIO_SPEAKERS);
         int yOffset = (height / 2) - 40 + (radioLines * 14); // Сдвиг вниз на строки рации
         int xOffset = 5;
 
@@ -1036,7 +1038,7 @@ public class AASOverlay {
             float g = ((color >> 8) & 0xFF) / 255f;
             float b = (color & 0xFF) / 255f;
             RenderSystem.setShaderColor(r, g, b, 1.0f);
-            gui.blit(com.example.aas.client.VoiceIcons.forPlayer(speakerName), xOffset + VOICE_X, yOffset, 0, 0, 8, 8, 8, 8);
+            gui.blit(VoiceIcons.forPlayer(speakerName), xOffset + VOICE_X, yOffset, 0, 0, 8, 8, 8, 8);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
             // 3) Ник игрока (у командирского канала — со звёздочкой)
@@ -1048,7 +1050,7 @@ public class AASOverlay {
     }
 
     // Убирает протухших говорящих (> 300 мс) и добавляет живых в список строк.
-    private static void collectSpeakers(java.util.List<Object[]> rows, java.util.Map<String, Long> speakers,
+    private static void collectSpeakers(java.util.List<Object[]> rows, Map<String, Long> speakers,
                                         long now, int color, String prefix, boolean badge, boolean command) {
         for (var entry : new java.util.ArrayList<>(speakers.entrySet())) {
             if (now - entry.getValue() > 300) {
@@ -1071,7 +1073,7 @@ public class AASOverlay {
             BlockState state = mc.level.getBlockState(pos); // Получаем состояние блока
             BlockEntity be = mc.level.getBlockEntity(pos);
 
-            if (be instanceof com.example.aas.block.HubBlockEntity hub) {
+            if (be instanceof HubBlockEntity hub) {
 
                 // === ПРОВЕРКА: Если ХАБ еще не построен (чертеж), выходим из метода ===
                 if (state.hasProperty(HubBlock.CONSTRUCTED) && !state.getValue(HubBlock.CONSTRUCTED)) {
@@ -1102,7 +1104,7 @@ public class AASOverlay {
             int textX = (width - textWidth) / 2;
             int textY = height - 70;
 
-            com.mojang.blaze3d.vertex.PoseStack pose = gui.pose();
+            PoseStack pose = gui.pose();
             pose.pushPose();
             pose.translate(width / 2.0f, textY - 12, 0);
             pose.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(45));
@@ -1158,7 +1160,7 @@ public class AASOverlay {
         } else if (be instanceof TOWConstructionBlockEntity tow) {
             progress = tow.getPercentage();
             structureTeam = tow.getTeam();
-        } else if (be instanceof com.example.aas.block.VehicleStationBlockEntity vs) {
+        } else if (be instanceof VehicleStationBlockEntity vs) {
             progress = vs.getPercentage();
             structureTeam = vs.getTeam();
             // Проверяем состояние блока через свойство CONSTRUCTED
@@ -1553,7 +1555,7 @@ public class AASOverlay {
         Entity supplyTruck = getSupplyTruckEntity(ridingEntity);
         if (supplyTruck != null) {
             int crates = supplyTruck.getPersistentData().getInt("AAS_SupplyAmmo");
-            int maxCrates = com.example.aas.config.AASConfig.SUPPLY_TRUCK_CRATES.get();
+            int maxCrates = AASConfig.SUPPLY_TRUCK_CRATES.get();
             boolean isCharging = false;
 
             if (crates < maxCrates) {
@@ -1614,7 +1616,7 @@ public class AASOverlay {
         int yOffset = 60;
         for (Integer id : ClientData.DOWNED_PLAYERS) {
             Entity entity = mc.level.getEntity(id);
-            if (entity instanceof net.minecraft.world.entity.player.Player downed && downed != mc.player) {
+            if (entity instanceof Player downed && downed != mc.player) {
                 int distance = (int) mc.player.distanceTo(downed);
                 if (distance < 100) { // Видим раненых в радиусе 100 блоков
                     String name = downed.getScoreboardName();

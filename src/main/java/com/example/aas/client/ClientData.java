@@ -128,6 +128,16 @@ public class ClientData {
         menuChatHistory.add(0, msg);
         if (menuChatHistory.size() > 50) menuChatHistory.remove(menuChatHistory.size() - 1);
     }
+    // --- Recon UAV values synced from the server (-1 = not received yet -> local config) ---
+    public static int serverUavMinRadius = -1, serverUavMaxRadius = -1, serverUavMaxTilt = -1;
+    public static float[] serverUavZoomFov = null;
+    public static int uavMinRadius() { return serverUavMinRadius >= 0 ? serverUavMinRadius : com.example.aas.config.AASConfig.UAV_MIN_RADIUS.get(); }
+    public static int uavMaxRadius() { return serverUavMaxRadius >= 0 ? serverUavMaxRadius : com.example.aas.config.AASConfig.UAV_MAX_RADIUS.get(); }
+    public static int uavMaxTilt() { return serverUavMaxTilt >= 0 ? serverUavMaxTilt : com.example.aas.config.AASConfig.UAV_MAX_TILT.get(); }
+    public static float uavZoomFov(int i) {
+        if (serverUavZoomFov != null && i < serverUavZoomFov.length) return serverUavZoomFov[i];
+        return com.example.aas.uav.UavRules.zoomFov(i);
+    }
     public static int serverMinHubDistance = -1;   // -1 = ещё не пришло от сервера
     public static int serverHubBuildRadius = -1;
     public static int serverCrateBuildRadius = -1;

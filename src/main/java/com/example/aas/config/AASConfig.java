@@ -50,6 +50,16 @@ public class AASConfig {
     public static final ForgeConfigSpec.BooleanValue AUTO_BALANCE_TEAMS;
     public static final ForgeConfigSpec.IntValue ART_STRIKE_COOLDOWN_MINUTES;
     public static final ForgeConfigSpec.IntValue ART_STRIKE_RADIUS;
+    // === Recon UAV ===
+    public static final ForgeConfigSpec.IntValue UAV_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.IntValue UAV_MIN_RADIUS;
+    public static final ForgeConfigSpec.IntValue UAV_MAX_RADIUS;
+    public static final ForgeConfigSpec.IntValue UAV_DURATION_SECONDS;
+    public static final ForgeConfigSpec.IntValue UAV_ALTITUDE;
+    public static final ForgeConfigSpec.IntValue UAV_HEALTH;
+    public static final ForgeConfigSpec.DoubleValue UAV_SPEED;
+    public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends Number>> UAV_ZOOM_FOV;
+    public static final ForgeConfigSpec.IntValue UAV_MAX_TILT;
     public static final ForgeConfigSpec.IntValue INVASION_PREP_TIME_MINUTES;
     public static final ForgeConfigSpec.IntValue REVIVE_HOLD_SECONDS;
     public static final ForgeConfigSpec.IntValue MEDIC_REVIVE_HOLD_SECONDS;
@@ -168,6 +178,27 @@ public class AASConfig {
                 .defineInRange("artStrikeCooldownMinutes", 30, 1, 120);
         ART_STRIKE_RADIUS = BUILDER.comment("Artillery strike impact radius")
                 .defineInRange("artStrikeRadius", 20, 5, 100);
+        BUILDER.pop();
+
+        BUILDER.push("UAV Settings");
+        UAV_COOLDOWN_SECONDS = BUILDER.comment("Recon UAV cooldown in seconds (starts at match start, after the UAV is shot down or expires)")
+                .defineInRange("uavCooldownSeconds", 1, 0, 36000);
+        UAV_MIN_RADIUS = BUILDER.comment("Min radius of the UAV flight zone (blocks)")
+                .defineInRange("uavMinRadius", 200, 10, 4000);
+        UAV_MAX_RADIUS = BUILDER.comment("Max radius of the UAV flight zone (blocks)")
+                .defineInRange("uavMaxRadius", 500, 10, 4000);
+        UAV_DURATION_SECONDS = BUILDER.comment("UAV lifetime in seconds")
+                .defineInRange("uavDurationSeconds", 300, 10, 3600);
+        UAV_ALTITUDE = BUILDER.comment("UAV altitude above the average terrain height inside the zone (blocks)")
+                .defineInRange("uavAltitude", 200, 20, 600);
+        UAV_HEALTH = BUILDER.comment("UAV health (iron golem = 100)")
+                .defineInRange("uavHealth", 100, 1, 100000);
+        UAV_SPEED = BUILDER.comment("UAV flight speed in blocks per tick (1.0 = 20 blocks/s)")
+                .defineInRange("uavSpeed", 1.0, 0.1, 5.0);
+        UAV_ZOOM_FOV = BUILDER.comment("FOV (degrees) for the 3 zoom stages of the UAV camera, from weakest to strongest zoom")
+                .defineList("uavZoomFov", java.util.Arrays.<Number>asList(45.0, 25.0, 10.0), o -> o instanceof Number);
+        UAV_MAX_TILT = BUILDER.comment("Max camera deviation from the vertical while looking through the UAV (degrees)")
+                .defineInRange("uavMaxTilt", 30, 1, 80);
         BUILDER.pop();
 
         BUILDER.push("Faction Settings");
