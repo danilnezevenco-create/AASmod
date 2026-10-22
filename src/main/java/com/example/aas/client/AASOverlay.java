@@ -98,7 +98,12 @@ public class AASOverlay {
         int height = mc.getWindow().getGuiScaledHeight();
 
         // 1. Тикеты
-        if (com.example.aas.client.uav.UavViewClient.isViewing()) return; // UAV camera: usual HUD hidden
+        if (com.example.aas.client.uav.UavViewClient.isViewing()) {      // UAV camera: usual HUD hidden, but the minimap stays
+            if (com.example.aas.client.ClientData.isMapOpen || com.example.aas.client.ClientData.mapTransition > 0) {
+                renderSideMap(gui, mc, width, height, event.getPartialTick());
+            }
+            return;
+        }
         renderTickets(gui, mc, width);
         renderVotePanel(gui, mc, height);
 

@@ -215,7 +215,12 @@ public class WorldMarkerRadialScreen extends Screen {
         }
         confirmed = true;
         int type = SECTOR_TYPES[hoveredIndex];
-        PacketHandler.INSTANCE.sendToServer(new PacketPlaceRadialMarker(type));
+        if (com.example.aas.client.uav.UavViewClient.isViewing()) {
+            PacketHandler.INSTANCE.sendToServer(new com.example.aas.network.PacketUavMarker(type,
+                    com.example.aas.client.uav.UavViewClient.viewYaw(), com.example.aas.client.uav.UavViewClient.viewPitch()));
+        } else {
+            PacketHandler.INSTANCE.sendToServer(new PacketPlaceRadialMarker(type));
+        }
         if (this.minecraft != null && this.minecraft.player != null) {
             this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.MAP_MARKER_PLACE.get(), 1.0F));
         }

@@ -173,7 +173,7 @@ public final class UavViewManager {
             LOGGER.info("[AAS] UAV exit: reason={} bodyY={} anchorY={} onGround={} bodyChunkLoaded={}",
                     reason, p.getY(), s.anchor.y, p.onGround(),
                     p.serverLevel().getChunkSource().getChunkNow(p.chunkPosition().x, p.chunkPosition().z) != null);
-            GUARD.put(p.getUUID(), new Guard(s.anchor, p.serverLevel().getGameTime() + 100)); // 5 s
+            GUARD.put(p.getUUID(), new Guard(s.anchor, p.serverLevel().getGameTime() + 200)); // 10 s
             if (p.position().distanceToSqr(s.anchor) > 0.01) {
                 p.connection.teleport(s.anchor.x, s.anchor.y, s.anchor.z, p.getYRot(), p.getXRot());
             }
@@ -196,15 +196,16 @@ public final class UavViewManager {
     }
 
     /** Player left the server: just forget (tracking is cleaned up by vanilla using the last section). */
-    public static void forget(UUID id) { SESSIONS.remove(id); }
+    public static void forget(UUID id) { SESSIONS.remove(id); GUARD.remove(id); RESTORE.remove(id); }
 
-    public static void clearAll() { SESSIONS.clear(); RESTORE.clear(); }
+    public static void clearAll() { SESSIONS.clear(); RESTORE.clear(); GUARD.clear(); }
 
     // ------------------------------------------------------------------ per tick
     public static void tickLevel(ServerLevel level) {
-        if (SESSIONS.isEmpty() && RESTORE.isEmpty()) return;
+        if (SESSIONS.isEmpty() && RESTORE.isEmpty() && GUARD.isEmpty()) return;
         MinecraftServer server = level.getServer();
         long now = level.getGameTime();
+        tickGuard(level, server, now);   // was never called: nothing caught the body falling after exit
         tickRestore(level, server, now);
         if (SESSIONS.isEmpty()) return;
         AASWorldData d = AASWorldData.get(level);

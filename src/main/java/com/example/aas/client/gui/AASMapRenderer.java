@@ -161,8 +161,9 @@ public class AASMapRenderer implements AutoCloseable {
         if (follow) { mapPanX = 0; mapPanZ = 0; } else { clampView(localPlayer); }
 
         double currentScale = follow ? ClientData.miniMapScale : ClientData.mapScale;
-        double cx = localPlayer.getX() + mapPanX;
-        double cz = localPlayer.getZ() + mapPanZ;
+        Vec3 origin = viewOrigin(localPlayer);   // UAV position while looking through the UAV (minimap only)
+        double cx = origin.x + mapPanX;
+        double cz = origin.z + mapPanZ;
 
         gui.fillGradient(mapX, mapY, mapX + mapSize, mapY + mapSize, 0xFF1A2430, 0xFF050505);
 
@@ -555,8 +556,21 @@ public class AASMapRenderer implements AutoCloseable {
     }
 
     public void centerOnPlayer() { mapPanX = 0; mapPanZ = 0; }
-    public double getCenterX(LocalPlayer player) { return player.getX() + mapPanX; }
-    public double getCenterZ(LocalPlayer player) { return player.getZ() + mapPanZ; }
+    public double getCenterX(LocalPlayer player) { return viewOrigin(player).x + mapPanX; }
+    public double getCenterZ(LocalPlayer player) { return viewOrigin(player).z + mapPanZ; }
+
+    /**
+     * Where the map is centred and where marker lines start: the player, or - on the follow-mode minimap while the
+     * player looks through the UAV - the flying UAV.
+     */
+    private Vec3 viewOrigin(LocalPlayer p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (followMode && mc.level != null && com.example.aas.client.uav.UavViewClient.isViewing()
+                && com.example.aas.client.uav.UavClientState.active) {
+            return com.example.aas.client.uav.UavClientState.position(mc.level.getGameTime() + mc.getPartialTick());
+        }
+        return p.position();
+    }
     public double getBlocksPerPixel() { return followMode ? ClientData.miniMapScale : ClientData.mapScale; }
     /** Keeps the view inside the map so the background gradient is never visible. */
     private void clampView(LocalPlayer p) {
@@ -1126,8 +1140,9 @@ public class AASMapRenderer implements AutoCloseable {
         int mx = (int) (mapX + (mapSize / 2) + (m.x - cx) / bpp);
         int my = (int) (mapY + (mapSize / 2) + (m.z - cz) / bpp);
 
-        int px = (int) (mapX + (mapSize / 2) + (mc.player.getX() - cx) / bpp);
-        int py = (int) (mapY + (mapSize / 2) + (mc.player.getZ() - cz) / bpp);
+        Vec3 lineFrom = viewOrigin(mc.player);
+        int px = (int) (mapX + (mapSize / 2) + (lineFrom.x - cx) / bpp);
+        int py = (int) (mapY + (mapSize / 2) + (lineFrom.z - cz) / bpp);
 
         if (withDash) {
             drawSolidLine(gui, px, py, mx, my, color);
@@ -1138,7 +1153,7 @@ public class AASMapRenderer implements AutoCloseable {
             RenderSystem.setShaderColor(1, 1, 1, 1);
             gui.blit(icon, mx - 6, my - 6, 0, 0, 12, 12, 12, 12);
 
-            double distance = Math.sqrt(mc.player.distanceToSqr(m.x, mc.player.getY(), m.z));
+            double distance = Math.sqrt(lineFrom.distanceToSqr(m.x, lineFrom.y, m.z));
             String distText = (int)distance + "m";
 
             gui.pose().pushPose();

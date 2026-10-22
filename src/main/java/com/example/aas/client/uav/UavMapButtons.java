@@ -55,13 +55,14 @@ public class UavMapButtons {
         if (hover) tooltip = enabled ? Component.translatable("aas.uav.tooltip.ready") : reason;
 
         // --- eye button at the UAV position ---
-        if (UavClientState.active && mc.level != null) {
+        if (UavClientState.active && !UavViewClient.isViewing() && mc.level != null) {
             Vec3 p = UavClientState.position(mc.level.getGameTime() + mc.getPartialTick());
             double sx = mapX + mapSize / 2.0 + (p.x - panX) / bpp;
             double sy = mapY + mapSize / 2.0 + (p.z - panZ) / bpp;
-            if (sx >= mapX + EYE / 2.0 && sx <= mapX + mapSize - EYE / 2.0 && sy >= mapY + EYE / 2.0 && sy <= mapY + mapSize - EYE / 2.0) {
+            double by = sy + 8 + EYE / 2.0 + 1;   // button centre: right under the 16px UAV icon
+            if (sx >= mapX + EYE / 2.0 && sx <= mapX + mapSize - EYE / 2.0 && by >= mapY + EYE / 2.0 && by <= mapY + mapSize - EYE / 2.0) {
                 ex = (int) sx - EYE / 2;
-                ey = (int) sy - EYE / 2;
+                ey = (int) by - EYE / 2;
                 eyeVisible = true;
                 boolean downed = UavClientState.isDowned(mc);
                 boolean eh = inside(mouseX, mouseY, ex, ey, EYE);

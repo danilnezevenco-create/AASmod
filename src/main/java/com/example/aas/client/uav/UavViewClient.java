@@ -41,6 +41,8 @@ public class UavViewClient {
 
     public static boolean isViewing() { return viewing; }
     public static int zoomStage() { return zoomStage; }
+    public static float viewYaw() { return viewYaw; }
+    public static float viewPitch() { return viewPitch; }
 
     // ------------------------------------------------------------------ enter / exit
     /** Authoritative state from the server. */
@@ -70,8 +72,6 @@ public class UavViewClient {
         if (e.phase != TickEvent.Phase.END || e.side != LogicalSide.CLIENT) return;
         Minecraft mc = Minecraft.getInstance();
         if (frozenPos == null || mc.player == null || mc.level == null || e.player != mc.player) return;
-        if (holdTicks % 5 == 0) com.mojang.logging.LogUtils.getLogger().info(
-                "[AAS-client] hold: y={} onGround={} dy={}", mc.player.getY(), mc.player.onGround(), mc.player.getDeltaMovement().y);
         if (viewing) { pinBody(mc.player); return; }
         if (holdTicks > 0 && !bodyChunksReady(mc)) { holdTicks--; pinBody(mc.player); return; }
         frozenPos = null;
@@ -86,6 +86,8 @@ public class UavViewClient {
         placeAnchor(p);
 
         LocalPlayer pl = mc.player;
+        frozenPos = pl.position();   // body is pinned here while viewing and after exit until its chunks are back
+        holdTicks = 0;
         frozenYaw = pl.getYRot();
         origPitch = pl.getXRot();
         viewYaw = frozenYaw;
@@ -115,6 +117,7 @@ public class UavViewClient {
             mc.player.setXRot(origPitch);
             mc.player.xRotO = origPitch;
             mc.setCameraEntity(mc.player);
+            if (frozenPos != null) holdTicks = 200; // up to 10 s: keep the body still until its chunks arrive
         }
         viewing = false;
         zoomStage = 0;
@@ -208,12 +211,15 @@ public class UavViewClient {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onMouseButton(InputEvent.MouseButton.Pre e) {
-        if (viewing && Minecraft.getInstance().screen == null) e.setCanceled(true);
+        // the ping button must still reach ClientEvents: markers can be thrown from the UAV camera
+        if (viewing && Minecraft.getInstance().screen == null
+                && !com.example.aas.client.ModKeyBindings.PLACE_PING_KEY.matchesMouse(e.getButton())) e.setCanceled(true);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onScroll(InputEvent.MouseScrollingEvent e) {
-        if (viewing && Minecraft.getInstance().screen == null) e.setCanceled(true);
+        // minimap open: the wheel zooms it (ClientEvents.onMouseScroll); otherwise it must not switch hotbar slots
+        if (viewing && Minecraft.getInstance().screen == null && !ClientData.isMapOpen) e.setCanceled(true);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -234,9 +240,7 @@ public class UavViewClient {
 
     @SubscribeEvent
     public static void onScreenOpening(ScreenEvent.Opening e) {
-        if (viewing && (e.getNewScreen() instanceof SquadSelectionScreen || e.getNewScreen() instanceof WorldMarkerRadialScreen)) {
-            e.setCanceled(true);
-        }
+        // the big map (SquadSelectionScreen) and the marker wheel (WorldMarkerRadialScreen) are allowed while viewing
     }
 
     // ------------------------------------------------------------------ HUD hiding
@@ -265,6 +269,8 @@ public class UavViewClient {
         viewing = false;
         zoomStage = 0;
         anchor = null;
+        frozenPos = null;
+        holdTicks = 0;
         UavClientState.clear();
     }
 
@@ -274,6 +280,8 @@ public class UavViewClient {
         viewing = false;
         zoomStage = 0;
         anchor = null;
+        frozenPos = null;
+        holdTicks = 0;
     }
     private static int dbgTick = 0;
 

@@ -372,7 +372,14 @@ public class ClientEvents {
 
         if (canPing) {
             boolean isShift = net.minecraft.client.gui.screens.Screen.hasShiftDown();
-            PacketHandler.INSTANCE.sendToServer(new PacketPlacePing(isShift));
+            if (com.example.aas.client.uav.UavViewClient.isViewing()) {
+                // looking through the UAV: raycast from the UAV camera, not from the body
+                PacketHandler.INSTANCE.sendToServer(new com.example.aas.network.PacketUavMarker(
+                        isShift ? com.example.aas.network.PacketPlaceRadialMarker.TYPE_MOVE : com.example.aas.network.PacketPlaceRadialMarker.TYPE_EYE,
+                        com.example.aas.client.uav.UavViewClient.viewYaw(), com.example.aas.client.uav.UavViewClient.viewPitch()));
+            } else {
+                PacketHandler.INSTANCE.sendToServer(new PacketPlacePing(isShift));
+            }
             mc.player.playSound(ModSounds.MAP_MARKER_PLACE.get(), 1.0f, 1.0f);
             return true; // метку реально поставили
         }

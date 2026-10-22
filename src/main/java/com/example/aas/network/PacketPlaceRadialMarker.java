@@ -50,14 +50,21 @@ public class PacketPlaceRadialMarker {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
-            if (msg.type < TYPE_MOVE || msg.type > TYPE_EYE) return;
+            place(player, msg.type, player.getEyePosition(), player.getLookAngle());
+        });
+        ctx.get().setPacketHandled(true);
+    }
+
+    /** Shared placement: raycast from eyePos along look. Used by the radial menu and by the UAV camera (PacketUavMarker). */
+    public static void place(ServerPlayer player, int type, Vec3 eyePos, Vec3 look) {
+        {
+            if (type < TYPE_MOVE || type > TYPE_EYE) return;
 
             AASWorldData data = AASWorldData.get(player.serverLevel());
             String pName = player.getScoreboardName();
 
             // РЎРѕС…СЂР°РЅСЏРµРј С‚Сѓ Р¶Рµ Р»РѕРіРёРєСѓ raycast'Р°, С‡С‚Рѕ Рё Сѓ PacketPlacePing
-            Vec3 eyePos = player.getEyePosition();
-            Vec3 reachVec = eyePos.add(player.getLookAngle().scale(300.0));
+            Vec3 reachVec = eyePos.add(look.scale(300.0));
             BlockHitResult hit = player.level().clip(new ClipContext(eyePos, reachVec, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
             if (hit.getType() != HitResult.Type.BLOCK) return;
 
@@ -74,7 +81,7 @@ public class PacketPlaceRadialMarker {
                 // РўРѕР»СЊРєРѕ SL Рё FTL РјРѕРіСѓС‚ СЃС‚Р°РІРёС‚СЊ СЌС‚Рё РјРµС‚РєРё (РєР°Рє Рё СЂР°РЅСЊС€Рµ Сѓ ping/squad markers)
                 if (!isSL && !isBravoFTL && !isCharlieFTL) break;
 
-                if (msg.type == TYPE_EYE) {
+                if (type == TYPE_EYE) {
                     // РљРѕСЂРѕС‚РєРёР№ "РіР»Р°Р·-РїРёРЅРі" вЂ” РёРґРµРЅС‚РёС‡РЅРѕ PacketPlacePing(isMoveMarker=false)
                     if (isSL) {
                         s.pingPos = target;
@@ -89,7 +96,7 @@ public class PacketPlaceRadialMarker {
                 } else {
                     // Move / Attack / Defend / Build вЂ” РґРѕР»РіРѕР¶РёРІСѓС‰Р°СЏ РјРµС‚РєР° СЃ СЂРµР°Р»СЊРЅС‹Рј Y РёР· raycast'Р°
                     AASWorldData.SquadMarker marker = new AASWorldData.SquadMarker(
-                            target.getX(), target.getY(), target.getZ(), msg.type, time + 12000, true);
+                            target.getX(), target.getY(), target.getZ(), type, time + 12000, true);
 
                     if (isSL) {
                         s.marker = marker;
@@ -106,7 +113,6 @@ public class PacketPlaceRadialMarker {
                 PacketHandler.playMarkerSoundForSquad(player.serverLevel(), s.members, player);
                 break;
             }
-        });
-        ctx.get().setPacketHandled(true);
+        }
     }
 }

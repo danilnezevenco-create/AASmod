@@ -5,10 +5,12 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 /** Draws the UAV zone circle (light yellow fill, dark yellow outline) and the UAV icon on the map. */
@@ -25,7 +27,14 @@ public final class UavZoneRenderer {
         float sx = (float) (mapX + mapSize / 2.0 + (UavClientState.cx - centerX) / bpp);
         float sy = (float) (mapY + mapSize / 2.0 + (UavClientState.cz - centerZ) / bpp);
         drawZone(gui, sx, sy, (float) (UavClientState.radius / bpp));
-        drawIcon(gui, sx, sy, 16);
+        // the icon sits on the flying UAV itself (it orbits with it), not in the zone centre
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            Vec3 p = UavClientState.position(mc.level.getGameTime() + mc.getPartialTick());
+            float ux = (float) (mapX + mapSize / 2.0 + (p.x - centerX) / bpp);
+            float uy = (float) (mapY + mapSize / 2.0 + (p.z - centerZ) / bpp);
+            drawIcon(gui, ux, uy, 16);
+        }
     }
 
     public static void drawIcon(GuiGraphics gui, float sx, float sy, int size) {

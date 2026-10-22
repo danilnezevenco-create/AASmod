@@ -182,7 +182,7 @@ public class AASConfig {
 
         BUILDER.push("UAV Settings");
         UAV_COOLDOWN_SECONDS = BUILDER.comment("Recon UAV cooldown in seconds (starts at match start, after the UAV is shot down or expires)")
-                .defineInRange("uavCooldownSeconds", 1, 0, 36000);
+                .defineInRange("uavCooldownSeconds", 10, 0, 36000);
         UAV_MIN_RADIUS = BUILDER.comment("Min radius of the UAV flight zone (blocks)")
                 .defineInRange("uavMinRadius", 200, 10, 4000);
         UAV_MAX_RADIUS = BUILDER.comment("Max radius of the UAV flight zone (blocks)")

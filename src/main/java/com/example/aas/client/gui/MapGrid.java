@@ -234,10 +234,10 @@ public final class MapGrid {
         int w = font.width(text) + 2;
         int h = font.lineHeight;
         int x = mouseX + 5;
-        int y = mouseY - h - 2;
+        int y = mouseY + 8;
         if (x + w > screenW - 2) x = mouseX - w - 5;   // no room on the right -> put it on the left
         if (y < 2) y = mouseY + 8;                     // no room above -> put it below
-        if (y + h > screenH - 2) y = screenH - 2 - h;
+        if (y + h > screenH - 2) y = mouseY - h - 2;
         if (x < 2) x = 2;
 
         gui.pose().pushPose();

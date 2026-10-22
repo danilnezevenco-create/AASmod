@@ -97,6 +97,7 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketUavLaunch.class, PacketUavLaunch::encode, PacketUavLaunch::decode, PacketUavLaunch::handle);
         INSTANCE.registerMessage(id++, PacketUavView.class, PacketUavView::encode, PacketUavView::decode, PacketUavView::handle);
         INSTANCE.registerMessage(id++, PacketUavViewState.class, PacketUavViewState::encode, PacketUavViewState::decode, PacketUavViewState::handle);
+        INSTANCE.registerMessage(id++, PacketUavMarker.class, PacketUavMarker::encode, PacketUavMarker::decode, PacketUavMarker::handle);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
