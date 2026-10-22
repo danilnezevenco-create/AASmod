@@ -13,7 +13,8 @@
     "PlayerModelMixin",
     "FirstPersonArmFixMixin",
     "MouseSensitivityMixin",
-    "ChatPanelMixin"
+    "ChatPanelMixin",
+    "LevelRendererUavMixin"
   ],
   "injectors": {
     "defaultRequire": 1

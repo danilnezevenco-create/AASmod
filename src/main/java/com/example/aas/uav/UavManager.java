@@ -6,6 +6,7 @@ import com.example.aas.entity.ReconUavEntity;
 import com.example.aas.network.PacketHandler;
 import com.example.aas.network.PacketSyncUav;
 import com.example.aas.world.AASWorldData;
+import com.mojang.logging.LogUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.PacketDistributor;
+import org.slf4j.Logger;
 
 import java.util.Comparator;
 
@@ -27,7 +29,7 @@ public final class UavManager {
             TicketType.create("aas_uav", Comparator.comparingLong(ChunkPos::toLong), 40);
 
     public enum EndKind { DESTROYED, EXPIRED, LOST, MATCH_END }
-
+    private static final Logger LOGGER = LogUtils.getLogger();
     // ------------------------------------------------------------------ launch
     public static boolean tryLaunch(ServerPlayer p, double cx, double cz, int radius) {
         ServerLevel level = p.serverLevel();
@@ -96,20 +98,48 @@ public final class UavManager {
         }
     }
 
+    private static ChunkPos flightChunk(UavState u, long now, int ahead) {
+        Vec3 p = UavFlight.position(u.cx, u.cz, u.radius, u.altY, u.theta0, u.omega(), now - u.startTick + ahead);
+        return new ChunkPos(Mth.floor(p.x) >> 4, Mth.floor(p.z) >> 4);
+    }
+
+    /** Tickets under the UAV and ahead of it along the orbit, so chunks are generated before it arrives. */
+    private static void keepFlightPathLoaded(ServerLevel level, UavState u, long now) {
+        ChunkPos cur = flightChunk(u, now, 0);
+        level.getChunkSource().addRegionTicket(UAV_TICKET, cur, 3, cur);
+        for (int ahead : new int[]{40, 80}) {
+            ChunkPos cp = flightChunk(u, now, ahead);
+            level.getChunkSource().addRegionTicket(UAV_TICKET, cp, 2, cp);
+        }
+    }
+
     private static void tickTeam(ServerLevel level, AASWorldData d, String team) {
         UavState u = UavRules.get(d, team);
         if (u == null) return;
         long now = level.getGameTime();
         Entity e = level.getEntity(u.entityUuid);
-        if (!(e instanceof ReconUavEntity uav) || uav.isRemoved()) {
-            if (now > u.startTick + 5) finish(level, d, team, EndKind.LOST, null);
+
+        if (now >= u.endTick) {
+            finish(level, d, team, EndKind.EXPIRED, e instanceof ReconUavEntity r ? r : null);
             return;
         }
-        if (now >= u.endTick) { finish(level, d, team, EndKind.EXPIRED, uav); return; }
-        if (now % 10 == 0) {
-            ChunkPos cp = uav.chunkPosition();
-            level.getChunkSource().addRegionTicket(UAV_TICKET, cp, 2, cp);
+        if (now % 5 == 0) keepFlightPathLoaded(level, u, now);
+
+        if (e instanceof ReconUavEntity uav && !uav.isRemoved()) {
+            u.missingSince = -1;
+            return;
         }
+        if (now <= u.startTick + 5) return;
+
+        // The UAV sits in a chunk that is not loaded yet: pull it in and wait instead of giving up at once.
+        if (u.missingSince < 0) {
+            u.missingSince = now;
+            LOGGER.info("[AAS] UAV entity not found, loading its chunk (team={})", team);
+        }
+        ChunkPos cp = flightChunk(u, now, 0);
+        level.getChunkSource().addRegionTicket(UAV_TICKET, cp, 3, cp);
+        if (now % 5 == 0) level.getChunk(cp.x, cp.z);
+        if (now - u.missingSince > 200) finish(level, d, team, EndKind.LOST, null); // 10 s
     }
 
     // ------------------------------------------------------------------ end of life

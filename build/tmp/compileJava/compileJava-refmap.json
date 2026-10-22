@@ -10,6 +10,12 @@
       "Lnet/minecraft/core/SectionPos;of(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;": "Lnet/minecraft/core/SectionPos;m_235861_(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;",
       "updatePlayerPos": "Lnet/minecraft/server/level/ChunkMap;m_140373_(Lnet/minecraft/server/level/ServerPlayer;)Lnet/minecraft/core/SectionPos;"
     },
+    "com/example/aas/mixin/LevelRendererUavMixin": {
+      "Lnet/minecraft/client/player/LocalPlayer;getX()D": "Lnet/minecraft/client/player/LocalPlayer;m_20185_()D",
+      "setupRender": "Lnet/minecraft/client/renderer/LevelRenderer;m_194338_(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;ZZ)V",
+      "Lnet/minecraft/client/player/LocalPlayer;getY()D": "Lnet/minecraft/client/player/LocalPlayer;m_20186_()D",
+      "Lnet/minecraft/client/player/LocalPlayer;getZ()D": "Lnet/minecraft/client/player/LocalPlayer;m_20189_()D"
+    },
     "com/example/aas/mixin/MouseSensitivityMixin": {
       "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;": "Lnet/minecraft/client/OptionInstance;m_231551_()Ljava/lang/Object;",
       "turnPlayer": "Lnet/minecraft/client/MouseHandler;m_91523_()V"
@@ -41,6 +47,12 @@
         "Lnet/minecraft/server/level/ServerPlayer;getBlockX()I": "Lnet/minecraft/server/level/ServerPlayer;m_146903_()I",
         "Lnet/minecraft/core/SectionPos;of(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;": "Lnet/minecraft/core/SectionPos;m_235861_(Lnet/minecraft/world/level/entity/EntityAccess;)Lnet/minecraft/core/SectionPos;",
         "updatePlayerPos": "Lnet/minecraft/server/level/ChunkMap;m_140373_(Lnet/minecraft/server/level/ServerPlayer;)Lnet/minecraft/core/SectionPos;"
+      },
+      "com/example/aas/mixin/LevelRendererUavMixin": {
+        "Lnet/minecraft/client/player/LocalPlayer;getX()D": "Lnet/minecraft/client/player/LocalPlayer;m_20185_()D",
+        "setupRender": "Lnet/minecraft/client/renderer/LevelRenderer;m_194338_(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;ZZ)V",
+        "Lnet/minecraft/client/player/LocalPlayer;getY()D": "Lnet/minecraft/client/player/LocalPlayer;m_20186_()D",
+        "Lnet/minecraft/client/player/LocalPlayer;getZ()D": "Lnet/minecraft/client/player/LocalPlayer;m_20189_()D"
       },
       "com/example/aas/mixin/MouseSensitivityMixin": {
         "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;": "Lnet/minecraft/client/OptionInstance;m_231551_()Ljava/lang/Object;",

@@ -12,6 +12,7 @@ public class UavState {
     public final double theta0;
     public final float speed;
     public final long startTick, endTick;
+    public long missingSince = -1;
     public UUID entityUuid;
 
     public UavState(String team, UUID owner, double cx, double cz, int radius, double altY,

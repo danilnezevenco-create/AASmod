@@ -107,7 +107,27 @@ public final class UavViewManager {
             this.team = team; this.viewPos = viewPos; this.anchor = anchor; this.slot = slot;
         }
     }
+    private static final class Guard {
+        final Vec3 anchor; final long until;
+        Guard(Vec3 a, long u) { anchor = a; until = u; }
+    }
+    private static final Map<UUID, Guard> GUARD = new HashMap<>();
 
+    private static void tickGuard(ServerLevel level, MinecraftServer server, long now) {
+        if (GUARD.isEmpty()) return;
+        for (UUID id : new ArrayList<>(GUARD.keySet())) {
+            Guard g = GUARD.get(id);
+            ServerPlayer p = server.getPlayerList().getPlayer(id);
+            if (g == null || p == null || !p.isAlive() || now > g.until) { GUARD.remove(id); continue; }
+            if (p.serverLevel() != level) continue;
+            if (p.getY() < g.anchor.y - 1.0) {
+                LOGGER.warn("[AAS] body dropped to y={} after UAV exit, put back at y={}", p.getY(), g.anchor.y);
+                p.connection.teleport(g.anchor.x, g.anchor.y, g.anchor.z, p.getYRot(), p.getXRot());
+                p.fallDistance = 0f;
+                p.setDeltaMovement(Vec3.ZERO);
+            }
+        }
+    }
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
 
     public static boolean isViewing(ServerPlayer p) { return SESSIONS.containsKey(p.getUUID()); }
@@ -150,6 +170,15 @@ public final class UavViewManager {
         if (s == null) return;
         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), new PacketUavViewState(false, reason.ordinal()));
         if (p.isAlive() && !p.hasDisconnected()) {
+            LOGGER.info("[AAS] UAV exit: reason={} bodyY={} anchorY={} onGround={} bodyChunkLoaded={}",
+                    reason, p.getY(), s.anchor.y, p.onGround(),
+                    p.serverLevel().getChunkSource().getChunkNow(p.chunkPosition().x, p.chunkPosition().z) != null);
+            GUARD.put(p.getUUID(), new Guard(s.anchor, p.serverLevel().getGameTime() + 100)); // 5 s
+            if (p.position().distanceToSqr(s.anchor) > 0.01) {
+                p.connection.teleport(s.anchor.x, s.anchor.y, s.anchor.z, p.getYRot(), p.getXRot());
+            }
+            p.fallDistance = 0f;
+            p.setDeltaMovement(Vec3.ZERO);
             p.serverLevel().getChunkSource().move(p); // tracking back to the body
             RESTORE.put(p.getUUID(), new Restore()); // resend the body's surroundings
         }

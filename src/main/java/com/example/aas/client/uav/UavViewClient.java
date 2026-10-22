@@ -22,7 +22,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
-
+import net.minecraftforge.fml.LogicalSide;
 /**
  * Client side of looking through the UAV.
  *  - the camera is a client-only Marker entity placed on the analytic orbit (the real UAV entity may not even be
@@ -48,7 +48,35 @@ public class UavViewClient {
         if (active) enter();
         else exit(UavExitReason.byId(reason));
     }
+    private static Vec3 frozenPos;   // где стояло тело, когда начался просмотр
+    private static int holdTicks;    // после выхода держим тело, пока не вернутся его чанки
 
+    private static void pinBody(LocalPlayer pl) {
+        pl.setPos(frozenPos.x, frozenPos.y, frozenPos.z);
+        pl.setDeltaMovement(Vec3.ZERO);
+        pl.fallDistance = 0f;
+    }
+
+    private static boolean bodyChunksReady(Minecraft mc) {
+        int cx = Mth.floor(frozenPos.x) >> 4, cz = Mth.floor(frozenPos.z) >> 4;
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                if (!mc.level.getChunkSource().hasChunk(cx + dx, cz + dz)) return false;
+        return true;
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent e) {
+        if (e.phase != TickEvent.Phase.END || e.side != LogicalSide.CLIENT) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (frozenPos == null || mc.player == null || mc.level == null || e.player != mc.player) return;
+        if (holdTicks % 5 == 0) com.mojang.logging.LogUtils.getLogger().info(
+                "[AAS-client] hold: y={} onGround={} dy={}", mc.player.getY(), mc.player.onGround(), mc.player.getDeltaMovement().y);
+        if (viewing) { pinBody(mc.player); return; }
+        if (holdTicks > 0 && !bodyChunksReady(mc)) { holdTicks--; pinBody(mc.player); return; }
+        frozenPos = null;
+        holdTicks = 0;
+    }
     private static void enter() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || !UavClientState.active) return;
