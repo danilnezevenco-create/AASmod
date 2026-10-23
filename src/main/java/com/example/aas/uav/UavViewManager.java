@@ -173,7 +173,7 @@ public final class UavViewManager {
             LOGGER.info("[AAS] UAV exit: reason={} bodyY={} anchorY={} onGround={} bodyChunkLoaded={}",
                     reason, p.getY(), s.anchor.y, p.onGround(),
                     p.serverLevel().getChunkSource().getChunkNow(p.chunkPosition().x, p.chunkPosition().z) != null);
-            GUARD.put(p.getUUID(), new Guard(s.anchor, p.serverLevel().getGameTime() + 200)); // 10 s
+            GUARD.put(p.getUUID(), new Guard(s.anchor, p.serverLevel().getGameTime() + 20)); // 1 s
             if (p.position().distanceToSqr(s.anchor) > 0.01) {
                 p.connection.teleport(s.anchor.x, s.anchor.y, s.anchor.z, p.getYRot(), p.getXRot());
             }

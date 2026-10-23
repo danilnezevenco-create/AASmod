@@ -429,19 +429,48 @@ public class ClientEvents {
                                        ResourceLocation texture, Minecraft mc, float alpha, double heightOffset) {
         poseStack.pushPose();
 
+        boolean uav = com.example.aas.client.uav.UavViewClient.isViewing();
+
         double renderX = pos.getX() + 0.5 - cameraPos.x;
         double renderY = pos.getY() + heightOffset - cameraPos.y;
         double renderZ = pos.getZ() + 0.5 - cameraPos.z;
-        poseStack.translate(renderX, renderY, renderZ);
 
-        poseStack.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
+        // Расстояние: от игрока, а в БПЛА - от камеры БПЛА (тело игрока может быть за километры)
+        double realDist = Math.sqrt(renderX * renderX + renderY * renderY + renderZ * renderZ);
+
+        // В БПЛА метка рисуется на любом расстоянии (в т.ч. 1000+ блоков). Дальняя плоскость отсечения камеры
+        // (~ renderDistance * 4) обрезала бы далёкую метку, поэтому подтягиваем её вдоль луча взгляда ближе к камере
+        // и пропорционально уменьшаем размер: положение на экране и угловой размер остаются теми же.
+        double k = 1.0;
+        if (uav) {
+            double maxD = Math.max(64.0, mc.gameRenderer.getDepthFar() * 0.9);
+            if (realDist > maxD) k = maxD / realDist;
+        }
+        poseStack.translate(renderX * k, renderY * k, renderZ * k);
+
+        if (uav) {
+            // всегда лицом к камере БПЛА: ориентацию строим из углов, которые реально использует камера БПЛА
+            poseStack.mulPose(new org.joml.Quaternionf().rotationYXZ(
+                    (float) Math.PI - com.example.aas.client.uav.UavViewClient.viewYaw() * Mth.DEG_TO_RAD,
+                    -com.example.aas.client.uav.UavViewClient.viewPitch() * Mth.DEG_TO_RAD,
+                    0.0f));
+        } else {
+            poseStack.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
+        }
 
         float scale = 0.025f;
-        double distSq = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-        if (distSq > 100) {
-            scale *= (float) (Math.sqrt(distSq) / 10.0);
+        if (uav) {
+            // тот же угловой размер, что у обычной метки на ~100 блоках, но без ограничения сверху
+            double d = realDist * k;
+            if (d > 10.0) scale *= (float) (d / 10.0);
+            scale /= 1.5f;   // в БПЛА метки в 1.5 раза меньше
+        } else {
+            double distSq = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            if (distSq > 100) {
+                scale *= (float) (Math.sqrt(distSq) / 10.0);
+            }
+            scale = Math.min(scale, 0.25f);
         }
-        scale = Math.min(scale, 0.25f);
         poseStack.scale(-scale, -scale, scale);
 
         Matrix4f matrix = poseStack.last().pose();
@@ -449,6 +478,7 @@ public class ClientEvents {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
+        RenderSystem.disableCull();   // метка видна лицевой стороной с любого ракурса
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
@@ -465,6 +495,7 @@ public class ClientEvents {
         buf.vertex(matrix,  h, -h, 0).uv(1f, 0f).color(255, 255, 255, a).endVertex();
         tesselator.end();
 
+        RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         poseStack.popPose();

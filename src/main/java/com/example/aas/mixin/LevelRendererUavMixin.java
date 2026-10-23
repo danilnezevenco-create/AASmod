@@ -20,21 +20,24 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class LevelRendererUavMixin {
 
     @Redirect(method = "setupRender",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getX()D"))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getX()D"),
+            require = 0)
     private double aas$viewX(LocalPlayer p) {
         Vec3 c = aas$camPos();
         return c != null ? c.x : p.getX();
     }
 
     @Redirect(method = "setupRender",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getY()D"))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getY()D"),
+            require = 0)
     private double aas$viewY(LocalPlayer p) {
         Vec3 c = aas$camPos();
         return c != null ? c.y : p.getY();
     }
 
     @Redirect(method = "setupRender",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getZ()D"))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getZ()D"),
+            require = 0)
     private double aas$viewZ(LocalPlayer p) {
         Vec3 c = aas$camPos();
         return c != null ? c.z : p.getZ();

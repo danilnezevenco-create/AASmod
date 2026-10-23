@@ -4,6 +4,7 @@ package com.example.aas.network;
 import com.example.aas.world.AASWorldData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
@@ -32,6 +33,11 @@ public class PacketPlaceRadialMarker {
     public static final int TYPE_BUILD = 3;
     public static final int TYPE_EYE = 4;
 
+    /** Обычная дальность установки метки (блоков). */
+    public static final double DEFAULT_REACH = 300.0;
+    /** Дальность установки метки из БПЛА: практически не ограничена (луч идёт только по загруженным чанкам). */
+    public static final double UAV_REACH = 8192.0;
+
     private final int type;
 
     public PacketPlaceRadialMarker(int type) {
@@ -57,6 +63,24 @@ public class PacketPlaceRadialMarker {
 
     /** Shared placement: raycast from eyePos along look. Used by the radial menu and by the UAV camera (PacketUavMarker). */
     public static void place(ServerPlayer player, int type, Vec3 eyePos, Vec3 look) {
+        place(player, type, eyePos, look, DEFAULT_REACH);
+    }
+
+    /**
+     * Длина луча, которую можно безопасно пройти: останавливаемся на первом незагруженном чанке,
+     * иначе level.clip() принудительно подгружал/генерировал бы чанки на сервере.
+     */
+    private static double loadedReach(ServerLevel level, Vec3 from, Vec3 look, double max) {
+        final double step = 2.0;
+        for (double d = 0; d <= max; d += step) {
+            BlockPos bp = BlockPos.containing(from.add(look.scale(d)));
+            if (!level.hasChunkAt(bp)) return Math.max(0.0, d - step);
+        }
+        return max;
+    }
+
+    /** Общая установка метки с заданной дальностью луча (для БПЛА - UAV_REACH). */
+    public static void place(ServerPlayer player, int type, Vec3 eyePos, Vec3 look, double reach) {
         {
             if (type < TYPE_MOVE || type > TYPE_EYE) return;
 
@@ -64,7 +88,8 @@ public class PacketPlaceRadialMarker {
             String pName = player.getScoreboardName();
 
             // РЎРѕС…СЂР°РЅСЏРµРј С‚Сѓ Р¶Рµ Р»РѕРіРёРєСѓ raycast'Р°, С‡С‚Рѕ Рё Сѓ PacketPlacePing
-            Vec3 reachVec = eyePos.add(look.scale(300.0));
+            double len = reach > DEFAULT_REACH ? loadedReach(player.serverLevel(), eyePos, look, reach) : reach;
+            Vec3 reachVec = eyePos.add(look.scale(len));
             BlockHitResult hit = player.level().clip(new ClipContext(eyePos, reachVec, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
             if (hit.getType() != HitResult.Type.BLOCK) return;
 

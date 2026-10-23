@@ -2,6 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.example.aas.mixin",
+  "plugin": "com.example.aas.mixin.AasMixinPlugin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "aas.refmap.json",
   "mixins": [

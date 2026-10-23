@@ -35,7 +35,7 @@ public class PacketUavMarker {
             if (eye == null) return;
             if (!Float.isFinite(m.yaw) || !Float.isFinite(m.pitch)) return;
             Vec3 look = Vec3.directionFromRotation(Mth.clamp(m.pitch, -90f, 90f), m.yaw);
-            PacketPlaceRadialMarker.place(p, m.type, eye, look);
+            PacketPlaceRadialMarker.place(p, m.type, eye, look, PacketPlaceRadialMarker.UAV_REACH);
         });
         ctx.get().setPacketHandled(true);
     }

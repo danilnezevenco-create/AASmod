@@ -161,7 +161,7 @@ public class AASMapRenderer implements AutoCloseable {
         if (follow) { mapPanX = 0; mapPanZ = 0; } else { clampView(localPlayer); }
 
         double currentScale = follow ? ClientData.miniMapScale : ClientData.mapScale;
-        Vec3 origin = viewOrigin(localPlayer);   // UAV position while looking through the UAV (minimap only)
+        Vec3 origin = viewOrigin(localPlayer);   // UAV position while looking through the UAV (minimap and big map)
         double cx = origin.x + mapPanX;
         double cz = origin.z + mapPanZ;
 
@@ -560,12 +560,12 @@ public class AASMapRenderer implements AutoCloseable {
     public double getCenterZ(LocalPlayer player) { return viewOrigin(player).z + mapPanZ; }
 
     /**
-     * Where the map is centred and where marker lines start: the player, or - on the follow-mode minimap while the
-     * player looks through the UAV - the flying UAV.
+     * Where the map is centred and where marker lines start: the player, or - on the minimap AND the big map
+     * while the player looks through the UAV - the flying UAV.
      */
     private Vec3 viewOrigin(LocalPlayer p) {
         Minecraft mc = Minecraft.getInstance();
-        if (followMode && mc.level != null && com.example.aas.client.uav.UavViewClient.isViewing()
+        if (mc.level != null && com.example.aas.client.uav.UavViewClient.isViewing()
                 && com.example.aas.client.uav.UavClientState.active) {
             return com.example.aas.client.uav.UavClientState.position(mc.level.getGameTime() + mc.getPartialTick());
         }
@@ -578,10 +578,11 @@ public class AASMapRenderer implements AutoCloseable {
         double maxBpp = MapGrid.maxBpp(ClientData.mapSizeBlocks, mapSize, 0.5);
         if (ClientData.mapScale > maxBpp) ClientData.mapScale = maxBpp;
         double view = mapSize * ClientData.mapScale;
-        double cx = MapGrid.clampCenter(p.getX() + mapPanX, ClientData.mapCenterX, ClientData.mapSizeBlocks, view);
-        double cz = MapGrid.clampCenter(p.getZ() + mapPanZ, ClientData.mapCenterZ, ClientData.mapSizeBlocks, view);
-        mapPanX = cx - p.getX();
-        mapPanZ = cz - p.getZ();
+        Vec3 origin = viewOrigin(p);   // игрок или БПЛА (если игрок смотрит через БПЛА)
+        double cx = MapGrid.clampCenter(origin.x + mapPanX, ClientData.mapCenterX, ClientData.mapSizeBlocks, view);
+        double cz = MapGrid.clampCenter(origin.z + mapPanZ, ClientData.mapCenterZ, ClientData.mapSizeBlocks, view);
+        mapPanX = cx - origin.x;
+        mapPanZ = cz - origin.z;
     }
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (isMouseOver(mouseX, mouseY)) {

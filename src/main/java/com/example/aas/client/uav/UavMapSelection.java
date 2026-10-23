@@ -63,8 +63,8 @@ public class UavMapSelection {
             hint = Component.translatable("aas.uav.select.radius", r);
         } else {
             hint = Component.translatable("aas.uav.select.center");
-            gui.fill(mouseX - 5, mouseY, mouseX + 6, mouseY + 1, 0xFFB8860B);
-            gui.fill(mouseX, mouseY - 5, mouseX + 1, mouseY + 6, 0xFFB8860B);
+            gui.fill(mouseX - 5, mouseY, mouseX + 6, mouseY + 1, 0xFFFFFF00);   // ярко-жёлтый
+            gui.fill(mouseX, mouseY - 5, mouseX + 1, mouseY + 6, 0xFFFFFF00);
         }
         int w = font.width(hint);
         int x = mapX + mapSize / 2 - w / 2;
